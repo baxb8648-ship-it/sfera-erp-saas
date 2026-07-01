@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg?v=2" />
+    <link rel="apple-touch-icon" href="./favicon.svg?v=2" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#F95700" />
+    
+    <!-- Preconnect / Performance Optimization -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- JSON-LD Local Business Schema (SEO) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "LocalBusiness",
+      "name": "ООО СФЕРА",
+      "image": "http://127.0.0.1:5173/src/assets/industrial_hero_bg.png",
+      "@id": "http://127.0.0.1:5173/#localbusiness",
+      "url": "http://127.0.0.1:5173/",
+      "telephone": "+79636006346",
+      "priceRange": "$$$",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "промзона",
+        "addressLocality": "Оренбург",
+        "addressRegion": "Оренбургская область",
+        "postalCode": "460000",
+        "addressCountry": "RU"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 51.7666,
+        "longitude": 55.1005
+      },
+      "openingHoursSpecification": {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          "Sunday"
+        ],
+        "opens": "00:00",
+        "closes": "23:59"
+      },
+      "areaServed": ["Оренбург", "Самара", "Уфа"],
+      "description": "Подрядные работы по промышленной антикоррозийной защите металлоконструкций, гидроизоляции бетона и механизированной покраске."
+    }
+    </script>
+
+    <!-- SEO Meta Tags -->
+    <title>СФЕРА | Промышленная антикоррозийная защита (АКЗ), гидроизоляция бетона и покраска в Оренбурге, Самаре, Уфе</title>
+    <meta name="description" content="ООО СФЕРА - подрядные работы по антикоррозийной защите металлоконструкций (АКЗ), нанесению систем Биурс и Унипол, гидроизоляции бетона и механизированной безвоздушной покраске. Работа 24/7 в 2 смены. Собственная техника." />
+    <meta name="keywords" content="АКЗ, антикоррозийная защита, гидроизоляция бетона, Специзол, Унипол, Биурс, покраска металлоконструкций, пескоструйная очистка Sa 2.5, безвоздушная покраска АБР, Оренбург, Самара, Уфа" />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="ООО СФЕРА" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="СФЕРА | Промышленная антикоррозийная защита и гидроизоляция" />
+    <meta property="og:description" content="Подрядные работы по АКЗ и покраске объектов. Собственный парк автовышек и компрессоров. Работа без простоев 24/7 в 2 смены." />
+    <meta property="og:image" content="/src/assets/industrial_hero_bg.png" />
+    <meta property="og:url" content="http://127.0.0.1:5173/" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:title" content="СФЕРА | Промышленная защита и изоляция" />
+    <meta property="twitter:description" content="Подрядные работы по АКЗ и покраске объектов. Собственный парк автовышек и компрессоров. Работа без простоев 24/7 в 2 смены." />
+    <meta property="twitter:image" content="/src/assets/industrial_hero_bg.png" />
+  </head>
+  <body class="bg-[#0F0F11]">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

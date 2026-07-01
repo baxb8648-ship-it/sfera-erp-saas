@@ -1,0 +1,19 @@
+tunnel: a9e21056-7719-4150-9840-edb698e039a1
+credentials-file: C:\Users\LEONIKA\.cloudflared\a9e21056-7719-4150-9840-edb698e039a1.json
+
+# Протокол: quic (UDP) вместо http2 (TCP) для обхода блокировок/DPI
+protocol: quic
+edge-ip-version: "4"
+
+# Параметры переподключения для стабильности
+retries: 10
+grace-period: 30s
+
+# Ingress rules: весь трафик туннеля → FastAPI
+# Без жёсткой привязки по hostname (кириллица vs punycode) — работает для обоих вариантов
+ingress:
+  - hostname: api.xn--56-6kctpmeri.xn--p1ai
+    service: http://127.0.0.1:8000
+  - hostname: "api.леоника56.рф"
+    service: http://127.0.0.1:8000
+  - service: http://127.0.0.1:8000

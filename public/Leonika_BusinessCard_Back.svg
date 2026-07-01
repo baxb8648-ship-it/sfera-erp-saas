@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="90mm" height="50mm" viewBox="0 0 90 50">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900');
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@700');
+    </style>
+    <clipPath id="card-clip">
+      <rect x="0.5" y="0.5" width="89" height="49" rx="3.5" />
+    </clipPath>
+  </defs>
+  
+  <!-- Rounded Card Base -->
+  <rect x="0.5" y="0.5" width="89" height="49" rx="3.5" fill="#0F0F11" stroke="rgba(255, 255, 255, 0.05)" stroke-width="0.5" />
+  
+  <!-- Logo Header -->
+  <text x="45" y="11" font-family="Montserrat, sans-serif" font-weight="900" font-size="6" fill="#ffffff" letter-spacing="-0.2" text-anchor="middle">ЛЕОНИКА</text>
+  <text x="45" y="14.5" font-family="Inter, sans-serif" font-weight="700" font-size="1.4" fill="#F95700" letter-spacing="0.8" text-anchor="middle">ПРОМЫШЛЕННАЯ ГРУППА</text>
+  
+  <!-- QR Code Image Container -->
+  <rect x="37" y="18" width="16" height="16" rx="1.5" fill="#FFFFFF" />
+  <g transform="translate(38, 19) scale(0.4827586206896552)">
+    <path d="M0 0.5h7m3 0h2m3 0h2m2 0h1m2 0h7M0 1.5h1m5 0h1m3 0h2m5 0h2m1 0h1m1 0h1m5 0h1M0 2.5h1m1 0h3m1 0h1m1 0h2m1 0h1m2 0h1m1 0h1m1 0h1m3 0h1m1 0h3m1 0h1M0 3.5h1m1 0h3m1 0h1m1 0h1m2 0h2m3 0h2m4 0h1m1 0h3m1 0h1M0 4.5h1m1 0h3m1 0h1m1 0h2m3 0h3m2 0h3m1 0h1m1 0h3m1 0h1M0 5.5h1m5 0h1m1 0h4m1 0h6m1 0h1m1 0h1m5 0h1M0 6.5h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7M8 7.5h6m1 0h1m4 0h1M0 8.5h1m1 0h5m2 0h1m1 0h1m2 0h2m1 0h3m2 0h5M1 9.5h1m2 0h2m2 0h4m3 0h6m1 0h1m1 0h1m3 0h1M3 10.5h2m1 0h2m1 0h4m4 0h1m5 0h2M0 11.5h1m1 0h4m1 0h2m5 0h1m1 0h1m1 0h1m1 0h1m2 0h1m1 0h1m1 0h1M4 12.5h3m2 0h1m1 0h1m5 0h1m3 0h1m3 0h2M1 13.5h1m1 0h1m3 0h1m1 0h2m2 0h3m1 0h1m1 0h2m1 0h1m1 0h1m3 0h1M1 14.5h1m2 0h3m1 0h9m1 0h1m4 0h4M0 15.5h1m2 0h2m2 0h1m2 0h1m2 0h1m1 0h1m2 0h6m3 0h1M1 16.5h1m1 0h1m2 0h2m2 0h2m2 0h1m2 0h1m2 0h2m3 0h2M0 17.5h1m1 0h2m4 0h1m1 0h3m3 0h4m1 0h2m1 0h1m1 0h1m1 0h1M0 18.5h1m4 0h2m2 0h3m3 0h3m2 0h1m1 0h1m3 0h1M0 19.5h1m1 0h4m1 0h3m1 0h2m1 0h2m2 0h2m3 0h1m3 0h1M0 20.5h1m1 0h1m3 0h1m3 0h1m4 0h1m1 0h2m1 0h5m1 0h3M8 21.5h1m2 0h4m1 0h3m1 0h1m3 0h5M0 22.5h7m5 0h5m2 0h2m1 0h1m1 0h3M0 23.5h1m5 0h1m1 0h6m1 0h1m3 0h2m3 0h1M0 24.5h1m1 0h3m1 0h1m1 0h1m1 0h3m1 0h5m1 0h5m1 0h2M0 25.5h1m1 0h3m1 0h1m1 0h5m4 0h5m3 0h4M0 26.5h1m1 0h3m1 0h1m1 0h2m2 0h4m4 0h1m1 0h6M0 27.5h1m5 0h1m3 0h4m1 0h1m4 0h1m3 0h2m1 0h1M0 28.5h7m1 0h1m2 0h7m1 0h1m1 0h2m2 0h2" fill="none" stroke="#0f0f11" stroke-width="1" shape-rendering="crispEdges" />
+  </g>
+  <text x="45" y="38.5" font-family="Inter, sans-serif" font-weight="700" font-size="1.2" fill="#a1a1aa" letter-spacing="0.4" text-anchor="middle">СКАНИРУЙТЕ ДЛЯ ПЕРЕХОДА</text>
+
+  <!-- Footer Website link -->
+  <text x="45" y="44.0" font-family="Inter, sans-serif" font-weight="700" font-size="1.8" fill="#ffffff" letter-spacing="0.8" text-anchor="middle">ЛЕОНИКА56.РФ</text>
+
+  <!-- Accent orange bar clipped to rounded corner -->
+  <rect x="0.5" y="47.5" width="89" height="2" fill="#F95700" clip-path="url(#card-clip)" />
+</svg>

@@ -1,0 +1,53 @@
+# Виртуальное окружение Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+
+# База данных SQLite (резервная)
+*.db
+*.db-shm
+*.db-wal
+*.db.bak
+
+# Переменные окружения (секреты)
+.env
+backend/.env
+.env.local
+.env.production
+
+# Dist и node_modules
+dist/
+node_modules/
+
+# Загруженные файлы
+backend/uploads/
+backend/backups/
+backend/data/
+
+# Временные файлы и логи
+*.log
+*.tmp
+scratch/
+
+# Тяжёлые бинарники
+cloudflared.exe
+ngrok.exe
+*.exe
+
+# IDE и OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Тестовые файлы PDF
+test_*.pdf
+test_*.txt
+
+# Python bytecode
+*.pyc
+__pycache__/

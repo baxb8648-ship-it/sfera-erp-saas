@@ -1,0 +1,19 @@
+{
+  "name": "ЛЕОНИКА ERP CRM",
+  "short_name": "ЛЕОНИКА",
+  "description": "Система управления процессами",
+  "start_url": "./#/crm",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#F95700",
+  "lang": "ru",
+  "scope": "./",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

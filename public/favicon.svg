@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Orange Gradient -->
+    <linearGradient id="orange-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF7F3E" />
+      <stop offset="50%" stop-color="#F95700" />
+      <stop offset="100%" stop-color="#D04300" />
+    </linearGradient>
+    <!-- Steel/Zinc Gradient -->
+    <linearGradient id="steel-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="60%" stop-color="#E4E4E7" />
+      <stop offset="100%" stop-color="#A1A1AA" />
+    </linearGradient>
+    <!-- Dark Slate Gradient for Background -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E1E24" />
+      <stop offset="100%" stop-color="#0F0F11" />
+    </linearGradient>
+    <!-- Subtle glow/shadow -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#F95700" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Outer background circle -->
+  <circle cx="256" cy="256" r="240" fill="url(#bg-grad)" stroke="#27272A" stroke-width="8" />
+  
+  <!-- Subtle glowing orange ring -->
+  <circle cx="256" cy="256" r="236" fill="none" stroke="url(#orange-grad)" stroke-width="3" opacity="0.4" />
+
+  <!-- The stylized Cyrillic "Л" with drop shadow -->
+  <g filter="url(#glow)">
+    <!-- Left Angled Metal Leg -->
+    <path d="M140 400 L215 400 L300 170 L225 170 Z" fill="url(#steel-grad)" />
+    
+    <!-- Right Angled Orange AKZ Leg -->
+    <path d="M225 170 L300 170 L385 400 L310 400 Z" fill="url(#orange-grad)" />
+    
+    <!-- Joining Structural Beam (horizontal) -->
+    <path d="M185 280 L325 280 L310 315 L170 315 Z" fill="#FFFFFF" opacity="0.9" />
+    
+    <!-- Spray Coating / Precision Apex Point -->
+    <polygon points="256,105 285,145 227,145" fill="url(#orange-grad)" />
+  </g>
+</svg>

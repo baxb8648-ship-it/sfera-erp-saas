@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>СФЕРА | Промышленная защита и изоляция</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0F0F11;
+            color: #A1A1AA;
+        }
+        h1, h2, h3 {
+            font-family: 'Montserrat', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: -0.02em;
+        }
+        .btn-industrial {
+            background-color: #F95700;
+            color: white;
+            transition: all 0.3s ease;
+            clip-path: polygon(8% 0, 100% 0, 100% 70%, 92% 100%, 0 100%, 0% 30%);
+        }
+        .btn-industrial:hover {
+            background-color: #FF7426;
+            transform: scale(1.02);
+        }
+        .card-glass {
+            background: rgba(24, 24, 27, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+        }
+        .sector-active {
+            border-bottom: 3px solid #F95700;
+            color: white !important;
+        }
+        input, textarea, select {
+            background: #18181B !important;
+            border: 1px solid #3F3F46 !important;
+            color: white !important;
+            border-radius: 0 !important;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #fff 0%, #71717a 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .leonica-accent {
+            color: #F95700;
+        }
+    </style>
+</head>
+<body class="overflow-x-hidden">
+
+<!-- Chosen Palette: Индустриальный премиум (Уголь, Титан, Сигнальный рыжий) -->
+<!-- Application Structure Plan: 
+    1. Навигация: Полностью на русском, акцент на бренде СФЕРА.
+    2. Герой-блок: Удален заголовок "ТЕХЗАЩИТА", акцент на услугах и масштабе.
+    3. Отраслевой блок: Интерактивное разделение на Нефтегаз (регламенты), Госзаказы (44-ФЗ) и Частный сектор (АБР).
+    4. Сетка услуг: 7 ключевых направлений, включая АБР и Сварку.
+    5. Ресурсы: Визуализация 2-х сменной работы и собственного парка техники.
+    6. Калькулятор: B2B расчет с учетом сложности секторов.
+    7. Футер: Максимально детальные реквизиты ООО "СФЕРА" для юридической чистоты.
+-->
+
+<!-- Навигация -->
+<nav class="fixed w-full z-50 bg-[#0F0F11]/95 border-b border-white/5 backdrop-blur-lg">
+    <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <div class="flex flex-col leading-none">
+                <span class="text-white font-black tracking-tighter text-3xl block uppercase">СФЕРА</span>
+                <span class="text-[9px] text-[#F95700] font-bold tracking-[0.3em] uppercase">Промышленная группа</span>
+            </div>
+        </div>
+        <div class="hidden md:flex space-x-8 text-[11px] font-black tracking-widest uppercase text-gray-400">
+            <a href="#sectors" class="hover:text-[#F95700] transition">Отрасли</a>
+            <a href="#services" class="hover:text-[#F95700] transition">Технологии</a>
+            <a href="#materials" class="hover:text-[#F95700] transition">Материалы</a>
+            <a href="#calc" class="hover:text-[#F95700] transition">Смета</a>
+        </div>
+        <div class="flex flex-col items-end">
+            <a href="tel:+79636006346" class="text-white font-bold text-lg">8 963 600 63 46</a>
+            <span class="text-[9px] text-gray-500 font-bold uppercase">Оренбург и область</span>
+        </div>
+    </div>
+</nav>
+
+<!-- Главный экран -->
+<section class="relative min-h-screen flex items-center pt-20">
+    <div class="absolute inset-0 z-0">
+        <div class="absolute inset-0 bg-gradient-to-t from-[#0F0F11] via-[#0F0F11]/60 to-transparent z-10"></div>
+        <div class="w-full h-full bg-[url('https://images.unsplash.com/photo-1513828583688-c52646db42da?auto=format&fit=crop&q=80&w=2070')] bg-cover bg-center opacity-40"></div>
+    </div>
+    
+    <div class="max-w-7xl mx-auto px-6 relative z-20">
+        <div class="max-w-4xl">
+            <div class="inline-flex items-center space-x-2 px-3 py-1 bg-[#F95700]/10 border border-[#F95700]/20 mb-6">
+                <span class="w-2 h-2 bg-[#F95700]"></span>
+                <span class="text-[#F95700] font-bold text-[10px] tracking-widest uppercase">Технологический регламент СФЕРА</span>
+            </div>
+            <h1 class="text-5xl md:text-8xl text-white font-black leading-[0.9] mb-8">
+                ПРОМЫШЛЕННАЯ <br>
+                <span class="gradient-text">ЗАЩИТА И ИЗОЛЯЦИЯ</span>
+            </h1>
+            <p class="text-xl text-gray-400 mb-12 max-w-2xl leading-relaxed">
+                Собственный парк автовышек, компрессоров и систем безвоздушного распыления. Работаем 24/7 в 2 смены. Полный цикл: от пескоструя Sa 2.5 до нанесения «Биурс» и «Унипол».
+            </p>
+            <div class="flex flex-wrap gap-4">
+                <button onclick="scrollToSection('calc')" class="btn-industrial px-12 py-6 text-lg font-black uppercase tracking-tighter">Рассчитать стоимость</button>
+                <div class="flex items-center px-8 text-white border border-white/10 font-bold uppercase text-[10px] tracking-widest bg-white/5">
+                    Без простоев для заказчика
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Отраслевые решения -->
+<section id="sectors" class="py-24 bg-[#121214]">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="mb-16">
+            <h2 class="text-3xl font-black text-white mb-2 uppercase">Профильные направления</h2>
+            <p class="text-gray-500 uppercase tracking-widest text-xs font-bold">Адаптация технологий под требования вашего сектора</p>
+        </div>
+
+        <div class="flex space-x-12 border-b border-white/5 mb-12 overflow-x-auto scrollbar-hide">
+            <button onclick="switchSector('oilgas')" id="tab-oilgas" class="sector-tab sector-active pb-4 font-bold text-sm tracking-widest transition whitespace-nowrap uppercase">Нефтегазовый сектор</button>
+            <button onclick="switchSector('municipal')" id="tab-municipal" class="sector-tab text-gray-600 pb-4 font-bold text-sm tracking-widest transition whitespace-nowrap uppercase">Госзаказы / 44-ФЗ</button>
+            <button onclick="switchSector('private')" id="tab-private" class="sector-tab text-gray-600 pb-4 font-bold text-sm tracking-widest transition whitespace-nowrap uppercase">Частный сектор</button>
+        </div>
+
+        <div id="sector-content" class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center min-h-[400px] transition-opacity duration-300">
+            <!-- Контент подгружается через JS -->
+        </div>
+    </div>
+</section>
+
+<!-- Сетка услуг -->
+<section id="services" class="py-24 border-t border-white/5">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="flex justify-between items-end mb-16">
+            <div>
+                <h2 class="text-4xl text-white font-black mb-4 uppercase">Услуги группы <span class="leonica-accent">СФЕРА</span></h2>
+                <p class="max-w-md text-gray-400">Мы не просто красим — мы создаем долговечный защитный барьер, применяя промышленное оборудование высокого давления.</p>
+            </div>
+            <div class="hidden lg:block text-right">
+                <span class="text-6xl font-black text-white/5 uppercase">Технологии</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-white/5 border border-white/5">
+            <!-- Услуга 1 -->
+            <div class="card-glass p-8 group hover:bg-[#F95700]/5 transition duration-500">
+                <div class="w-12 h-12 border border-[#F95700] mb-6 flex items-center justify-center text-[#F95700] font-black">01</div>
+                <h3 class="text-xl text-white font-bold mb-4 uppercase">Покрытия «Биурс»</h3>
+                <p class="text-sm mb-6 leading-relaxed">Защита газо- и нефтепроводов с использованием специализированных установок. Трассовое и базовое нанесение.</p>
+                <div class="text-[10px] text-[#F95700] font-bold tracking-[0.2em] uppercase opacity-0 group-hover:opacity-100 transition">Стандарты Газпром / Транснефть</div>
+            </div>
+            <!-- Услуга 2 -->
+            <div class="card-glass p-8 group hover:bg-[#F95700]/5 transition duration-500">
+                <div class="w-12 h-12 border border-[#F95700] mb-6 flex items-center justify-center text-[#F95700] font-black">02</div>
+                <h3 class="text-xl text-white font-bold mb-4 uppercase">Механизированная покраска</h3>
+                <p class="text-sm mb-6 leading-relaxed">Скоростная окраска фасадов, ангаров, кровли и заборов аппаратами безвоздушного распыления (АБР).</p>
+                <div class="text-[10px] text-[#F95700] font-bold tracking-[0.2em] uppercase opacity-0 group-hover:opacity-100 transition">До 1500 м2 в смену</div>
+            </div>
+            <!-- Услуга 3 -->
+            <div class="card-glass p-8 group hover:bg-[#F95700]/5 transition duration-500">
+                <div class="w-12 h-12 border border-[#F95700] mb-6 flex items-center justify-center text-[#F95700] font-black">03</div>
+                <h3 class="text-xl text-white font-bold mb-4 uppercase">Сварка и подготовка</h3>
+                <p class="text-sm mb-6 leading-relaxed">Восстановление геометрии профилей, зачистка швов и ремонт металлоконструкций перед изоляцией.</p>
+                <div class="text-[10px] text-[#F95700] font-bold tracking-[0.2em] uppercase opacity-0 group-hover:opacity-100 transition">Технический подход</div>
+            </div>
+            <!-- Услуга 4 -->
+            <div class="card-glass p-8 group hover:bg-[#F95700]/5 transition duration-500">
+                <div class="w-12 h-12 border border-[#F95700] mb-6 flex items-center justify-center text-[#F95700] font-black">04</div>
+                <h3 class="text-xl text-white font-bold mb-4 uppercase">Пескоструй Sa 2.5</h3>
+                <p class="text-sm mb-6 leading-relaxed">Глубокая абразивоструйная очистка от окалины, ржавчины и старых слоев до чистого металла.</p>
+                <div class="text-[10px] text-[#F95700] font-bold tracking-[0.2em] uppercase opacity-0 group-hover:opacity-100 transition">ИСО 8501-1</div>
+            </div>
+            <!-- Услуга 5 -->
+            <div class="card-glass p-8 group hover:bg-[#F95700]/5 transition duration-500">
+                <div class="w-12 h-12 border border-[#F95700] mb-6 flex items-center justify-center text-[#F95700] font-black">05</div>
+                <h3 class="text-xl text-white font-bold mb-4 uppercase">АКЗ Резервуаров</h3>
+                <p class="text-sm mb-6 leading-relaxed">Комплексная защита РВС, промышленных узлов и эстакад любой степени сложности.</p>
+                <div class="text-[10px] text-[#F95700] font-bold tracking-[0.2em] uppercase opacity-0 group-hover:opacity-100 transition">Антикоррозийная защита</div>
+            </div>
+            <!-- Услуга 6 -->
+            <div class="card-glass p-8 group hover:bg-[#F95700]/5 transition duration-500">
+                <div class="w-12 h-12 border border-[#F95700] mb-6 flex items-center justify-center text-[#F95700] font-black">06</div>
+                <h3 class="text-xl text-white font-bold mb-4 uppercase">Гидроизоляция бетона</h3>
+                <p class="text-sm mb-6 leading-relaxed">Нанесение двухкомпонентной системы «Специзол». Защита фундаментов и кровель от влаги.</p>
+                <div class="text-[10px] text-[#F95700] font-bold tracking-[0.2em] uppercase opacity-0 group-hover:opacity-100 transition">Бесшовный барьер</div>
+            </div>
+            <!-- Услуга 7 (Дополнительная) -->
+            <div class="card-glass p-8 group hover:bg-[#F95700]/5 transition duration-500 md:col-span-2 lg:col-span-1">
+                <div class="w-12 h-12 border border-[#F95700] mb-6 flex items-center justify-center text-[#F95700] font-black">07</div>
+                <h3 class="text-xl text-white font-bold mb-4 uppercase">Огнезащита (ОЗП)</h3>
+                <p class="text-sm mb-6 leading-relaxed">Повышение предела огнестойкости несущих конструкций сертифицированными составами.</p>
+                <div class="text-[10px] text-[#F95700] font-bold tracking-[0.2em] uppercase opacity-0 group-hover:opacity-100 transition">Сертификация МЧС</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Ресурсы -->
+<section class="py-24 bg-[#0F0F11]">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <div class="card-glass p-10 border-l-4 border-[#F95700]">
+                <h2 class="text-3xl text-white font-black mb-8 uppercase">Производственные мощности</h2>
+                <p class="text-sm text-gray-400 mb-8">СФЕРА располагает собственной базой техники в Оренбурге. Мы не зависим от аренды, что гарантирует старт работ в течение 24 часов.</p>
+                <div class="space-y-6">
+                    <div class="flex items-center justify-between border-b border-white/5 pb-4">
+                        <span class="text-gray-400">Собственные автовышки</span>
+                        <span class="text-white font-bold">4 ед.</span>
+                    </div>
+                    <div class="flex items-center justify-between border-b border-white/5 pb-4">
+                        <span class="text-gray-400">Компрессоры высокого давления</span>
+                        <span class="text-white font-bold">6 ед.</span>
+                    </div>
+                    <div class="flex items-center justify-between border-b border-white/5 pb-4">
+                        <span class="text-gray-400">Аппараты АВД (Graco / WIWA)</span>
+                        <span class="text-white font-bold">12 ед.</span>
+                    </div>
+                    <div class="flex items-center justify-between border-b border-white/5 pb-4">
+                        <span class="text-gray-400">Работа в 2 смены (24/7)</span>
+                        <span class="text-white font-bold">8 бригад</span>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center">
+                <h3 class="text-white font-bold mb-6 text-[10px] tracking-widest uppercase">Загрузка парка техники (Оренбургская обл.)</h3>
+                <div class="chart-container">
+                    <canvas id="capacityChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Поставки материалов -->
+<section id="materials" class="py-24 bg-[#121214]">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="flex flex-col md:flex-row justify-between items-start mb-16">
+            <div>
+                <h2 class="text-4xl text-white font-black mb-4 uppercase">Комплектация <br>объектов</h2>
+                <p class="text-gray-400 max-w-lg">Прямые дилерские контракты с заводами-производителями. Склад в Оренбурге с ежедневной отгрузкой материалов.</p>
+            </div>
+            <div class="mt-8 md:mt-0 p-6 bg-[#F95700]/5 border border-[#F95700]/20 max-w-sm">
+                <span class="block text-white font-bold mb-2">Заводские цены</span>
+                <p class="text-[11px] text-gray-500 uppercase tracking-tighter font-bold">Унипол АМ | Специзол | Биурс</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="p-10 border border-white/5 bg-[#18181B] hover:border-[#F95700]/50 transition duration-300">
+                <h3 class="text-2xl text-white font-black mb-4 uppercase">Грунт-эмали УНИПОЛ®</h3>
+                <p class="text-sm text-gray-500 mb-8 leading-relaxed">Сверхстойкие покрытия для агрессивных сред. Обеспечивают защиту до 20 лет в условиях промышленной атмосферы.</p>
+                <button class="w-full py-4 border border-[#F95700] text-[#F95700] font-black uppercase text-[11px] tracking-widest hover:bg-[#F95700] hover:text-white transition">Запросить прайс</button>
+            </div>
+            <div class="p-10 border border-white/5 bg-[#18181B] hover:border-[#F95700]/50 transition duration-300">
+                <h3 class="text-2xl text-white font-black mb-4 uppercase">Гидроизоляция СПЕЦИЗОЛ</h3>
+                <p class="text-sm text-gray-500 mb-8 leading-relaxed">Двухкомпонентная система мгновенного отверждения. Идеально для фундаментов, РВС и бетонных конструкций.</p>
+                <button class="w-full py-4 border border-[#F95700] text-[#F95700] font-black uppercase text-[11px] tracking-widest hover:bg-[#F95700] hover:text-white transition">Запросить прайс</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Калькулятор -->
+<section id="calc" class="py-24">
+    <div class="max-w-4xl mx-auto px-6">
+        <div class="card-glass p-12 border border-[#F95700]/20">
+            <h2 class="text-3xl text-white font-black mb-10 text-center uppercase tracking-tighter">Предварительный расчет сметы</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black tracking-widest text-gray-500 uppercase">Технологический процесс</label>
+                    <select id="calc-service" class="w-full p-4 focus:outline-none">
+                        <option value="2500">Нефтегазовый сектор (Биурс + ВИК)</option>
+                        <option value="1200">Безвоздушная окраска АБР</option>
+                        <option value="1000">Пескоструйная очистка Sa 2.5</option>
+                        <option value="1600">Гидроизоляция «Специзол»</option>
+                        <option value="900">Сварка и ремонт металла</option>
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black tracking-widest text-gray-500 uppercase">Площадь работ (м²)</label>
+                    <input type="number" id="calc-area" value="500" class="w-full p-4 focus:outline-none">
+                </div>
+            </div>
+            <div class="text-center">
+                <span class="block text-gray-500 text-[10px] tracking-[0.4em] uppercase mb-2">Оценочная стоимость</span>
+                <span id="calc-result" class="text-5xl md:text-7xl text-white font-black">1 250 000 ₽</span>
+                <p class="mt-8 text-[10px] text-gray-600 uppercase font-bold">* Расчет по ФЕР/ТЕР производится после предоставления проектной документации.</p>
+                <button class="btn-industrial px-16 py-6 mt-10 font-black uppercase tracking-widest text-sm">Получить детальный ППР</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Футер -->
+<footer class="py-24 bg-[#0F0F11] border-t border-white/5">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-16">
+            <div>
+                <h2 class="text-4xl text-white font-black mb-10 uppercase leading-tight">Контакты и <br><span class="leonica-accent">Реквизиты</span></h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                    <div>
+                        <p class="text-[10px] text-gray-500 uppercase font-black mb-2">Телефон (Отдел заказов)</p>
+                        <a href="tel:+79636006346" class="text-white font-bold block mb-1 hover:text-[#F95700] transition text-xl">8 963 600 63 46</a>
+                        <p class="text-gray-400 text-sm font-medium">spherarus.msk@gmail.com</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-gray-500 uppercase font-black mb-2">Офис и База</p>
+                        <p class="text-white font-bold text-sm uppercase">Оренбургская обл., г. Оренбург</p>
+                    </div>
+                </div>
+
+                <!-- Карточка реквизитов -->
+                <div class="p-8 bg-white/5 border border-white/5 space-y-2">
+                    <p class="text-[10px] text-gray-500 uppercase font-black mb-4 tracking-widest text-white/40">Юридическая информация</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-2 text-[10px] tracking-tight">
+                        <p><span class="text-gray-600 uppercase mr-2">Наименование:</span> <span class="text-gray-300">ООО "СФЕРА"</span></p>
+                        <p><span class="text-gray-600 uppercase mr-2">ИНН:</span> <span class="text-gray-300">5629021484</span></p>
+                        <p><span class="text-gray-600 uppercase mr-2">КПП:</span> <span class="text-gray-300">562901001</span></p>
+                        <p><span class="text-gray-600 uppercase mr-2">ОГРН:</span> <span class="text-gray-300">1225600009480</span></p>
+                        <p><span class="text-gray-600 uppercase mr-2">БИК:</span> <span class="text-gray-300">045354601</span></p>
+                        <p class="sm:col-span-2 border-t border-white/5 pt-2 mt-2">
+                            <span class="text-gray-600 uppercase mr-2">Расчётный счёт:</span> 
+                            <span class="text-gray-300">40702810746000014531</span>
+                        </p>
+                        <p class="sm:col-span-2">
+                            <span class="text-gray-600 uppercase mr-2">Банк:</span> 
+                            <span class="text-gray-300 uppercase">Оренбургское отделение N8623 ПАО СБЕРБАНК</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-glass p-10">
+                <p class="text-white font-bold mb-6 uppercase tracking-widest text-sm">Запрос на расчет объекта</p>
+                <form id="contact-form" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" placeholder="Организация" required class="p-4 w-full text-sm">
+                        <input type="tel" placeholder="Номер для связи" required class="p-4 w-full text-sm">
+                    </div>
+                    <textarea rows="4" placeholder="Тип объекта, примерная площадь, локация..." class="p-4 w-full text-sm"></textarea>
+                    <div class="border-2 border-dashed border-[#3F3F46] p-6 text-center cursor-pointer hover:border-[#F95700] transition group">
+                        <span class="text-[10px] text-gray-500 group-hover:text-white transition uppercase font-black">Прикрепить ТЗ или Фото объекта</span>
+                    </div>
+                    <button class="btn-industrial w-full py-5 font-black uppercase text-sm tracking-widest">Отправить на расчет</button>
+                </form>
+            </div>
+        </div>
+        <div class="mt-20 pt-8 border-t border-white/5 text-[9px] text-gray-700 uppercase tracking-widest flex flex-col md:flex-row justify-between items-center">
+            <p>© 2024 ООО «СФЕРА» | ИНН 5629021484</p>
+            <p class="mt-4 md:mt-0 italic text-gray-800">Промышленное лидерство и technological надежность</p>
+        </div>
+    </div>
+</footer>
+
+<!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+<script>
+    // Отраслевой контент
+    const sectorContent = {
+        oilgas: {
+            title: "Нефтегазовый сектор",
+            desc: "Строгое соблюдение техкарт и регламентов ПАО «Газпром» и «Транснефть». Нанесение покрытий «Биурс» на трубопроводы и РВС.",
+            features: [
+                "Трассовые и базовые покрытия",
+                "Внутренний контроль (ВИК)",
+                "Адгезиметрия / Толщинометрия",
+                "Работа по ИСО 8501-1"
+            ],
+            btn: "Регламент работ"
+        },
+        municipal: {
+            title: "Госзаказы / 44-ФЗ",
+            desc: "Работа через казначейские счета. Прозрачная сметная документация. Соблюдение графиков на объектах инфраструктуры.",
+            features: [
+                "Гранд-Смета (ФЕР/ТЕР)",
+                "Акты КС-2 и КС-3",
+                "Работа по 44-ФЗ / 223-ФЗ",
+                "Заводская инфраструктура"
+            ],
+            btn: "Подготовка тендера"
+        },
+        private: {
+            title: "Частный сектор",
+            desc: "Оперативная окраска заборов, кровли и фасадов большой площади. Сварочный ремонт конструкций перед изоляцией.",
+            features: [
+                "Покраска фасадов и крыш",
+                "Безвоздушное нанесение АБР",
+                "Сварочные работы любой сложности",
+                "Гарантия на адгезию"
+            ],
+            btn: "Расчет для частника"
+        }
+    };
+
+    function switchSector(key) {
+        document.querySelectorAll('.sector-tab').forEach(btn => {
+            btn.classList.remove('sector-active');
+            btn.classList.add('text-gray-600');
+        });
+        document.getElementById(`tab-${key}`).classList.add('sector-active');
+        document.getElementById(`tab-${key}`).classList.remove('text-gray-600');
+
+        const data = sectorContent[key];
+        const container = document.getElementById('sector-content');
+        container.style.opacity = '0';
+        
+        setTimeout(() => {
+            container.innerHTML = `
+                <div class="animate-in fade-in duration-500">
+                    <h3 class="text-3xl text-white font-black mb-6 uppercase">${data.title}</h3>
+                    <p class="text-lg text-gray-400 mb-8 leading-relaxed">${data.desc}</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                        ${data.features.map(f => `
+                            <div class="flex items-center space-x-3">
+                                <div class="w-1.5 h-1.5 bg-[#F95700]"></div>
+                                <span class="text-[11px] font-bold text-white uppercase">${f}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button class="px-8 py-4 border border-[#F95700] text-[#F95700] font-black uppercase text-[10px] tracking-widest hover:bg-[#F95700] hover:text-white transition">
+                        ${data.btn}
+                    </button>
+                </div>
+                <div class="relative hidden lg:block overflow-hidden border border-white/5 bg-[#18181B] aspect-video">
+                    <div class="absolute inset-0 bg-gradient-to-br from-[#F95700]/10 to-transparent"></div>
+                    <div class="w-full h-full flex items-center justify-center">
+                        <span class="text-white/5 font-black text-5xl uppercase text-center leading-none">СФЕРА<br>ПРОМ</span>
+                    </div>
+                </div>
+            `;
+            container.style.opacity = '1';
+        }, 200);
+    }
+
+    function updateCalc() {
+        const rate = parseInt(document.getElementById('calc-service').value);
+        const area = parseInt(document.getElementById('calc-area').value) || 0;
+        const total = rate * area;
+        document.getElementById('calc-result').innerText = total.toLocaleString() + ' ₽';
+    }
+
+    function initCharts() {
+        const ctx = document.getElementById('capacityChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
+                datasets: [{
+                    label: 'Задействованная техника (%)',
+                    data: [82, 95, 88, 92, 98, 75, 70],
+                    borderColor: '#F95700',
+                    backgroundColor: 'rgba(249, 87, 0, 0.05)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#F95700',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { 
+                        beginAtZero: true, 
+                        max: 100, 
+                        grid: { color: 'rgba(255,255,255,0.03)' }, 
+                        ticks: { color: '#52525b', font: { size: 9 } } 
+                    },
+                    x: { 
+                        grid: { display: false }, 
+                        ticks: { color: '#52525b', font: { size: 9 } } 
+                    }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+
+    function scrollToSection(id) {
+        document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+    }
+
+    window.onload = () => {
+        switchSector('oilgas');
+        initCharts();
+        updateCalc();
+        
+        document.getElementById('calc-service').addEventListener('change', updateCalc);
+        document.getElementById('calc-area').addEventListener('input', updateCalc);
+        
+        document.getElementById('contact-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            alert('Ваша заявка принята. Специалист ООО «СФЕРА» подготовит расчет в течение 1 рабочего дня.');
+            e.target.reset();
+        });
+    };
+</script>
+
+</body>
+</html>

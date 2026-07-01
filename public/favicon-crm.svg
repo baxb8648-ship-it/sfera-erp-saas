@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Orange Gradient -->
+    <linearGradient id="orange-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF7F3E" />
+      <stop offset="50%" stop-color="#F95700" />
+      <stop offset="100%" stop-color="#D04300" />
+    </linearGradient>
+    <!-- Steel/Zinc Gradient -->
+    <linearGradient id="steel-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="60%" stop-color="#E4E4E7" />
+      <stop offset="100%" stop-color="#A1A1AA" />
+    </linearGradient>
+    <!-- Dark Slate Gradient for Background -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E1E24" />
+      <stop offset="100%" stop-color="#0F0F11" />
+    </linearGradient>
+    <!-- Glow filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#F95700" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- Outer background circle -->
+  <circle cx="256" cy="256" r="240" fill="url(#bg-grad)" stroke="#27272A" stroke-width="8" />
+  
+  <!-- Outer Gear-like teeth representing ERP/CRM mechanisms -->
+  <g fill="none" stroke="#27272A" stroke-width="8" opacity="0.8">
+    <path d="M 256 0 L 256 30 M 256 482 L 256 512 M 0 256 L 30 256 M 482 256 L 512 256" />
+    <path d="M 75 75 L 96 96 M 416 416 L 437 437 M 75 437 L 96 416 M 416 75 L 437 96" />
+  </g>
+  
+  <!-- Glowing orange connection grid / nodes in the background -->
+  <g stroke="url(#orange-grad)" stroke-width="3" opacity="0.3" fill="none">
+    <!-- horizontal network lines -->
+    <line x1="80" y1="200" x2="432" y2="200" />
+    <line x1="80" y1="312" x2="432" y2="312" />
+    <!-- connection circles (nodes) -->
+    <circle cx="120" cy="200" r="8" fill="#F95700" />
+    <circle cx="392" cy="200" r="8" fill="#F95700" />
+    <circle cx="180" cy="312" r="8" fill="#F95700" />
+    <circle cx="332" cy="312" r="8" fill="#F95700" />
+  </g>
+
+  <!-- The stylized Cyrillic "Л" with drop shadow -->
+  <g filter="url(#glow)">
+    <!-- Left Angled Metal Leg -->
+    <path d="M140 400 L215 400 L300 170 L225 170 Z" fill="url(#steel-grad)" />
+    
+    <!-- Right Angled Orange AKZ Leg -->
+    <path d="M225 170 L300 170 L385 400 L310 400 Z" fill="url(#orange-grad)" />
+    
+    <!-- Joining Structural Beam (horizontal) -->
+    <path d="M185 280 L325 280 L310 315 L170 315 Z" fill="#FFFFFF" opacity="0.9" />
+    
+    <!-- Spray Coating / Precision Apex Point -->
+    <polygon points="256,105 285,145 227,145" fill="url(#orange-grad)" />
+  </g>
+</svg>

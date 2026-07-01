@@ -1,0 +1,640 @@
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, ARRAY, Enum, Boolean, Text
+from sqlalchemy.orm import relationship
+import enum
+from datetime import datetime
+from .database import Base
+
+class Tenant(Base):
+    """
+    Таблица компаний-клиентов (тенантов) в SaaS.
+    Каждая компания изолирована и имеет свой набор данных.
+    """
+    __tablename__ = "tenants"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)                          # Краткое наименование
+    full_name = Column(String, nullable=True)                   # Полное наименование (из ФНС)
+    inn = Column(String, unique=True, index=True)               # ИНН
+    kpp = Column(String, nullable=True)                         # КПП
+    ogrn = Column(String, nullable=True)                        # ОГРН
+    address = Column(Text, nullable=True)                       # Юридический адрес
+    director = Column(String, nullable=True)                    # ФИО генерального директора
+    sphere = Column(String, default="construction")             # Сфера деятельности: construction, service, agri, booking
+    is_active = Column(Boolean, default=True)                   # Активность (блокировка за неуплату)
+    subscription_ends_at = Column(DateTime, nullable=True)      # Срок действия подписки
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Invoice(Base):
+    """
+    Таблица B2B счетов на оплату подписки SaaS.
+    """
+    __tablename__ = "invoices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"))
+    amount = Column(Float, nullable=False)
+    pdf_path = Column(String, nullable=False)
+    status = Column(String, default="pending")                  # pending, paid, cancelled
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    tenant = relationship("Tenant")
+
+
+class SegmentEnum(str, enum.Enum):
+    oil_gas = "Нефтегаз"
+    municipal = "Муниципальные учреждения"
+    agro = "Агросектор"
+    commercial = "Коммерческая недвижимость"
+    energy = "ТЭК/ТЭС"
+
+class ClientStatusEnum(str, enum.Enum):
+    new = "Новый"
+    negotiation = "Переговоры"
+    audit = "Выезд на аудит"
+    kp_sent = "КП отправлено"
+    contract = "Договор"
+    in_progress = "В работе"
+    completed = "Завершено"
+
+class Client(Base):
+    __tablename__ = "clients"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    name = Column(String, index=True)
+
+    inn = Column(String, unique=True, index=True, nullable=True)
+    contact_person = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    segment = Column(Enum(SegmentEnum), nullable=True)
+    status = Column(Enum(ClientStatusEnum), default=ClientStatusEnum.new)
+    notes = Column(String, nullable=True)
+    kpp = Column(String, nullable=True)
+    legal_address = Column(String, nullable=True)
+    ogrn = Column(String, nullable=True)
+    bank_name = Column(String, nullable=True)
+    bik = Column(String, nullable=True)
+    rs = Column(String, nullable=True)
+    ks = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    acquisition_cost = Column(Float, default=0.0)
+    
+    # relations
+    interactions = relationship("Interaction", back_populates="client")
+    objects = relationship("Object", back_populates="client")
+
+class Interaction(Base):
+    __tablename__ = "interactions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    client_id = Column(Integer, ForeignKey("clients.id"))
+
+    type = Column(String) # call, email, meeting
+    notes = Column(String)
+    date = Column(DateTime, default=datetime.utcnow)
+    
+    client = relationship("Client", back_populates="interactions")
+
+class Object(Base):
+    __tablename__ = "objects"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    client_id = Column(Integer, ForeignKey("clients.id"))
+
+    name = Column(String)
+    area_sqm = Column(Float)
+    surface_type = Column(String) # concrete, metal
+    service_required = Column(String) # Sandblasting, AKZ, PPU
+    status = Column(String)
+    
+    client = relationship("Client", back_populates="objects")
+    material_consumptions = relationship("MaterialConsumption", back_populates="object", cascade="all, delete-orphan")
+
+    @property
+    def client_name(self):
+        return self.client.name if self.client else None
+
+
+class MaterialConsumption(Base):
+    __tablename__ = "material_consumptions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    object_id = Column(Integer, ForeignKey("objects.id"))
+
+    inventory_id = Column(Integer, ForeignKey("inventory.id"))
+    quantity = Column(Float)
+    date = Column(DateTime, default=datetime.utcnow)
+    
+    object = relationship("Object", back_populates="material_consumptions")
+    inventory_item = relationship("InventoryItem")
+
+    @property
+    def inventory_name(self):
+        return self.inventory_item.name if self.inventory_item else None
+
+    @property
+    def inventory_unit(self):
+        return self.inventory_item.unit if self.inventory_item else "шт"
+
+
+class User(Base):
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    username = Column(String, unique=True, index=True)
+
+    hashed_password = Column(String)
+    role = Column(String, default="manager")
+    telegram_chat_id = Column(String, nullable=True)
+    is_active = Column(Integer, default=1)
+    
+    # SMTP Settings per user
+    smtp_host = Column(String, nullable=True)
+    smtp_port = Column(Integer, nullable=True)
+    smtp_user = Column(String, nullable=True)
+    smtp_password = Column(String, nullable=True)
+    smtp_use_ssl = Column(Integer, default=1)
+
+class AuthLog(Base):
+    __tablename__ = "auth_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    username = Column(String, nullable=True)
+    status = Column(String) # success, failure
+    ip_address = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User")
+
+class FinanceTransaction(Base):
+    __tablename__ = "finance_transactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=True)
+
+    object_id = Column(Integer, ForeignKey("objects.id"), nullable=True)
+    amount = Column(Float)
+    transaction_type = Column(String) # income, expense
+    payment_method = Column(String) # Наличный, Безнал с НДС, Безнал без НДС
+    category = Column(String) # ГСМ, Суточные, Закупка, Оплата
+    date = Column(DateTime, default=datetime.utcnow)
+    cash_register = Column(String, default="works") # works or materials
+    description = Column(String, nullable=True) # Описание транзакции / Контрагент на стороне (Авито и др.)
+
+    client = relationship("Client")
+    object = relationship("Object")
+
+    @property
+    def client_name(self):
+        return self.client.name if self.client else None
+
+    @property
+    def object_name(self):
+        return self.object.name if self.object else None
+
+class Document(Base):
+    __tablename__ = "documents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    client_id = Column(Integer, ForeignKey("clients.id"))
+
+    object_id = Column(Integer, ForeignKey("objects.id"), nullable=True)
+    tender_id = Column(Integer, ForeignKey("tenders.id"), nullable=True)
+    name = Column(String, nullable=True)
+    is_uploaded = Column(Integer, default=0) # 1 if uploaded manually, 0 if generated
+    doc_type = Column(String) # КП, Договор, Акт, Счет
+    file_url = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # relationships
+    client = relationship("Client")
+    object = relationship("Object")
+    tender = relationship("Tender")
+
+    @property
+    def client_name(self):
+        return self.client.name if self.client else None
+
+    @property
+    def object_name(self):
+        return self.object.name if self.object else None
+
+    @property
+    def tender_title(self):
+        return self.tender.title if self.tender else None
+
+
+
+class InventoryItem(Base):
+    __tablename__ = "inventory"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    name = Column(String, index=True)
+
+    quantity = Column(Float, default=0.0)
+    unit = Column(String, default="шт")
+    category = Column(String, nullable=True)
+    barcode = Column(String, unique=True, index=True, nullable=True)
+
+class EquipmentItem(Base):
+    __tablename__ = "equipment"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    name = Column(String, index=True)
+
+    status = Column(String, default="На базе") # На базе, На объекте, В ремонте, Списано
+    last_service = Column(DateTime, nullable=True)
+    inspector = Column(String, nullable=True)
+    object_id = Column(Integer, ForeignKey("objects.id"), nullable=True)
+    barcode = Column(String, unique=True, index=True, nullable=True)
+
+    object = relationship("Object")
+
+    @property
+    def object_name(self):
+        return self.object.name if self.object else None
+
+class CompanySetting(Base):
+    __tablename__ = "company_settings"
+
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), primary_key=True)
+    key = Column(String, primary_key=True, index=True)
+    value = Column(String, nullable=True)
+
+
+
+class Organization(Base):
+    __tablename__ = "organizations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    name = Column(String, index=True)
+
+    subtitle = Column(String, nullable=True)
+    legal_name = Column(String, nullable=True)
+    inn = Column(String, nullable=True)
+    kpp = Column(String, nullable=True)
+    address = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    website = Column(String, nullable=True)
+    website_url = Column(String, nullable=True)
+    regions = Column(String, nullable=True)
+    director = Column(String, nullable=True)
+
+    # Works bank
+    bank_name = Column(String, nullable=True)
+    bik = Column(String, nullable=True)
+    rs = Column(String, nullable=True)
+    ks = Column(String, nullable=True)
+
+    # Materials bank
+    bank_name_materials = Column(String, nullable=True)
+    bik_materials = Column(String, nullable=True)
+    rs_materials = Column(String, nullable=True)
+    ks_materials = Column(String, nullable=True)
+
+    is_active = Column(Integer, default=0)
+
+
+class Tender(Base):
+    __tablename__ = "tenders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    tender_number = Column(String, unique=True, index=True)
+
+    title = Column(String)
+    description = Column(String, nullable=True)
+    customer_name = Column(String, nullable=True)
+    inn = Column(String, nullable=True)
+    price = Column(Float)
+    currency = Column(String, default="RUB")
+    platform = Column(String)
+    link = Column(String, nullable=True)
+    status = Column(String, default="Анализ") # Анализ, Участие, Заявка подана, Выигран, Проигран, Отклонен
+    publication_date = Column(DateTime, nullable=True)
+    submission_deadline = Column(DateTime, nullable=True)
+    assigned_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=True)
+    object_id = Column(Integer, ForeignKey("objects.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    notified_3_days = Column(Integer, default=0)
+    notified_1_day = Column(Integer, default=0)
+    telegram_thread_id = Column(Integer, nullable=True)
+    expected_dumping = Column(String, nullable=True)
+    expected_participants = Column(String, nullable=True)
+    platform_updated_at = Column(DateTime, nullable=True)
+    ai_analysis = Column(String, nullable=True)
+
+    assigned_user = relationship("User")
+    client = relationship("Client")
+    object = relationship("Object")
+
+    @property
+    def assigned_username(self):
+        return self.assigned_user.username if self.assigned_user else None
+
+    @property
+    def client_name(self):
+        return self.client.name if self.client else None
+
+    @property
+    def object_name(self):
+        return self.object.name if self.object else None
+
+
+class TenderPlatform(Base):
+    __tablename__ = "tender_platforms"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    name = Column(String, index=True)
+
+    api_url = Column(String)
+    api_key = Column(String, nullable=True)
+    is_active = Column(Integer, default=1)
+    keywords = Column(String) # Comma-separated
+    exclude_keywords = Column(String, nullable=True) # Comma-separated minus words
+    regions = Column(String) # Comma-separated
+    min_price = Column(Float, nullable=True)
+    max_price = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class TenderRole(Base):
+    __tablename__ = "tender_roles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    tender_id = Column(Integer, ForeignKey("tenders.id"))
+
+    user_id = Column(Integer, ForeignKey("users.id"))
+    role_name = Column(String) # e.g. 'Менеджер', 'Сметчик', 'Юрист'
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    tender = relationship("Tender", backref="roles")
+    user = relationship("User")
+
+    @property
+    def username(self):
+        return self.user.username if self.user else None
+
+
+class DocumentTemplate(Base):
+    __tablename__ = "document_templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    name = Column(String, index=True)
+
+    doc_type = Column(String) # e.g. "Заявка на участие", "Коммерческое предложение"
+    file_path = Column(String)
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    title = Column(String, index=True)
+
+    description = Column(String, nullable=True)
+    status = Column(String, default="Новая")  # Новая, В процессе, Выполнена, Отменена
+    priority = Column(String, default="Средний")  # Низкий, Средний, Высокий
+    created_by_id = Column(Integer, ForeignKey("users.id"))
+    assigned_to_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    due_date = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    created_by = relationship("User", foreign_keys=[created_by_id])
+    assigned_to = relationship("User", foreign_keys=[assigned_to_id])
+
+    @property
+    def creator_name(self):
+        return self.created_by.username if self.created_by else None
+
+    @property
+    def assignee_name(self):
+        return self.assigned_to.username if self.assigned_to else None
+
+
+class TaskMessage(Base):
+    __tablename__ = "task_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=True)  # Nullable для общего командного чата
+
+    user_id = Column(Integer, ForeignKey("users.id"))
+    message = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+
+    @property
+    def username(self):
+        return self.user.username if self.user else None
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    username = Column(String, nullable=True)
+    action = Column(String)  # "create", "update", "delete"
+    object_type = Column(String)  # "Client", "Object", "Tender", "Task", "FinanceTransaction", "EquipmentItem", "InventoryItem", "Document"
+    object_id = Column(Integer, nullable=True)
+    object_name = Column(String, nullable=True)
+    changes = Column(String, nullable=True)  # JSON-serialized changed fields
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+
+
+class SpecialTask(Base):
+    __tablename__ = "special_tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    name = Column(String, index=True)
+
+    keyword = Column(String)
+    offer_context = Column(String)
+    platform = Column(String, default="Закупки.gov.ru")
+    search_type = Column(String, default="tenders") # tenders, organizations, okvad
+    is_active = Column(Integer, default=1)
+    schedule_interval = Column(String, default="weekly") # manual, daily, weekly
+    last_run = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    # Поля для ОКВЭД-парсинга
+    okvad_code = Column(String, nullable=True)       # e.g. "43.99" или "43.99,43.91"
+    region_code = Column(String, nullable=True)       # e.g. "56" (Оренбургская обл.)
+    search_limit = Column(Integer, default=20)        # 20 или 50
+    use_ai_filter = Column(Integer, default=0)        # 0 или 1
+    ai_filter_prompt = Column(Text, nullable=True)    # Описание целевой аудитории для ИИ
+    run_status = Column(String, default="idle")       # idle, running, error
+
+    leads = relationship("LeadDatabase", back_populates="task", cascade="all, delete-orphan")
+
+
+class LeadDatabase(Base):
+    """База лидов, собранных через ОКВЭД-парсер и другие источники."""
+    __tablename__ = "lead_database"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    task_id = Column(Integer, ForeignKey("special_tasks.id"), nullable=True)
+
+
+    # Реквизиты из ЕГРЮЛ
+    name = Column(String, index=True)          # Краткое название ООО
+    full_name = Column(String, nullable=True)  # Полное наименование
+    inn = Column(String, nullable=True, index=True)
+    ogrn = Column(String, nullable=True)
+    okvad_main = Column(String, nullable=True) # Основной ОКВЭД
+    okvad_name = Column(String, nullable=True) # Расшифровка основного ОКВЭД
+    region = Column(String, nullable=True)     # Регион из адреса
+    address = Column(String, nullable=True)    # Юридический адрес
+    reg_date = Column(String, nullable=True)   # Дата регистрации
+    status = Column(String, default="Действующее")  # Действующее / Ликвидировано
+
+    # Контакты (из rusprofile/DuckDuckGo обогащения)
+    phone = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    website = Column(String, nullable=True)
+    director = Column(String, nullable=True)   # Руководитель
+
+    # AI-оценка
+    ai_score = Column(Integer, default=0)      # 0-10 релевантность по ИИ
+    ai_reason = Column(Text, nullable=True)    # Пояснение ИИ
+
+    # Статус работы
+    kp_sent = Column(Integer, default=0)       # Отправлено ли КП
+    kp_sent_at = Column(DateTime, nullable=True)
+    added_to_crm = Column(Integer, default=0)  # Добавлен ли в клиенты CRM
+    source = Column(String, default="api-fns") # Источник: api-fns, rusprofile, duckduckgo
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    task = relationship("SpecialTask", back_populates="leads")
+
+
+class TempVoiceTask(Base):
+    """Временное хранилище параметров задачи, распознанных из голосового сообщения.
+    Запись создаётся при распознавании и удаляется после подтверждения или отмены.
+    """
+    __tablename__ = "temp_voice_tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    telegram_user_id = Column(String, index=True)  # ID пользователя в Telegram
+
+    chat_id = Column(String)                        # ID чата, куда отправить ответ
+    original_text = Column(Text, nullable=True)     # Расшифрованный текст голосового
+
+    # Сущности, извлечённые ИИ
+    client_name = Column(String, nullable=True)
+    contact_person = Column(String, nullable=True)
+    contact_phone = Column(String, nullable=True)
+    service_type = Column(String, nullable=True)
+    area = Column(String, nullable=True)
+    deadline_desc = Column(String, nullable=True)
+    task_title = Column(String, nullable=True)
+    task_description = Column(Text, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class DecisionLog(Base):
+    """
+    Журнал архитектурных решений (Decision Log) — часть мета-модуля управления платформой.
+
+    Фиксирует ПОЧЕМУ было принято то или иное техническое решение,
+    чтобы будущие сессии агента (и команда) понимали контекст без повторного анализа.
+
+    Пример: 'STT через Groq, а не локальный faster-whisper — потому что
+    Groq бесплатен, не требует GPU и работает быстрее на текущем железе.'
+
+    Добавить из Telegram: /решение Название | Решение | Обоснование
+    Посмотреть список: /решения
+    API: GET /decisions, POST /decisions, GET /decisions/export
+    """
+    __tablename__ = "decision_log"
+
+    id           = Column(Integer,  primary_key=True, index=True)
+    title        = Column(String,   nullable=False)   # Короткое название: "STT: Groq vs Whisper"
+    decision     = Column(Text,     nullable=False)   # Что решили: "Используем Groq Whisper API"
+    rationale    = Column(Text,     nullable=False)   # Почему: "Бесплатно, не нужен GPU, быстрее"
+    alternatives = Column(Text,     nullable=True)    # Что отвергли: "faster-whisper — нужен GPU"
+    tags         = Column(String,   nullable=True)    # "ai,infrastructure" — через запятую
+    source       = Column(String,   default="telegram")  # "telegram" | "api" | "seed"
+    created_at   = Column(DateTime, default=datetime.utcnow)
+
+
+class Epic(Base):
+    """
+    Крупные блоки/модули разработки (например, 'Telegram Mini App v2', 'Бот-Снабженец').
+    """
+    __tablename__ = "epics"
+
+    id          = Column(Integer,  primary_key=True, index=True)
+    title       = Column(String,   nullable=False)
+    description = Column(Text,     nullable=True)
+    status      = Column(String,   default="planned")  # planned, in_progress, done, cancelled
+    priority    = Column(String,   default="Medium")   # Low, Medium, High
+    created_at  = Column(DateTime, default=datetime.utcnow)
+
+
+class Feature(Base):
+    """
+    Конкретные функциональные фичи, привязанные к эпикам.
+    """
+    __tablename__ = "features"
+
+    id          = Column(Integer,  primary_key=True, index=True)
+    epic_id     = Column(Integer,  ForeignKey("epics.id"), nullable=True)
+    title       = Column(String,   nullable=False)
+    description = Column(Text,     nullable=True)
+    module      = Column(String,   nullable=True)  # frontend, backend, bot, ai, infra
+    status      = Column(String,   default="planned")  # planned, in_progress, done, cancelled
+    priority    = Column(String,   default="Medium")   # Low, Medium, High
+    created_at  = Column(DateTime, default=datetime.utcnow)
+
+    epic = relationship("Epic")
+
+
+class Bug(Base):
+    """
+    Баги и технические дефекты.
+    """
+    __tablename__ = "bugs"
+
+    id          = Column(Integer,  primary_key=True, index=True)
+    title       = Column(String,   nullable=False)
+    steps       = Column(Text,     nullable=True)      # Шаги воспроизведения
+    severity    = Column(String,   default="Medium")   # Low, Medium, High, Critical
+    component   = Column(String,   nullable=True)      # frontend, backend, bot, parser
+    status      = Column(String,   default="open")     # open, in_progress, resolved, closed
+    created_at  = Column(DateTime, default=datetime.utcnow)
+
