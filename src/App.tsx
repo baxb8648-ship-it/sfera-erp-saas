@@ -34,6 +34,7 @@ if (
 }
 
 // Lazy load website public pages
+const SaaSLanding = React.lazy(() => import('./pages/SaaSLanding').then(m => ({ default: m.SaaSLanding })));
 const HomePage = React.lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })));
 const SectorPage = React.lazy(() => import('./pages/SectorPage').then(m => ({ default: m.SectorPage })));
 const MaterialPage = React.lazy(() => import('./pages/MaterialPage').then(m => ({ default: m.MaterialPage })));
@@ -106,7 +107,8 @@ const App: React.FC = () => {
             <Routes>
               {/* Main Website Layout */}
               <Route path="/" element={<Layout />}>
-                <Route index element={<HomePage />} />
+                <Route index element={<SaaSLanding />} />
+                <Route path="industrial" element={<HomePage />} />
                 <Route path="sectors/:id" element={<SectorPage />} />
                 <Route path="materials/:id" element={<MaterialPage />} />
                 <Route path="standards/:id" element={<StandardPage />} />

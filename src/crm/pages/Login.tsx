@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, User, Eye, EyeOff, Building2, Mail, Sparkles, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { useAuth } from '../context/AuthContext';
 
 export const Login: React.FC = () => {
-  // Состояние переключения Вход / Регистрация
-  const [isRegister, setIsRegister] = useState(false);
+  const [searchParams] = useSearchParams();
+  // Состояние переключения Вход / Регистрация (из URL или по дефолту)
+  const [isRegister, setIsRegister] = useState(() => searchParams.get('tab') === 'register');
 
   // Общие стейты
   const [error, setError] = useState('');
@@ -21,7 +22,7 @@ export const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   // Стейты Регистрации по ИНН
-  const [inn, setInn] = useState('');
+  const [inn, setInn] = useState(() => searchParams.get('inn') || '');
   const [sphere, setSphere] = useState('construction');
   const [regUsername, setRegUsername] = useState('');
   const [regPassword, setRegPassword] = useState('');
@@ -37,7 +38,7 @@ export const Login: React.FC = () => {
   } | null>(null);
   const [isFetchingInn, setIsFetchingInn] = useState(false);
 
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 
   // Живой поиск реквизитов при вводе ИНН
   useEffect(() => {

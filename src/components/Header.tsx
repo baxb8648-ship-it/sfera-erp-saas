@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, X, Phone, Sun, Moon } from 'lucide-react';
+import { Menu, X, Sun, Moon } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 export const Header: React.FC = () => {
@@ -79,16 +79,26 @@ export const Header: React.FC = () => {
         </div>
 
         {/* Desktop Contact / CTA & Theme Toggle */}
-        <div className="hidden sm:flex items-center gap-6">
-          <div className="flex flex-col items-end">
-            <a href="tel:+79636006346" className="text-text font-bold text-lg hover:text-[#F95700] transition flex items-center gap-2">
-              <Phone className="w-4 h-4 text-primary" />
-              8 963 600 63 46
-            </a>
-            <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider mt-0.5">
-              Оренбург • Самара • Уфа
-            </span>
-          </div>
+        <div className="hidden sm:flex items-center gap-4">
+          <button
+            onClick={() => navigate('/crm/login')}
+            className="px-4 py-2 rounded-xl bg-transparent hover:bg-surface border border-border text-xs font-bold text-text transition cursor-pointer"
+          >
+            Войти в ERP
+          </button>
+          <button
+            onClick={() => {
+              if (location.pathname === '/') {
+                const el = document.getElementById('fns-onboard');
+                el?.scrollIntoView({ behavior: 'smooth' });
+              } else {
+                navigate('/crm/login?tab=register');
+              }
+            }}
+            className="px-4 py-2 rounded-xl bg-[#F95700] hover:bg-orange-600 text-white text-xs font-bold transition cursor-pointer shadow-sm shadow-[#F95700]/20"
+          >
+            Регистрация B2B
+          </button>
           <button 
             onClick={() => setIsDark(!isDark)}
             className="relative p-2 rounded-full bg-surface border border-border text-text-muted hover:text-primary transition group cursor-pointer"
@@ -137,14 +147,27 @@ export const Header: React.FC = () => {
           <button onClick={() => handleNavClick('contacts')} className="text-left hover:text-[#F95700] transition">
             Контакты
           </button>
-          <div className="pt-4 border-t border-border flex flex-col space-y-2">
-            <a href="tel:+79636006346" className="text-text font-bold text-lg flex items-center gap-2">
-              <Phone className="w-4 h-4 text-primary" />
-              8 963 600 63 46
-            </a>
-            <span className="text-[10px] text-text-muted font-bold uppercase">
-              Оренбург • Самара • Уфа
-            </span>
+          <div className="pt-4 border-t border-border flex flex-col space-y-3">
+            <button
+              onClick={() => { setIsOpen(false); navigate('/crm/login'); }}
+              className="w-full py-3 rounded-xl bg-surface border border-border text-center text-xs font-bold text-text transition cursor-pointer"
+            >
+              Войти в ERP
+            </button>
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                if (location.pathname === '/') {
+                  const el = document.getElementById('fns-onboard');
+                  el?.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                  navigate('/crm/login?tab=register');
+                }
+              }}
+              className="w-full py-3 rounded-xl bg-[#F95700] hover:bg-orange-600 text-center text-white text-xs font-bold transition cursor-pointer shadow-sm shadow-[#F95700]/20"
+            >
+              Регистрация B2B (по ИНН)
+            </button>
           </div>
         </div>
       </div>
