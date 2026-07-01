@@ -1,0 +1,169 @@
+
+<h2 class="sr-only">Архитектура SaaS-платформы CRM/ERP с AI-агентами — интерактивная карта модулей</h2>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.wrap{padding:0 0 1.5rem;font-family:var(--font-sans)}
+.top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;padding-bottom:.75rem;border-bottom:.5px solid var(--border)}
+.top-bar h3{font-size:15px;font-weight:500;color:var(--text-primary)}
+.badge{font-size:11px;padding:3px 10px;border-radius:20px;background:var(--bg-success);color:var(--text-success);font-weight:500}
+.core-block{background:var(--surface-1);border:.5px solid var(--border-accent);border-radius:12px;padding:14px 16px;margin-bottom:16px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+.core-title{grid-column:1/-1;font-size:12px;font-weight:500;color:var(--text-accent);letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px}
+.core-pill{font-size:12px;color:var(--text-secondary);background:var(--surface-2);border:.5px solid var(--border);border-radius:6px;padding:5px 8px;text-align:center}
+.modules-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.module-card{background:var(--surface-1);border:.5px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;transition:border-color .15s;position:relative}
+.module-card:hover{border-color:var(--border-strong)}
+.module-card.active{border-color:var(--border-accent);background:var(--surface-2)}
+.module-head{display:flex;align-items:center;gap:10px;margin-bottom:0}
+.module-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:17px}
+.module-name{font-size:13px;font-weight:500;color:var(--text-primary);line-height:1.3}
+.module-sub{font-size:11px;color:var(--text-secondary);margin-top:1px}
+.agents-block{margin-top:12px;border-top:.5px solid var(--border);padding-top:12px;display:none}
+.module-card.active .agents-block{display:block}
+.agent-row{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:.5px solid var(--border)}
+.agent-row:last-child{border-bottom:none}
+.agent-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.agent-name{font-size:12px;font-weight:500;color:var(--text-primary)}
+.agent-desc{font-size:11px;color:var(--text-secondary);margin-top:1px}
+.sub-agents{margin-top:4px;display:flex;flex-wrap:wrap;gap:4px}
+.sub-pill{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--surface-0);border:.5px solid var(--border);color:var(--text-muted)}
+.pipeline{background:var(--surface-1);border:.5px solid var(--border);border-radius:12px;padding:14px 16px}
+.pipe-title{font-size:12px;font-weight:500;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px}
+.pipe-steps{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding-bottom:4px}
+.pipe-step{flex:1;min-width:100px;background:var(--surface-2);border:.5px solid var(--border);border-radius:8px;padding:10px 10px;position:relative;text-align:center}
+.pipe-step+.pipe-step::before{content:'→';position:absolute;left:-10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;z-index:1}
+.pipe-tag{font-size:10px;color:var(--text-muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.04em}
+.pipe-name{font-size:12px;font-weight:500;color:var(--text-primary);line-height:1.3}
+.pipe-step.manual{border-color:var(--border-warning);background:var(--bg-warning)}
+.pipe-step.manual .pipe-name{color:var(--text-warning)}
+.pipe-step.ai{border-color:var(--border-accent);background:var(--bg-accent)}
+.pipe-step.ai .pipe-name{color:var(--text-accent)}
+.legend{display:flex;gap:12px;margin-top:10px;flex-wrap:wrap}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-secondary)}
+.leg-dot{width:8px;height:8px;border-radius:2px}
+.info-bar{margin-top:12px;font-size:11px;color:var(--text-muted);line-height:1.5;padding:8px 10px;background:var(--surface-0);border-radius:6px;border:.5px solid var(--border)}
+</style>
+<div class="wrap">
+  <div class="top-bar">
+    <h3>CRM/ERP SaaS-платформа с AI-агентами</h3>
+    <span class="badge">v2.0 Roadmap</span>
+  </div>
+
+  <div class="core-block">
+    <div class="core-title">Ядро платформы (Core) — уже построено → нужна миграция на PostgreSQL + Multi-tenancy</div>
+    <div class="core-pill">Kanban + CRM</div>
+    <div class="core-pill">Тендеры + Парсер</div>
+    <div class="core-pill">Telegram Bot + Mini App</div>
+    <div class="core-pill">Ollama Qwen2:7B</div>
+    <div class="core-pill">Финансы + Склад</div>
+    <div class="core-pill">ОКВЭД-парсер</div>
+    <div class="core-pill">AI Копилот</div>
+    <div class="core-pill">PostgreSQL + RLS</div>
+  </div>
+
+  <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Нажмите на модуль чтобы увидеть агентов ↓</div>
+
+  <div class="modules-grid" id="grid"></div>
+
+  <div class="pipeline">
+    <div class="pipe-title">Пример пайплайна: тендер → продажа → стройка</div>
+    <div class="pipe-steps">
+      <div class="pipe-step ai"><div class="pipe-tag">Парсер</div><div class="pipe-name">Найден тендер</div></div>
+      <div class="pipe-step ai"><div class="pipe-tag">AI Скоринг</div><div class="pipe-name">Оценка 8/10</div></div>
+      <div class="pipe-step manual"><div class="pipe-tag">▶ Кнопка</div><div class="pipe-name">Взять в работу</div></div>
+      <div class="pipe-step ai"><div class="pipe-tag">Продажник</div><div class="pipe-name">Генерация КП</div></div>
+      <div class="pipe-step manual"><div class="pipe-tag">▶ Кнопка</div><div class="pipe-name">Отправить КП</div></div>
+      <div class="pipe-step ai"><div class="pipe-tag">Юрист</div><div class="pipe-name">Анализ договора</div></div>
+      <div class="pipe-step manual"><div class="pipe-tag">▶ Кнопка</div><div class="pipe-name">Подписать</div></div>
+      <div class="pipe-step ai"><div class="pipe-tag">Стройка</div><div class="pipe-name">Создать проект</div></div>
+    </div>
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:var(--fill-accent)"></div>AI-действие (авто)</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--fill-warning)"></div>Ручная кнопка (подтверждение)</div>
+    </div>
+    <div class="info-bar">Каждый переход между агентами требует нажатия кнопки менеджером. Агенты работают автономно внутри своего этапа, но не переходят к следующему без разрешения человека.</div>
+  </div>
+</div>
+<script>
+const modules=[
+  {id:'construction',icon:'🏗',color:'#185FA5',bg:'#E6F1FB',name:'Строительство',sub:'Закупки · Сметы · Ход работ',agents:[
+    {name:'Estimate Agent',desc:'Читает ТЗ/PDF → извлекает объёмы → создаёт смету КС-2',color:'#185FA5',subs:['PDF-парсер','Объёмы м²','Расценки из RAG']},
+    {name:'Procurement Agent',desc:'Мониторинг потребностей → заявки на закупку → поиск поставщиков',color:'#185FA5',subs:['Запросы цен','Сравнение КП','Авто-заявки']},
+    {name:'Progress Agent',desc:'Контролирует план-факт, фото-отчёты с геометками, Ганту',color:'#185FA5',subs:['Фото-анализ','Отклонения','Уведомления']},
+    {name:'Budget Control',desc:'Отслеживает бюджет vs факт, предупреждает о перерасходе',color:'#185FA5',subs:['KS-2/KS-3','Перерасход','Аналитика']},
+  ]},
+  {id:'agro',icon:'🌾',color:'#3B6D11',bg:'#EAF3DE',name:'Агро',sub:'Поля · Техника · КРС · Посевы',agents:[
+    {name:'Field Monitor',desc:'Следит за севооборотом, сроками посева и уборки по полям',color:'#3B6D11',subs:['Кадастр','Культуры','Погода']},
+    {name:'Equipment Agent',desc:'Учёт техники, пробег, расход ГСМ, ГЛОНАСС-трекинг',color:'#3B6D11',subs:['ГЛОНАСС','ТО-план','Расход ГСМ']},
+    {name:'Livestock Agent',desc:'КРС: здоровье, вакцинация, привесы, кормовой план',color:'#3B6D11',subs:['Вет.учёт','Рацион','Надои']},
+    {name:'Harvest Agent',desc:'Уборочная кампания: урожайность, элеватор, логистика',color:'#3B6D11',subs:['Бункера','Логистика','Хранение']},
+  ]},
+  {id:'beauty',icon:'✂️',color:'#993556',bg:'#FBEAF0',name:'Салоны красоты',sub:'Запись · Мастера · Остатки',agents:[
+    {name:'Booking Agent',desc:'Онлайн-запись, конфликты расписания, шахматка мастеров',color:'#993556',subs:['Слоты','Напоминания','Отмены']},
+    {name:'Inventory Agent',desc:'Списание расходников на услугу, заказ при минимуме',color:'#993556',subs:['Расходники/услуга','Остатки','Авто-заказ']},
+    {name:'Retention Agent',desc:'Анализ частоты визитов, отток, персональные акции',color:'#993556',subs:['LTV','Отток','SMS/Telegram']},
+  ]},
+  {id:'rental',icon:'🚜',color:'#854F0B',bg:'#FAEEDA',name:'Аренда спецтехники',sub:'Флот · GPS · Состояние · Договоры',agents:[
+    {name:'Fleet Monitor',desc:'Реал-тайм GPS/ГЛОНАСС, моточасы, загрузка флота',color:'#854F0B',subs:['GPS-трек','Моточасы','Загрузка %']},
+    {name:'Maintenance Agent',desc:'Предиктивное ТО по моточасам и пробегу, план ремонтов',color:'#854F0B',subs:['Регламент ТО','Предиктивка','Запчасти']},
+    {name:'Contract Agent',desc:'Договоры аренды, продления, страхование, залоги',color:'#854F0B',subs:['Аренда','Страховка','Биллинг']},
+    {name:'Incident Agent',desc:'Фиксация поломок, ДТП, простоев; страховые случаи',color:'#854F0B',subs:['Инциденты','Страх.случай','Штрафы']},
+  ]},
+  {id:'holding',icon:'🏢',color:'#3C3489',bg:'#EEEDFE',name:'Холдинг',sub:'Подразделения · Счета · Документооборот',agents:[
+    {name:'Consolidation Agent',desc:'Сводная отчётность по всем юр.лицам холдинга',color:'#3C3489',subs:['P&L','Баланс','Cash Flow']},
+    {name:'Intercompany Agent',desc:'Взаиморасчёты между юр.лицами, трансфертное ценообразование',color:'#3C3489',subs:['Займы','Услуги','Акты']},
+    {name:'DocFlow Agent',desc:'Маршрутизация и согласование документов между юр.лицами',color:'#3C3489',subs:['Согласование','ЭДО','Архив']},
+    {name:'Resource Redistribution',desc:'Перераспределение ресурсов: техника, люди, бюджеты',color:'#3C3489',subs:['Техника','Персонал','Бюджеты']},
+  ]},
+  {id:'legal',icon:'⚖️',color:'#0F6E56',bg:'#E1F5EE',name:'Юрист',sub:'Риски · M&A · Реструктуризация',agents:[
+    {name:'Contract Review Agent',desc:'Анализ договоров: риски, пени, скрытые условия → справка',color:'#0F6E56',subs:['Пени %','Оплата','Приёмка']},
+    {name:'M&A Agent',desc:'Схемы поглощений, due diligence, структура сделки',color:'#0F6E56',subs:['Due Dil.','Структура','Риски']},
+    {name:'Compliance Agent',desc:'Мониторинг изменений законодательства, 54-ФЗ, ЕИС',color:'#0F6E56',subs:['54-ФЗ','ЕИС','НПА']},
+    {name:'Litigation Agent',desc:'Судебные дела, дедлайны, претензионная работа',color:'#0F6E56',subs:['Дела','Дедлайны','Претензии']},
+  ]},
+  {id:'sales',icon:'🤝',color:'#D85A30',bg:'#FAECE7',name:'Продажник AI',sub:'Диалоги · КП · Скрипты · Лиды',agents:[
+    {name:'Lead Scorer Agent',desc:'Скоринг лидов 1-10 по ОКВЭД, сайту, истории закупок',color:'#D85A30',subs:['ОКВЭД','Сайт','История']},
+    {name:'Proposal Agent',desc:'Генерация КП.docx по ТЗ: объёмы × ставки из RAG',color:'#D85A30',subs:['ТЗ-парсинг','Расчёт','docx']},
+    {name:'Follow-up Agent',desc:'Мониторинг воронки, следующий шаг, напоминания',color:'#D85A30',subs:['Pipeline','Дедлайны','Телеграм']},
+    {name:'Script Coach Agent',desc:'RAG на библиотеке диалогов: подсказки на возражения',color:'#D85A30',subs:['Скрипты','Возражения','Шаблоны']},
+  ]},
+  {id:'parser',icon:'🔍',color:'#534AB7',bg:'#EEEDFE',name:'Парсер',sub:'Компании · ОКВЭД · Обогащение · Аутрич',agents:[
+    {name:'Discovery Agent',desc:'Поиск компаний по ОКВЭД + регион + размер через api-fns.ru',color:'#534AB7',subs:['ЕГРЮЛ','Регион','Размер']},
+    {name:'Enrichment Agent',desc:'Обогащение: сайт, соц.сети, ЛПР, контакты',color:'#534AB7',subs:['Сайт','ЛПР','DuckDuckGo']},
+    {name:'Scoring Agent',desc:'AI-оценка качества лида: тёплый/холодный/пустышка',color:'#534AB7',subs:['Ollama','Скоринг','Приоритет']},
+    {name:'Outreach Agent',desc:'Персональное КП на email + задача в CRM автоматически',color:'#534AB7',subs:['SMTP','КП','Задача CRM']},
+  ]},
+];
+
+const grid=document.getElementById('grid');
+modules.forEach(m=>{
+  const card=document.createElement('div');
+  card.className='module-card';
+  card.innerHTML=`
+    <div class="module-head">
+      <div class="module-icon" style="background:${m.bg}">${m.icon}</div>
+      <div>
+        <div class="module-name">${m.name}</div>
+        <div class="module-sub">${m.sub}</div>
+      </div>
+    </div>
+    <div class="agents-block">
+      ${m.agents.map(a=>`
+        <div class="agent-row">
+          <div class="agent-dot" style="background:${a.color}"></div>
+          <div>
+            <div class="agent-name">${a.name}</div>
+            <div class="agent-desc">${a.desc}</div>
+            <div class="sub-agents">${a.subs.map(s=>`<span class="sub-pill">${s}</span>`).join('')}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  card.onclick=()=>{
+    const was=card.classList.contains('active');
+    document.querySelectorAll('.module-card').forEach(c=>c.classList.remove('active'));
+    if(!was)card.classList.add('active');
+  };
+  grid.appendChild(card);
+});
+</script>
