@@ -1,73 +1,61 @@
-# React + TypeScript + Vite
+# 🚀 СФЕРА ERP SaaS — README
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## О проекте
 
-Currently, two official plugins are available:
+Коммерческая мультитенантная B2B CRM/ERP платформа, созданная как продолжение
+внутренней системы ООО ЛЕОНИКА.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+**Стек:** FastAPI + React (TypeScript, Vite) + Neon PostgreSQL + Pinecone RAG + Ollama AI
 
-## React Compiler
+## Локальный запуск
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Backend (порт 8001)
+```bash
+cd backend
+# Активировать venv
+.\venv\Scripts\activate        # Windows
+source venv/bin/activate       # Linux/Mac
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Запустить сервер
+uvicorn app.main:app --reload --port 8001
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Frontend (порт 5173)
+```bash
+npm install
+npm run dev
+```
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Переменные окружения
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Скопируй `.env.example` в `backend/.env` и заполни значения:
+
+```
+SECRET_KEY=<random-secret>
+DATABASE_URL=postgresql://...@neon.tech/neondb?sslmode=require
+PINECONE_API_KEY=pcsk_...
+GROQ_API_KEY=gsk_...
+OBLAKO_CRM_BOT_TOKEN=...
+API_FNS_KEY=...
+```
+
+## Архитектура
+
+- **Мультитенантность:** Row-Level Security через SQLAlchemy ContextVar
+- **RAG:** Pinecone (namespace per tenant) + Ollama qwen2:7b
+- **Биллинг:** B2B счета в Word Docx, ИНН-регистрация через api-fns.ru
+- **AI:** Voice-to-Lead (Groq Whisper), тендерный парсер, ОКВЭД-парсер
+
+## Структура
+
+```
+backend/app/
+├── api/          ← FastAPI роуты
+├── services/     ← Pinecone RAG, Billing, AI
+├── parsers/      ← Тендерные площадки
+├── models.py     ← SQLAlchemy модели с tenant_id
+└── database.py   ← RLS фильтр
+src/
+├── crm/          ← CRM-страницы
+└── pages/        ← Лендинг, Auth
 ```
