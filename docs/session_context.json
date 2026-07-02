@@ -1,7 +1,7 @@
 {
   "project_name": "СФЕРА ERP SaaS (коммерческая платформа)",
   "last_session_date": "2026-07-02",
-  "onboarding_next_step": "🚨 ОБЯЗАТЕЛЬНО: После изучения session_context.json следующим шагом агент ОБЯЗАН открыть и прочитать файл docs/REMAINING_GLOBAL_TASKS_AND_ROADMAP.md (или СФЕРА-ЕРП/SPHERA/docs/REMAINING_GLOBAL_TASKS_AND_ROADMAP.md), где описаны оставшиеся архитектурные задачи Фаз 3-6 и текущая работа над ошибками по Супер-Админке!",
+  "onboarding_next_step": "🚨 ОБЯЗАТЕЛЬНО: После изучения session_context.json следующим шагом агент ОБЯЗАН открыть и прочитать файл docs/REMAINING_GLOBAL_TASKS_AND_ROADMAP.md (или СФЕРА-ЕРП/SPHERA/docs/REMAINING_GLOBAL_TASKS_AND_ROADMAP.md), где описаны оставшиеся архитектурные задачи Фаз 5, 8 и новой Фазы 9 (Онлайн-запись и техкарты, Маркетинг/AdTech с промокодами, Логистика с ожиданием поставок)!",
   "legacy_project": "ЛЕОНИКА CRM (порт 8000, срм.леоника56.рф — активна, не трогать)",
   "current_project": {
     "name": "СФЕРА ERP SaaS",
