@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, UserCheck, ShieldAlert, Plus, RefreshCw, Search, ChevronLeft, ChevronRight, Lock, Unlock, Database, Download, Upload, Settings, Eye, EyeOff, Key, Trash2, Mail, History, CreditCard, FileText, Calendar, Sparkles } from 'lucide-react';
+import { ShieldCheck, UserCheck, ShieldAlert, Plus, RefreshCw, Search, ChevronLeft, ChevronRight, Lock, Unlock, Database, Download, Upload, Settings, Eye, EyeOff, Key, Trash2, Mail, History, CreditCard, FileText, Calendar, Sparkles, Gift, Copy, CheckCircle, Users, DollarSign, Award, Share2 } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { IntegrationsSettings } from '../components/IntegrationsSettings';
 import { WhiteLabelSettings } from '../components/WhiteLabelSettings';
+import { RoleMatrixSettings } from '../components/RoleMatrixSettings';
 import { AuditLogs } from './AuditLogs';
 
 interface UserItem {
@@ -29,7 +30,8 @@ interface AuthLogItem {
 }
 
 export const AdminSettings: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'users' | 'audit' | 'security' | 'backup' | 'integrations' | 'billing' | 'whitelabel'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'matrix' | 'audit' | 'security' | 'backup' | 'integrations' | 'billing' | 'whitelabel' | 'referral'>('users');
+  const [copiedRef, setCopiedRef] = useState(false);
   
   // User Management States
   const [users, setUsers] = useState<UserItem[]>([]);
@@ -424,6 +426,12 @@ export const AdminSettings: React.FC = () => {
           <UserCheck className="w-4 h-4" /> Сотрудники
         </button>
         <button
+          onClick={() => setActiveTab('matrix')}
+          className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'matrix' ? 'bg-[#F95700] text-white' : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800'}`}
+        >
+          <Key className="w-4 h-4" /> Матрица ролей
+        </button>
+        <button
           onClick={() => setActiveTab('audit')}
           className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'audit' ? 'bg-[#F95700] text-white' : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800'}`}
         >
@@ -459,11 +467,20 @@ export const AdminSettings: React.FC = () => {
         >
           <Sparkles className="w-4 h-4 text-amber-500" /> White-Label Брендирование
         </button>
+        <button
+          onClick={() => setActiveTab('referral')}
+          className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'referral' ? 'bg-[#F95700] text-white' : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800'}`}
+        >
+          <Gift className="w-4 h-4 text-emerald-500" /> Реферальная программа
+        </button>
       </div>
 
       {/* Tab Contents */}
       <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6">
         
+        {/* Tab: Matrix */}
+        {activeTab === 'matrix' && <RoleMatrixSettings />}
+
         {/* Tab 5: Billing & Invoices */}
         {activeTab === 'billing' && (
           <div className="space-y-8 animate-fadeIn">
@@ -1081,6 +1098,140 @@ export const AdminSettings: React.FC = () => {
         {activeTab === 'whitelabel' && (
           <div className="space-y-6">
             <WhiteLabelSettings />
+          </div>
+        )}
+
+        {/* Tab 7: Referral Program */}
+        {activeTab === 'referral' && (
+          <div className="space-y-8 animate-fadeIn">
+            {/* Header */}
+            <div className="border-b border-gray-100 dark:border-zinc-800 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <div>
+                <h3 className="text-base font-bold text-gray-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                  <Gift className="w-5 h-5 text-emerald-500" /> Партнерская и Реферальная Программа
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-zinc-400 mt-1">
+                  Приглашайте компании в СФЕРА ERP, получайте бесплатные месяцы подписки и до 30% партнерского вознаграждения.
+                </p>
+              </div>
+            </div>
+
+            {/* Hero Card */}
+            <div className="bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 rounded-2xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
+              <div className="relative z-10 max-w-2xl space-y-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-semibold uppercase tracking-wider">
+                  <Award className="w-3.5 h-3.5 text-amber-300" /> PRO Партнер (Скидка 15%)
+                </div>
+                <h4 className="text-2xl md:text-3xl font-extrabold font-['Montserrat'] leading-tight">
+                  Поделитесь ссылкой — получите +14 дней бесплатно за каждую регистрацию!
+                </h4>
+                <p className="text-sm text-emerald-100 leading-relaxed">
+                  Когда приглашенная компания оплачивает любой тариф, вам автоматически начисляется 30 дней работы бесплатно или 30% от суммы их первого счета на баланс.
+                </p>
+
+                <div className="pt-2">
+                  <label className="block text-xs font-semibold uppercase text-emerald-200 mb-1.5">
+                    Ваша персональная реферальная ссылка:
+                  </label>
+                  <div className="flex items-center gap-2 bg-black/20 backdrop-blur-md p-1.5 rounded-xl border border-white/20">
+                    <input 
+                      type="text" 
+                      readOnly 
+                      value={`https://сфера-ерп.рф/register?ref=SPHERA-TENANT-${billingStatus?.id || '101'}-PRO`}
+                      className="flex-1 bg-transparent px-3 py-2 text-sm font-mono text-white focus:outline-none truncate"
+                    />
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(`https://сфера-ерп.рф/register?ref=SPHERA-TENANT-${billingStatus?.id || '101'}-PRO`);
+                        setCopiedRef(true);
+                        setTimeout(() => setCopiedRef(false), 3000);
+                      }}
+                      className="px-4 py-2.5 rounded-lg bg-white text-emerald-800 font-bold text-xs hover:bg-emerald-50 transition-colors flex items-center gap-1.5 shadow-md shrink-0"
+                    >
+                      {copiedRef ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                      <span>{copiedRef ? 'Скопировано!' : 'Скопировать'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bento Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-5 rounded-2xl bg-gray-50 dark:bg-zinc-800/60 border border-gray-200/80 dark:border-zinc-700/80 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                  <Users className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white font-mono">3 компании</div>
+                  <div className="text-xs text-gray-500 dark:text-zinc-400">Приглашено по ссылке</div>
+                </div>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-gray-50 dark:bg-zinc-800/60 border border-gray-200/80 dark:border-zinc-700/80 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <DollarSign className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">+45 дней / 4 500 ₽</div>
+                  <div className="text-xs text-gray-500 dark:text-zinc-400">Начислено бонусов</div>
+                </div>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-gray-50 dark:bg-zinc-800/60 border border-gray-200/80 dark:border-zinc-700/80 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                  <Share2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white font-mono">30% комиссия</div>
+                  <div className="text-xs text-gray-500 dark:text-zinc-400">Ставка с продлений</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Invited Partners Table */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-wider">
+                Приглашенные компании и статус вознаграждения
+              </h4>
+              <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-zinc-800">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-gray-100 dark:bg-zinc-800/80 text-gray-600 dark:text-zinc-400 text-xs uppercase">
+                    <tr>
+                      <th className="py-3 px-4">Компания</th>
+                      <th className="py-3 px-4">Дата регистрации</th>
+                      <th className="py-3 px-4">Тариф</th>
+                      <th className="py-3 px-4">Статус</th>
+                      <th className="py-3 px-4 text-right">Начисленный бонус</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-zinc-800 text-gray-700 dark:text-zinc-300">
+                    <tr>
+                      <td className="py-3 px-4 font-semibold text-gray-900 dark:text-white">ООО ПромТехОборудование</td>
+                      <td className="py-3 px-4 font-mono text-xs">15.06.2026</td>
+                      <td className="py-3 px-4"><span className="px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 text-xs font-semibold">Бизнес</span></td>
+                      <td className="py-3 px-4"><span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">🟢 Оплачен (1 год)</span></td>
+                      <td className="py-3 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">+30 дней / 3 000 ₽</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3 px-4 font-semibold text-gray-900 dark:text-white">АО СтройМашЗавод</td>
+                      <td className="py-3 px-4 font-mono text-xs">28.06.2026</td>
+                      <td className="py-3 px-4"><span className="px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300 text-xs font-semibold">Стандарт</span></td>
+                      <td className="py-3 px-4"><span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">🟢 Оплачен (6 мес)</span></td>
+                      <td className="py-3 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">+15 дней / 1 500 ₽</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3 px-4 font-semibold text-gray-900 dark:text-white">ИП Смирнов В.А.</td>
+                      <td className="py-3 px-4 font-mono text-xs">01.07.2026</td>
+                      <td className="py-3 px-4"><span className="px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 text-xs font-semibold">Пробный</span></td>
+                      <td className="py-3 px-4"><span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">🟡 Тестовый период</span></td>
+                      <td className="py-3 px-4 text-right font-mono text-gray-400">Ожидание оплаты</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 

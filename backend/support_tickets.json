@@ -1,0 +1,89 @@
+[
+  {
+    "id": "SUP-101",
+    "tenant_id": 1,
+    "tenant_name": "ООО Леоника",
+    "sender_username": "admin",
+    "category": "Биллинг и тарифы",
+    "topic": "Вопрос по продлению тарифа Enterprise и закрывающим актам",
+    "priority": "high",
+    "status": "resolved",
+    "created_at": "2026-07-02 11:30",
+    "messages": [
+      {
+        "sender": "admin (Клиент)",
+        "text": "Здравствуйте! Подскажите, когда будет сформирован акт КС-2 за прошлый месяц для нашей бухгалтерии?",
+        "time": "11:30",
+        "is_support": false
+      },
+      {
+        "sender": "superadmin (Техподдержка)",
+        "text": "Здравствуйте. Пришлите скрин",
+        "time": "15:53",
+        "is_support": true
+      },
+      {
+        "sender": "superadmin (Техподдержка)",
+        "text": "ок",
+        "time": "16:20",
+        "is_support": true
+      },
+      {
+        "sender": "superadmin (Техподдержка)",
+        "text": "Прикреплен файл",
+        "time": "16:54",
+        "is_support": true
+      }
+    ]
+  },
+  {
+    "id": "SUP-102",
+    "tenant_id": 2,
+    "tenant_name": "АО СтройТрест",
+    "sender_username": "manager",
+    "category": "Технический сбой",
+    "topic": "Задержка при экспорте отчета КС-2 в формате PDF",
+    "priority": "medium",
+    "status": "resolved",
+    "created_at": "2026-07-02 10:15",
+    "messages": [
+      {
+        "sender": "manager (Клиент)",
+        "text": "При нажатии на кнопку выгрузки PDF система иногда думает 5-7 секунд. Можно ли ускорить?",
+        "time": "10:15",
+        "is_support": false
+      },
+      {
+        "sender": "Алексей (Служба поддержки)",
+        "text": "Добрый день! Мы оптимизировали генератор отчетов на бэкенде. Проверьте, пожалуйста, сейчас.",
+        "time": "10:45",
+        "is_support": true
+      }
+    ]
+  },
+  {
+    "id": "SUP-103",
+    "tenant_id": 1,
+    "tenant_name": "ООО Леоника",
+    "sender_username": "manager",
+    "category": "Запрос функционала",
+    "topic": "Добавить возможность прикреплять аудиозаписи к сделкам",
+    "priority": "low",
+    "status": "resolved",
+    "created_at": "2026-07-01 16:45",
+    "messages": [
+      {
+        "sender": "manager (Клиент)",
+        "text": "Очень хотелось бы прикреплять записи звонков с клиентами к карточке сделки.",
+        "time": "16:45",
+        "is_support": false
+      },
+      {
+        "sender": "Инженер СФЕРА",
+        "text": "Спасибо за предложение! Мы добавили поддержку аудиофайлов в реестр документов.",
+        "time": "18:10",
+        "is_support": true
+      }
+    ]
+  }
+]

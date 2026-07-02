@@ -23,6 +23,7 @@ interface Client {
   rs: string | null;
   ks: string | null;
   created_at: string;
+  custom_fields?: Record<string, any>;
 }
 
 const standardMaterials = [
@@ -175,7 +176,14 @@ export const Clients: React.FC = () => {
     bank_name: '',
     bik: '',
     rs: '',
-    ks: ''
+    ks: '',
+    custom_fields: {} as Record<string, any>
+  });
+
+  const { data: fieldTemplates = [] } = useQuery<any[]>({
+    queryKey: ['fieldTemplates', 'client'],
+    queryFn: () => apiClient.get(`/field-templates/?entity_type=client`),
+    enabled: isModalOpen,
   });
 
   const [formError, setFormError] = useState('');
@@ -352,7 +360,8 @@ export const Clients: React.FC = () => {
       bank_name: '',
       bik: '',
       rs: '',
-      ks: ''
+      ks: '',
+      custom_fields: {}
     });
     setFormError('');
     setIsModalOpen(true);
@@ -376,7 +385,8 @@ export const Clients: React.FC = () => {
       bank_name: client.bank_name || '',
       bik: client.bik || '',
       rs: client.rs || '',
-      ks: client.ks || ''
+      ks: client.ks || '',
+      custom_fields: (client as any).custom_fields || {}
     });
     setFormError('');
     setIsModalOpen(true);
@@ -462,7 +472,8 @@ export const Clients: React.FC = () => {
           bank_name: formData.bank_name || null,
           bik: formData.bik || null,
           rs: formData.rs || null,
-          ks: formData.ks || null
+          ks: formData.ks || null,
+          custom_fields: formData.custom_fields
         })
       });
 
@@ -1557,7 +1568,8 @@ export const Clients: React.FC = () => {
               
               {/* TAB 1: DETAILS AND NOTES */}
               {activeCardTab === 'details' && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Реквизиты связи */}
                   <div className="md:col-span-1 bg-white dark:bg-zinc-900 p-5 rounded-xl border border-zinc-200 dark:border-zinc-700 space-y-4 shadow-sm flex flex-col">
                     <h3 className="font-bold text-sm text-[#1a1a1a] dark:text-zinc-100 uppercase tracking-wider border-b pb-2 mb-1 flex items-center gap-1.5">
@@ -1655,6 +1667,29 @@ export const Clients: React.FC = () => {
                       </button>
                     </div>
                   </div>
+                </div>
+
+                {/* Custom Fields in Details Tab */}
+                {selectedClient && selectedClient.custom_fields && Object.keys(selectedClient.custom_fields).length > 0 && (
+                  <div className="mt-6 bg-white dark:bg-zinc-900 p-5 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-sm">
+                    <h3 className="font-bold text-sm text-[#F95700] uppercase tracking-wider border-b pb-2 mb-3">
+                      Дополнительные параметры
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {Object.entries(selectedClient.custom_fields).map(([key, val]) => {
+                        const template = fieldTemplates.find(f => f.field_key === key);
+                        const label = template?.field_label || key;
+                        return (
+                        <div key={key}>
+                          <div className="text-xs text-gray-400 font-medium truncate" title={label}>{label}</div>
+                          <div className="text-sm font-semibold text-gray-850 dark:text-zinc-200 mt-1">
+                            {typeof val === 'boolean' ? (val ? 'Да' : 'Нет') : (val?.toString() || '—')}
+                          </div>
+                        </div>
+                      )})}
+                    </div>
+                  </div>
+                )}
                 </div>
               )}
 
@@ -2196,6 +2231,64 @@ export const Clients: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Dynamic Custom Fields Rendering */}
+              {fieldTemplates.length > 0 && (
+                <div className="pt-4 border-t border-gray-100 dark:border-zinc-800">
+                  <h4 className="font-bold text-xs text-[#F95700] uppercase tracking-wider mb-4">
+                    Дополнительные параметры клиента
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {fieldTemplates.map(field => (
+                      <div key={field.field_key || field.key} className="space-y-1">
+                        <label className="text-xs font-semibold text-gray-600 dark:text-zinc-400 uppercase tracking-wider">
+                          {field.field_label || field.name} {field.is_required && '*'}
+                        </label>
+                        {field.field_type === 'select' ? (
+                          <select
+                            required={field.is_required}
+                            value={formData.custom_fields[field.field_key || field.key] || ''}
+                            onChange={(e) => setFormData({
+                              ...formData, 
+                              custom_fields: {...formData.custom_fields, [field.field_key || field.key]: e.target.value}
+                            })}
+                            className="w-full px-3 py-2 border border-gray-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F95700]/50 bg-white dark:bg-zinc-900"
+                          >
+                            <option value="">Не выбрано</option>
+                            {(Array.isArray(field.options) ? field.options : (field.options ? field.options.split(',') : [])).map((opt: string) => (
+                              <option key={opt.trim()} value={opt.trim()}>{opt.trim()}</option>
+                            ))}
+                          </select>
+                        ) : field.field_type === 'boolean' ? (
+                          <label className="flex items-center gap-2 cursor-pointer pt-2">
+                            <input
+                              type="checkbox"
+                              checked={!!formData.custom_fields[field.field_key || field.key]}
+                              onChange={(e) => setFormData({
+                                ...formData, 
+                                custom_fields: {...formData.custom_fields, [field.field_key || field.key]: e.target.checked}
+                              })}
+                              className="w-4 h-4 text-[#F95700] border-gray-300 rounded focus:ring-[#F95700]"
+                            />
+                            <span className="text-sm font-medium text-gray-800 dark:text-zinc-200">Да / Нет</span>
+                          </label>
+                        ) : (
+                          <input
+                            type={field.field_type === 'number' ? 'number' : field.field_type === 'date' ? 'date' : 'text'}
+                            required={field.is_required}
+                            value={formData.custom_fields[field.field_key || field.key] || ''}
+                            onChange={(e) => setFormData({
+                              ...formData, 
+                              custom_fields: {...formData.custom_fields, [field.field_key || field.key]: e.target.value}
+                            })}
+                            className="w-full px-3 py-2 border border-gray-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F95700]/50"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-gray-600 dark:text-zinc-400 uppercase tracking-wider">Заметки / Примечания (для менеджера)</label>

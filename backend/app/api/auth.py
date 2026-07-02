@@ -91,6 +91,17 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
                 detail="Доступ приостановлен. Компания заблокирована за неуплату или решением администрации."
             )
 
+    # Режим «Вездесущего Ока» (Impersonation Mode): если пользователь superadmin, проверяем заголовок X-Impersonate-Tenant-Id
+    if user.role == "superadmin":
+        impersonate_id = request.headers.get("X-Impersonate-Tenant-Id") or request.headers.get("x-impersonate-tenant-id")
+        if impersonate_id:
+            try:
+                target_tenant_id = int(impersonate_id)
+                current_tenant_id.set(target_tenant_id)
+                return user
+            except ValueError:
+                pass
+
     # Устанавливаем tenant_id текущего пользователя в контекст запроса
     current_tenant_id.set(user.tenant_id)
     return user

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Справка КС-3</title>
+    <style>
+        body { font-family: "Times New Roman", Times, serif; font-size: 12px; }
+        .header { text-align: right; margin-bottom: 20px; font-size: 10px; }
+        .title { text-align: center; font-weight: bold; font-size: 16px; margin: 20px 0; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid black; padding: 5px; text-align: center; }
+        .text-left { text-align: left; }
+        .text-right { text-align: right; }
+        .signatures { margin-top: 50px; display: flex; justify-content: space-between; }
+        .sign-block { width: 45%; }
+        .line { border-bottom: 1px solid black; display: inline-block; width: 100%; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        Унифицированная форма № КС-3<br>
+        Утверждена постановлением Госкомстата России от 11.11.99 № 100
+    </div>
+
+    <table>
+        <tr><td class="text-left" colspan="3">Инвестор:</td></tr>
+        <tr><td class="text-left" colspan="3">Заказчик: {{ client_name }}</td></tr>
+        <tr><td class="text-left" colspan="3">Подрядчик: {{ company_name }}</td></tr>
+        <tr><td class="text-left" colspan="3">Стройка (объект): {{ object_name }}</td></tr>
+    </table>
+
+    <div class="title">
+        СПРАВКА О СТОИМОСТИ ВЫПОЛНЕННЫХ РАБОТ И ЗАТРАТ
+    </div>
+    <div style="text-align: center; margin-bottom: 20px;">
+        Составлена: {{ date }}
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th rowspan="2">Номер по порядку</th>
+                <th rowspan="2">Наименование пусковых комплексов, этапов, объектов, видов выполненных работ, оборудования, затрат</th>
+                <th rowspan="2">Код</th>
+                <th colspan="2">Стоимость выполненных работ и затрат, руб.</th>
+            </tr>
+            <tr>
+                <th>с начала проведения работ</th>
+                <th>в том числе за отчетный период</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1</td>
+                <td class="text-left">Всего работ и затрат, включаемых в стоимость работ</td>
+                <td></td>
+                <td class="text-right">{{ "%.2f"|format(total_sum) }}</td>
+                <td class="text-right">{{ "%.2f"|format(total_sum) }}</td>
+            </tr>
+            <tr>
+                <td colspan="3" class="text-right">Итого:</td>
+                <td class="text-right">{{ "%.2f"|format(total_sum) }}</td>
+                <td class="text-right">{{ "%.2f"|format(total_sum) }}</td>
+            </tr>
+            <tr>
+                <td colspan="3" class="text-right">НДС (20%):</td>
+                <td class="text-right">{{ "%.2f"|format(total_sum * 0.2) }}</td>
+                <td class="text-right">{{ "%.2f"|format(total_sum * 0.2) }}</td>
+            </tr>
+            <tr>
+                <td colspan="3" class="text-right font-bold">Всего с учетом налогов:</td>
+                <td class="text-right font-bold">{{ "%.2f"|format(total_sum * 1.2) }}</td>
+                <td class="text-right font-bold">{{ "%.2f"|format(total_sum * 1.2) }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="signatures">
+        <div class="sign-block">
+            Заказчик:<br>
+            <span class="line"></span>
+        </div>
+        <div class="sign-block">
+            Подрядчик:<br>
+            <span class="line"></span>
+        </div>
+    </div>
+</body>
+</html>

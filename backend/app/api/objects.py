@@ -6,12 +6,13 @@ from ..models import Object, User, InventoryItem, MaterialConsumption
 from ..schemas import ObjectCreate, ObjectResponse, MaterialConsumptionCreate, MaterialConsumptionResponse
 from .auth import get_current_user
 from ..telegram import send_telegram_notification
+from ..utils.rbac import require_permission
 
 router = APIRouter(prefix="/objects", tags=["Objects"])
 
 @router.post("/", response_model=ObjectResponse)
-def create_object(obj: ObjectCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_obj = Object(**obj.model_dump())
+def create_object(obj: ObjectCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user), perm = Depends(require_permission("objects", "write"))):
+    db_obj = Object(**obj.model_dump(), tenant_id=current_user.tenant_id, owner_id=current_user.id)
     db.add(db_obj)
     db.commit()
     db.refresh(db_obj)
@@ -30,12 +31,18 @@ def create_object(obj: ObjectCreate, db: Session = Depends(get_db), current_user
 
 
 @router.get("/", response_model=List[ObjectResponse])
-def get_objects(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return db.query(Object).offset(skip).limit(limit).all()
+def get_objects(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user), perm = Depends(require_permission("objects", "read"))):
+    q = db.query(Object).filter(Object.tenant_id == current_user.tenant_id)
+    if perm.own_only:
+        q = q.filter(Object.owner_id == current_user.id)
+    return q.offset(skip).limit(limit).all()
 
 @router.patch("/{obj_id}/status", response_model=ObjectResponse)
-def update_object_status(obj_id: int, status: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_obj = db.query(Object).filter(Object.id == obj_id).first()
+def update_object_status(obj_id: int, status: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user), perm = Depends(require_permission("objects", "write"))):
+    q = db.query(Object).filter(Object.id == obj_id, Object.tenant_id == current_user.tenant_id)
+    if perm.own_only:
+        q = q.filter(Object.owner_id == current_user.id)
+    db_obj = q.first()
     if not db_obj:
         raise HTTPException(status_code=404, detail="Object not found")
     
@@ -64,8 +71,11 @@ def update_object_status(obj_id: int, status: str, db: Session = Depends(get_db)
 
 
 @router.delete("/{obj_id}")
-def delete_object(obj_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_obj = db.query(Object).filter(Object.id == obj_id).first()
+def delete_object(obj_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user), perm = Depends(require_permission("objects", "delete"))):
+    q = db.query(Object).filter(Object.id == obj_id, Object.tenant_id == current_user.tenant_id)
+    if perm.own_only:
+        q = q.filter(Object.owner_id == current_user.id)
+    db_obj = q.first()
     if not db_obj:
         raise HTTPException(status_code=404, detail="Object not found")
     obj_name = db_obj.name

@@ -3,6 +3,7 @@ import { Plus, Search, Edit2, Trash2, X, AlertTriangle, PenTool, Check, Calendar
 import { Html5Qrcode } from 'html5-qrcode';
 import { Helmet } from 'react-helmet-async';
 import QRCode from 'qrcode';
+import { FleetChessboard } from '../components/FleetChessboard';
 
 interface EquipmentItem {
   id: number;
@@ -21,6 +22,7 @@ interface ProjectObject {
 }
 
 export const Equipment: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'list' | 'fleet'>('fleet');
   const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
   const [objects, setObjects] = useState<ProjectObject[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -543,7 +545,39 @@ export const Equipment: React.FC = () => {
       <Helmet>
         <title>Оборудование | СФЕРА</title>
       </Helmet>
-      {/* Top statistics overview cards */}
+
+      {/* Top Tab Switcher */}
+      <div className="flex items-center gap-3 bg-white dark:bg-zinc-900 p-2 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm w-fit">
+        <button
+          onClick={() => setActiveTab('fleet')}
+          className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            activeTab === 'fleet'
+              ? 'bg-[#F95700] text-white shadow-md shadow-[#F95700]/20'
+              : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800'
+          }`}
+        >
+          <span>🚜 Шахматка спецтехники (Модуль 4.4)</span>
+          <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-500 font-extrabold animate-pulse">
+            NEW
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('list')}
+          className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            activeTab === 'list'
+              ? 'bg-[#F95700] text-white shadow-md shadow-[#F95700]/20'
+              : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800'
+          }`}
+        >
+          <span>📋 Реестр инвентаря</span>
+        </button>
+      </div>
+
+      {activeTab === 'fleet' ? (
+        <FleetChessboard />
+      ) : (
+        <div className="space-y-6">
+          {/* Top statistics overview cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-white dark:bg-zinc-900 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800 flex items-center justify-between hover:-translate-y-1 transition-transform duration-300 group cursor-default">
           <div>
@@ -1298,6 +1332,8 @@ export const Equipment: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+      </div>
       )}
     </div>
   );

@@ -24,6 +24,19 @@ export const apiClient = {
       ...((options.headers as Record<string, string>) || {}),
     };
 
+    // Режим «Вездесущего Ока» (Impersonation Mode)
+    const impersonated = localStorage.getItem('impersonated_tenant');
+    if (impersonated) {
+      try {
+        const parsed = JSON.parse(impersonated);
+        if (parsed && parsed.id) {
+          headers['X-Impersonate-Tenant-Id'] = parsed.id.toString();
+        }
+      } catch (e) {
+        console.error('Failed to parse impersonated_tenant:', e);
+      }
+    }
+
     // Do not set Content-Type for FormData
     if (options.body instanceof FormData) {
       delete headers['Content-Type'];

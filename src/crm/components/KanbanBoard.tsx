@@ -9,6 +9,7 @@ interface KanbanTask {
   status: string;
   area?: string;
   surfaceType?: string;
+  custom_fields?: Record<string, any>;
 }
 
 interface Column {
@@ -191,7 +192,8 @@ export const KanbanBoard: React.FC = () => {
           client: d.client_name || `Клиент #${d.client_id || 'N/A'}`,
           status: d.status,
           area: d.area_sqm ? `${d.area_sqm} м²` : '',
-          surfaceType: d.surface_type
+          surfaceType: d.surface_type,
+          custom_fields: d.custom_fields || {}
         }));
         setTasks(formatted);
       }
@@ -399,6 +401,25 @@ export const KanbanBoard: React.FC = () => {
                       </div>
                     </div>
                   </div>
+
+                  {/* Render Custom Fields if any */}
+                  {selectedTask.custom_fields && Object.keys(selectedTask.custom_fields).length > 0 && (
+                    <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                      <h4 className="text-[10px] font-bold text-[#F95700] uppercase tracking-widest mb-3">
+                        Дополнительные параметры
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4 text-xs font-['Inter']">
+                        {Object.entries(selectedTask.custom_fields).map(([key, val]) => (
+                          <div key={key}>
+                            <div className="text-zinc-455 dark:text-zinc-550 font-bold uppercase tracking-wider text-[9px] truncate" title={key}>{key}</div>
+                            <div className="text-sm font-black text-zinc-800 dark:text-zinc-200 mt-1">
+                              {typeof val === 'boolean' ? (val ? 'Да' : 'Нет') : (val?.toString() || '—')}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="pt-3 border-t border-zinc-150 dark:border-zinc-800 flex justify-end">
                     <button

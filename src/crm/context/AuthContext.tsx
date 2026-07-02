@@ -8,8 +8,42 @@ export interface User {
   is_active: number;
 }
 
+// ─── RBAC: Матрица прав (загружается из /permissions/my при логине) ─────────
+export interface ModulePermission {
+  role: string;
+  module: string;
+  can_read: boolean;
+  can_write: boolean;
+  can_delete: boolean;
+  own_only: boolean;
+}
+
+export interface UserPermissions {
+  role: string;
+  is_superadmin: boolean;
+  plan_modules?: string[] | null;
+  permissions: Record<string, ModulePermission>;
+}
+
+// Проверка права для модуля (хелпер для компонентов)
+export function hasPermission(
+  perms: UserPermissions | null,
+  module: string,
+  action: 'read' | 'write' | 'delete' = 'read'
+): boolean {
+  if (!perms) return false;
+  if (perms.is_superadmin) return true;
+  const p = perms.permissions[module];
+  if (!p) return false;
+  if (action === 'read') return p.can_read;
+  if (action === 'write') return p.can_write;
+  if (action === 'delete') return p.can_delete;
+  return false;
+}
+
 interface AuthContextType {
   user: User | null;
+  permissions: UserPermissions | null;
   isLoading: boolean;
   login: (user: User) => void;
   logout: () => Promise<void>;
@@ -18,22 +52,49 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [permissions, setPermissions] = useState<UserPermissions | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Загрузка матрицы прав для текущего пользователя
+  const fetchPermissions = async () => {
+    try {
+      const response = await fetch(`${API_URL}/permissions/my`, {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data: UserPermissions = await response.json();
+        setPermissions(data);
+      } else {
+        setPermissions(null);
+      }
+    } catch (error) {
+      console.error('Failed to fetch permissions:', error);
+      setPermissions(null);
+    }
+  };
 
   const fetchUserProfile = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/users/me`);
+      const response = await fetch(`${API_URL}/users/me`, {
+        credentials: 'include',
+      });
       if (response.ok) {
         const data = await response.json();
         setUser(data);
+        // Загружаем матрицу прав вместе с профилем
+        await fetchPermissions();
       } else {
         setUser(null);
+        setPermissions(null);
       }
     } catch (error) {
       console.error('Failed to fetch user profile:', error);
       setUser(null);
+      setPermissions(null);
     } finally {
       setIsLoading(false);
     }
@@ -42,9 +103,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     fetchUserProfile();
 
-    // Listen to global auth_error events to reset state if 401 occurs
     const handleAuthError = () => {
       setUser(null);
+      setPermissions(null);
     };
 
     window.addEventListener('auth_error', handleAuthError);
@@ -55,19 +116,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = (userData: User) => {
     setUser(userData);
+    // Перезагружаем права после успешного логина
+    fetchPermissions();
   };
 
   const logout = async () => {
     try {
-      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/auth/logout`, {
+      await fetch(`${API_URL}/auth/logout`, {
         method: 'POST',
+        credentials: 'include',
       });
     } catch (error) {
       console.error('Logout request failed:', error);
     } finally {
       setUser(null);
-      // Куки (access_token, csrf_token) удаляются бэкендом через /auth/logout
-      // Очищаем localStorage CSRF-fallback (JWT в localStorage не хранится — XSS-защита)
+      setPermissions(null);
       localStorage.removeItem('csrf_token');
     }
   };
@@ -78,7 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, refetchUser }}>
+    <AuthContext.Provider value={{ user, permissions, isLoading, login, logout, refetchUser }}>
       {children}
     </AuthContext.Provider>
   );

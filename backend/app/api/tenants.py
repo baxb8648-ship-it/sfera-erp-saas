@@ -12,6 +12,7 @@ from pydantic import BaseModel, EmailStr
 from ..database import get_db, current_tenant_id
 from ..models import Tenant, User, Organization
 from .auth import get_password_hash, get_current_user
+from ..utils.rbac import seed_default_permissions
 
 logger = logging.getLogger("uvicorn.error")
 router = APIRouter(prefix="/tenants", tags=["SaaS Tenants Management"])
@@ -191,6 +192,10 @@ def register_tenant(body: TenantRegister, db: Session = Depends(get_db)):
             is_active=1
         )
         db.add(new_org)
+        db.flush()
+
+        # 6. Инициализируем матрицу прав RBAC для нового тенанта
+        seed_default_permissions(new_tenant.id, db)
         
         db.commit()
         db.refresh(new_tenant)

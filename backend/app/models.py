@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, ARRAY, Enum, Boolean, Text
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Enum, Boolean, Text, JSON
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 import enum
 from datetime import datetime
@@ -23,6 +24,9 @@ class Tenant(Base):
     is_active = Column(Boolean, default=True)                   # Активность (блокировка за неуплату)
     subscription_ends_at = Column(DateTime, nullable=True)      # Срок действия подписки
     created_at = Column(DateTime, default=datetime.utcnow)
+    # Список модулей, доступных по тарифу (динамический сайдбар)
+    # Пример: ["clients", "tasks", "objects", "finance", "tenders", "analytics", "inventory", "equipment", "templates"]
+    plan_modules = Column(JSON, nullable=True, default=None)    # None = доступны все модули (Энтерпрайз)
 
 
 class Invoice(Base):
@@ -80,6 +84,9 @@ class Client(Base):
     ks = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     acquisition_cost = Column(Float, default=0.0)
+    # Владелец записи (для RBAC own_only): менеджер, создавший клиента
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    custom_fields = Column(JSONB, nullable=True, default={})
     
     # relations
     interactions = relationship("Interaction", back_populates="client")
@@ -106,10 +113,16 @@ class Object(Base):
     client_id = Column(Integer, ForeignKey("clients.id"))
 
     name = Column(String)
-    area_sqm = Column(Float)
-    surface_type = Column(String) # concrete, metal
-    service_required = Column(String) # Sandblasting, AKZ, PPU
+    # --- Фаза 3.1: Project Engine ---
+    object_type = Column(String, default="construction")  # construction | furniture | agro | fleet | generic
+    custom_fields = Column(JSONB, nullable=True, default={})  # Кастомные поля тенанта (Конструктор полей)
+    # --- Строительство (legacy поля — остаются для обратной совместимости) ---
+    area_sqm = Column(Float, nullable=True)
+    surface_type = Column(String, nullable=True)  # concrete, metal
+    service_required = Column(String, nullable=True)  # Sandblasting, AKZ, PPU
     status = Column(String)
+    # Владелец/ответственный (для RBAC own_only)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     
     client = relationship("Client", back_populates="objects")
     material_consumptions = relationship("MaterialConsumption", back_populates="object", cascade="all, delete-orphan")
@@ -131,6 +144,53 @@ class MaterialConsumption(Base):
     date = Column(DateTime, default=datetime.utcnow)
     
     object = relationship("Object", back_populates="material_consumptions")
+    inventory_item = relationship("InventoryItem")
+
+    @property
+    def inventory_name(self):
+        return self.inventory_item.name if self.inventory_item else None
+
+    @property
+    def inventory_unit(self):
+        return self.inventory_item.unit if self.inventory_item else "шт"
+
+
+class DailyReport(Base):
+    __tablename__ = "daily_reports"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    object_id = Column(Integer, ForeignKey("objects.id"))
+    user_id = Column(Integer, ForeignKey("users.id"))
+    
+    date = Column(DateTime, default=datetime.utcnow)
+    text = Column(Text, nullable=True)
+    weather_temp = Column(String, nullable=True)
+    weather_conditions = Column(String, nullable=True)
+    geo_lat = Column(Float, nullable=True)
+    geo_lon = Column(Float, nullable=True)
+    photos = Column(JSON, nullable=True, default=[]) # Array of URLs
+    
+    object = relationship("Object")
+    user = relationship("User")
+
+    @property
+    def username(self):
+        return self.user.username if self.user else None
+
+
+class ConstructionEstimate(Base):
+    __tablename__ = "construction_estimates"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    object_id = Column(Integer, ForeignKey("objects.id"))
+    
+    inventory_id = Column(Integer, ForeignKey("inventory.id"))
+    planned_quantity = Column(Float, default=0.0)
+    unit_price = Column(Float, default=0.0)
+    
+    object = relationship("Object")
     inventory_item = relationship("InventoryItem")
 
     @property
@@ -638,3 +698,67 @@ class Bug(Base):
     status      = Column(String,   default="open")     # open, in_progress, resolved, closed
     created_at  = Column(DateTime, default=datetime.utcnow)
 
+
+# ═══════════════════════════════════════════════════════
+# ФАЗА 3.3 — ГЛУБОКИЙ RBAC (Role-Based Access Control)
+# ═══════════════════════════════════════════════════════
+
+class RolePermission(Base):
+    """
+    Матрица прав доступа к модулям системы для каждой роли внутри тенанта.
+    Поддерживает два уровня контроля:
+      1. Уровень модуля (module): read / write / delete
+      2. Уровень строки (own_only): видит только свои записи (owner_id == user.id)
+
+    Пример: менеджер видит ТОЛЬКО своих клиентов (clients, own_only=True),
+    но не может удалять финансовые транзакции (finance, can_delete=False).
+
+    Дефолтная матрица инициализируется при создании тенанта в tenants.py.
+    """
+    __tablename__ = "role_permissions"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    tenant_id  = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    role       = Column(String, nullable=False, index=True)   # admin | manager | accountant | support_agent
+    module     = Column(String, nullable=False, index=True)   # clients | objects | finance | tasks | tenders
+                                                              # inventory | equipment | templates | analytics | audit
+    # Разрешения уровня модуля
+    can_read   = Column(Boolean, default=True)
+    can_write  = Column(Boolean, default=False)
+    can_delete = Column(Boolean, default=False)
+    # Ограничение уровня строки: True = видит только записи, где owner_id == user.id
+    own_only   = Column(Boolean, default=False)
+
+    tenant = relationship("Tenant")
+
+
+# ═══════════════════════════════════════════════════════
+# ФАЗА 3.1/3.2 — PROJECT ENGINE И КОНСТРУКТОР ПОЛЕЙ
+# ═══════════════════════════════════════════════════════
+
+class FieldTemplate(Base):
+    """
+    Шаблоны кастомных полей для карточек объектов/клиентов/задач.
+    Каждый тенант может создать свои поля без ALTER TABLE.
+    Значения хранятся в JSONB-колонке custom_fields соответствующей модели.
+
+    Пример: агрохозяйство добавляет поле 'Площадь (га)' типа number
+    для типа объекта 'agro'. При создании объекта это поле появляется
+    в форме динамически.
+    """
+    __tablename__ = "field_templates"
+
+    id           = Column(Integer, primary_key=True, index=True)
+    tenant_id    = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    entity_type  = Column(String, nullable=False)    # "object" | "client" | "task"
+    object_type  = Column(String, nullable=True)     # "construction" | "agro" | None (для всех типов)
+    field_key    = Column(String, nullable=False)    # Ключ в JSONB: "площадь_га" (snake_case)
+    field_label  = Column(String, nullable=False)    # Отображаемое название: "Площадь (га)"
+    field_type   = Column(String, default="text")    # text | number | date | select | boolean | textarea
+    options      = Column(JSON, nullable=True)        # Для select: ["Пшеница", "Подсолнечник", "Кукуруза"]
+    placeholder  = Column(String, nullable=True)     # Подсказка в поле ввода
+    is_required  = Column(Boolean, default=False)    # Обязательное поле
+    sort_order   = Column(Integer, default=0)        # Порядок отображения в форме
+    created_at   = Column(DateTime, default=datetime.utcnow)
+
+    tenant = relationship("Tenant")

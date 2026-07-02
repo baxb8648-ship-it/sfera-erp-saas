@@ -19,6 +19,7 @@ class ClientBase(BaseModel):
     bik: Optional[str] = None
     rs: Optional[str] = None
     ks: Optional[str] = None
+    custom_fields: Optional[dict] = None
 
 class ClientCreate(ClientBase):
     pass
@@ -46,6 +47,8 @@ class ObjectBase(BaseModel):
     surface_type: Optional[str] = None
     service_required: Optional[str] = None
     status: str = "Выезд на аудит"
+    object_type: str = "construction"
+    custom_fields: Optional[dict] = None
 
 class ObjectCreate(ObjectBase):
     pass

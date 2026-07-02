@@ -10,12 +10,13 @@ from .auth import get_current_user
 from ..telegram import send_telegram_notification
 from ..websocket_manager import manager
 import xml.etree.ElementTree as ET
+from ..utils.rbac import require_permission
 
 router = APIRouter(prefix="/clients", tags=["Clients"])
 
 @router.post("/", response_model=ClientResponse)
-def create_client(client: ClientCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_client = Client(**client.model_dump())
+def create_client(client: ClientCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: User = Depends(get_current_user), perm = Depends(require_permission("clients", "write"))):
+    db_client = Client(**client.model_dump(), tenant_id=current_user.tenant_id, owner_id=current_user.id)
     db.add(db_client)
     db.commit()
     db.refresh(db_client)
@@ -115,8 +116,11 @@ def create_public_lead(lead: PublicLeadCreate, background_tasks: BackgroundTasks
     return db_client
 
 @router.get("/", response_model=List[ClientResponse])
-def get_clients(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    clients = db.query(Client).offset(skip).limit(limit).all()
+def get_clients(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user), perm = Depends(require_permission("clients", "read"))):
+    q = db.query(Client).filter(Client.tenant_id == current_user.tenant_id)
+    if perm.own_only:
+        q = q.filter(Client.owner_id == current_user.id)
+    clients = q.offset(skip).limit(limit).all()
     return clients
 
 @router.post("/import-xml")
@@ -164,8 +168,11 @@ async def import_clients_xml(file: UploadFile = File(...), db: Session = Depends
     return {"message": f"Successfully imported {added_count} clients."}
 
 @router.put("/{client_id}", response_model=ClientResponse)
-def update_client(client_id: int, client_data: ClientCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_client = db.query(Client).filter(Client.id == client_id).first()
+def update_client(client_id: int, client_data: ClientCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: User = Depends(get_current_user), perm = Depends(require_permission("clients", "write"))):
+    q = db.query(Client).filter(Client.id == client_id, Client.tenant_id == current_user.tenant_id)
+    if perm.own_only:
+        q = q.filter(Client.owner_id == current_user.id)
+    db_client = q.first()
     if not db_client:
         raise HTTPException(status_code=404, detail="Client not found")
     
@@ -190,8 +197,11 @@ def update_client(client_id: int, client_data: ClientCreate, background_tasks: B
     return db_client
 
 @router.delete("/{client_id}")
-def delete_client(client_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_client = db.query(Client).filter(Client.id == client_id).first()
+def delete_client(client_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: User = Depends(get_current_user), perm = Depends(require_permission("clients", "delete"))):
+    q = db.query(Client).filter(Client.id == client_id, Client.tenant_id == current_user.tenant_id)
+    if perm.own_only:
+        q = q.filter(Client.owner_id == current_user.id)
+    db_client = q.first()
     if not db_client:
         raise HTTPException(status_code=404, detail="Client not found")
         

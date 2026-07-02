@@ -20,6 +20,8 @@ interface CRMObject {
   surface_type: string;
   service_required: string;
   status: string;
+  object_type?: string;
+  custom_fields?: Record<string, any>;
 }
 
 const CITIES = [
@@ -49,10 +51,19 @@ export const Objects: React.FC = () => {
     area_sqm: '',
     surface_type: 'Металл',
     service_required: 'АКЗ',
-    status: 'Выезд на аудит'
+    status: 'Выезд на аудит',
+    object_type: 'construction',
+    custom_fields: {} as Record<string, any>
   });
   const [formError, setFormError] = useState('');
   const [boardKey, setBoardKey] = useState(0); // to reload KanbanBoard on updates
+
+  // Fetch field templates for the selected object_type
+  const { data: fieldTemplates = [] } = useQuery<any[]>({
+    queryKey: ['fieldTemplates', formData.object_type],
+    queryFn: () => apiClient.get(`/field-templates/?entity_type=object&object_type=${formData.object_type}`),
+    enabled: isModalOpen,
+  });
 
   const { data: objects = [], isLoading: isLoadingObjects } = useQuery<CRMObject[]>({
     queryKey: ['objects', boardKey, viewMode],
@@ -98,7 +109,9 @@ export const Objects: React.FC = () => {
         area_sqm: formData.area_sqm ? parseFloat(formData.area_sqm) : null,
         surface_type: formData.surface_type,
         service_required: formData.service_required,
-        status: formData.status
+        status: formData.status,
+        object_type: formData.object_type,
+        custom_fields: formData.custom_fields
       });
 
       setIsModalOpen(false);
@@ -109,7 +122,9 @@ export const Objects: React.FC = () => {
         area_sqm: '',
         surface_type: 'Металл',
         service_required: 'АКЗ',
-        status: 'Выезд на аудит'
+        status: 'Выезд на аудит',
+        object_type: 'construction',
+        custom_fields: {}
       });
     } catch (error: any) {
       setFormError(error.message || 'Ошибка при сохранении объекта');
@@ -423,6 +438,20 @@ export const Objects: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-zinc-450 dark:text-zinc-550 uppercase tracking-wider">Тип объекта *</label>
+                <select 
+                  value={formData.object_type}
+                  onChange={(e) => setFormData({...formData, object_type: e.target.value, custom_fields: {}})}
+                  className="w-full px-3.5 py-2.5 border border-zinc-200 dark:border-zinc-700/80 rounded-xl bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#F95700]/40 transition-all font-medium text-sm cursor-pointer"
+                  required
+                >
+                  <option value="construction">Строительство</option>
+                  <option value="renovation">Ремонт / Реконструкция</option>
+                  <option value="service">Обслуживание</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-zinc-450 dark:text-zinc-550 uppercase tracking-wider">Заказчик / Клиент *</label>
                 <select 
                   value={formData.client_id}
@@ -478,7 +507,65 @@ export const Objects: React.FC = () => {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
+              {/* Dynamic Custom Fields Rendering */}
+              {fieldTemplates.length > 0 && (
+                <div className="pt-2">
+                  <h4 className="text-[10px] font-bold text-[#F95700] uppercase tracking-widest border-b border-zinc-100 dark:border-zinc-800 pb-2 mb-3">
+                    Дополнительные параметры ({formData.object_type})
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {fieldTemplates.map(field => (
+                      <div key={field.field_key || field.key} className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-zinc-455 dark:text-zinc-555 uppercase tracking-wider">
+                          {field.field_label || field.name} {field.is_required && '*'}
+                        </label>
+                        {field.field_type === 'select' ? (
+                          <select
+                            required={field.is_required}
+                            value={formData.custom_fields[field.field_key || field.key] || ''}
+                            onChange={(e) => setFormData({
+                              ...formData, 
+                              custom_fields: {...formData.custom_fields, [field.field_key || field.key]: e.target.value}
+                            })}
+                            className="w-full px-3.5 py-2.5 border border-zinc-200 dark:border-zinc-700/80 rounded-xl bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#F95700]/40 transition-all font-medium text-sm cursor-pointer"
+                          >
+                            <option value="">Не выбрано</option>
+                            {(Array.isArray(field.options) ? field.options : (field.options ? field.options.split(',') : [])).map((opt: string) => (
+                              <option key={opt.trim()} value={opt.trim()}>{opt.trim()}</option>
+                            ))}
+                          </select>
+                        ) : field.field_type === 'boolean' ? (
+                          <label className="flex items-center gap-2 cursor-pointer pt-2">
+                            <input
+                              type="checkbox"
+                              checked={!!formData.custom_fields[field.field_key || field.key]}
+                              onChange={(e) => setFormData({
+                                ...formData, 
+                                custom_fields: {...formData.custom_fields, [field.field_key || field.key]: e.target.checked}
+                              })}
+                              className="w-4 h-4 text-[#F95700] border-zinc-300 rounded focus:ring-[#F95700]"
+                            />
+                            <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Да / Нет</span>
+                          </label>
+                        ) : (
+                          <input
+                            type={field.field_type === 'number' ? 'number' : field.field_type === 'date' ? 'date' : 'text'}
+                            required={field.is_required}
+                            value={formData.custom_fields[field.field_key || field.key] || ''}
+                            onChange={(e) => setFormData({
+                              ...formData, 
+                              custom_fields: {...formData.custom_fields, [field.field_key || field.key]: e.target.value}
+                            })}
+                            className="w-full px-3.5 py-2.5 border border-zinc-200 dark:border-zinc-700/80 rounded-xl bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#F95700]/40 transition-all font-medium text-sm"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1.5 pt-2">
                 <label className="text-[10px] font-bold text-zinc-455 dark:text-zinc-555 uppercase tracking-wider">Начальный статус</label>
                 <select 
                   value={formData.status}

@@ -1,11 +1,11 @@
 import React from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Building2, Wallet, Package, PenTool, LogOut, FileText, Sun, Moon, ShieldCheck, Gavel, TrendingUp, Menu, X, Mail, CheckSquare, Bell, Crown } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, Wallet, Package, PenTool, LogOut, FileText, Sun, Moon, ShieldCheck, Gavel, TrendingUp, Menu, X, Mail, CheckSquare, Bell, Crown, LifeBuoy, HelpCircle, HardHat } from 'lucide-react';
 import { CommandMenu } from './components/CommandMenu';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useToast } from '../components/ui/Toast';
 import { Helmet } from 'react-helmet-async';
-import { useAuth } from './context/AuthContext';
+import { useAuth, hasPermission } from './context/AuthContext';
 import { apiClient } from '../api/client';
 import packageJson from '../../package.json';
 
@@ -27,6 +27,25 @@ export const CRMLayout: React.FC = () => {
   const [emailError, setEmailError] = React.useState<string>('');
   const [wsStatus, setWsStatus] = React.useState<'connecting' | 'connected' | 'disconnected'>('connecting');
   const [unreadTasksCount, setUnreadTasksCount] = React.useState<number>(0);
+
+  // Режим «Вездесущего Ока» (Impersonation Mode / Гостевой вход)
+  const [impersonatedTenant, setImpersonatedTenant] = React.useState<{ id: number; name: string; inn: string } | null>(() => {
+    const saved = localStorage.getItem('impersonated_tenant');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  React.useEffect(() => {
+    const handleImpersonation = (e: any) => {
+      if (e.detail) {
+        setImpersonatedTenant(e.detail);
+      } else {
+        const saved = localStorage.getItem('impersonated_tenant');
+        setImpersonatedTenant(saved ? JSON.parse(saved) : null);
+      }
+    };
+    window.addEventListener('tenant_impersonated', handleImpersonation);
+    return () => window.removeEventListener('tenant_impersonated', handleImpersonation);
+  }, []);
 
   const { data: settings = {} } = useQuery({
     queryKey: ['settings'],
@@ -213,24 +232,26 @@ export const CRMLayout: React.FC = () => {
     setIsSidebarOpen(false);
   }, [location.pathname]);
 
-  // Get user details from AuthContext
-  const { user, logout } = useAuth();
+  // Get user details and permissions from AuthContext
+  const { user, permissions, logout } = useAuth();
   const userRole = user?.role || 'manager';
   const usernameVal = user?.username ? user.username.charAt(0).toUpperCase() : 'А';
 
   const allMenuItems = [
-    { name: 'Дашборд', path: '/crm', icon: LayoutDashboard, roles: ['admin', 'manager', 'accountant', 'superadmin'] },
-    { name: 'Задачи', path: '/crm/tasks', icon: CheckSquare, roles: ['admin', 'manager', 'accountant', 'superadmin'] },
-    { name: 'Аналитика', path: '/crm/analytics', icon: TrendingUp, roles: ['admin', 'accountant', 'superadmin'] },
-    { name: 'Клиенты', path: '/crm/clients', icon: Users, roles: ['admin', 'manager', 'superadmin'] },
-    { name: 'Объекты', path: '/crm/objects', icon: Building2, roles: ['admin', 'manager', 'accountant', 'superadmin'] },
-    { name: 'Тендеры', path: '/crm/tenders', icon: Gavel, roles: ['admin', 'manager', 'superadmin'] },
-    { name: 'Финансы', path: '/crm/finance', icon: Wallet, roles: ['admin', 'accountant', 'superadmin'] },
-    { name: 'Склад', path: '/crm/inventory', icon: Package, roles: ['admin', 'accountant', 'superadmin'] },
-    { name: 'Оборудование', path: '/crm/equipment', icon: PenTool, roles: ['admin', 'accountant', 'superadmin'] },
-    { name: 'Шаблоны и Контент', path: '/crm/templates', icon: FileText, roles: ['admin', 'manager', 'accountant', 'superadmin'] },
-    { name: 'Администрирование', path: '/crm/admin', icon: ShieldCheck, roles: ['admin', 'superadmin'] },
-    { name: 'Супер-Админ (SaaS)', path: '/crm/superadmin', icon: Crown, roles: ['superadmin'] },
+    { name: 'Дашборд', path: '/crm', icon: LayoutDashboard, module: null }, // Всегда доступен (главная)
+    { name: 'Задачи', path: '/crm/tasks', icon: CheckSquare, module: 'tasks' },
+    { name: 'Техподдержка', path: '/crm/support', icon: LifeBuoy, module: 'support' },
+    { name: 'Аналитика', path: '/crm/analytics', icon: TrendingUp, module: 'analytics' },
+    { name: 'Клиенты', path: '/crm/clients', icon: Users, module: 'clients' },
+    { name: 'Объекты', path: '/crm/objects', icon: Building2, module: 'objects' },
+    { name: 'Строительство', path: '/crm/construction', icon: HardHat, module: 'construction' },
+    { name: 'Тендеры', path: '/crm/tenders', icon: Gavel, module: 'tenders' },
+    { name: 'Финансы', path: '/crm/finance', icon: Wallet, module: 'finance' },
+    { name: 'Склад', path: '/crm/inventory', icon: Package, module: 'inventory' },
+    { name: 'Оборудование', path: '/crm/equipment', icon: PenTool, module: 'equipment' },
+    { name: 'Шаблоны и Контент', path: '/crm/templates', icon: FileText, module: 'templates' },
+    { name: 'Администрирование', path: '/crm/admin', icon: ShieldCheck, module: 'audit' }, // Settings/Audit
+    { name: 'Супер-Админ (SaaS)', path: '/crm/superadmin', icon: Crown, isSuperadminOnly: true },
   ];
 
   React.useEffect(() => {
@@ -254,10 +275,17 @@ export const CRMLayout: React.FC = () => {
       }
       return currentPath.startsWith(item.path);
     });
-    if (matchedItem && !matchedItem.roles.includes(userRole)) {
-      navigate('/crm', { replace: true });
+    
+    if (matchedItem && permissions) {
+      const canAccess = matchedItem.isSuperadminOnly 
+        ? permissions.is_superadmin 
+        : (!matchedItem.module || hasPermission(permissions, matchedItem.module, 'read'));
+        
+      if (!canAccess) {
+        navigate('/crm', { replace: true });
+      }
     }
-  }, [location.pathname, userRole]);
+  }, [location.pathname, permissions]);
 
   // Real-time WebSocket Notifications
   const locationRef = React.useRef(location.pathname);
@@ -460,7 +488,22 @@ export const CRMLayout: React.FC = () => {
     navigate('/crm/login');
   };
 
-  const menuItems = allMenuItems.filter(item => item.roles.includes(userRole));
+  const menuItems = allMenuItems.filter(item => {
+    if (item.isSuperadminOnly) return permissions?.is_superadmin;
+    if (!item.module) return true;
+    
+    // Проверка прав пользователя
+    if (!hasPermission(permissions, item.module, 'read')) return false;
+
+    // Проверка тарифного плана компании
+    if (permissions?.plan_modules && Array.isArray(permissions.plan_modules)) {
+      if (!permissions.plan_modules.includes(item.module)) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-zinc-950 text-[#1a1a1a] dark:text-zinc-100 font-['Inter'] relative overflow-hidden">
@@ -547,7 +590,7 @@ export const CRMLayout: React.FC = () => {
                 {user?.username || 'Пользователь'}
               </p>
               <p className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mt-0.5">
-                {userRole === 'admin' ? 'Администратор' : userRole === 'accountant' ? 'Бухгалтер' : 'Менеджер'}
+                {userRole === 'superadmin' ? 'Супер-Админ (SaaS)' : userRole === 'support_agent' ? 'Техподдержка' : userRole === 'admin' ? 'Администратор' : userRole === 'accountant' ? 'Бухгалтер' : 'Менеджер'}
               </p>
             </div>
           </div>
@@ -560,6 +603,28 @@ export const CRMLayout: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col overflow-hidden">
+        {impersonatedTenant && (
+          <div className="bg-gradient-to-r from-amber-600 via-orange-600 to-rose-600 text-white px-4 md:px-8 py-2.5 shadow-md flex items-center justify-between gap-4 text-xs font-mono font-semibold animate-fadeIn shrink-0 z-50">
+            <div className="flex items-center gap-2.5 truncate">
+              <span className="px-2 py-0.5 rounded bg-black/30 text-amber-200 font-extrabold tracking-wider animate-pulse shrink-0">⚠️ РЕЖИМ АУДИТА</span>
+              <span className="truncate font-sans text-sm font-semibold">
+                Вы просматриваете кабинет клиента <strong className="underline">{impersonatedTenant.name}</strong> (ИНН: {impersonatedTenant.inn}) в режиме технической поддержки
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                localStorage.removeItem('impersonated_tenant');
+                setImpersonatedTenant(null);
+                window.dispatchEvent(new CustomEvent('tenant_impersonated', { detail: null }));
+                queryClient.invalidateQueries();
+                navigate('/crm/superadmin');
+              }}
+              className="px-3.5 py-1.5 rounded-full bg-white text-gray-900 hover:bg-zinc-100 font-bold tracking-tight shadow-md hover:shadow-lg transition-all active:scale-95 shrink-0 cursor-pointer flex items-center gap-1.5"
+            >
+              <span>❌ Вернуться в консоль Вендора</span>
+            </button>
+          </div>
+        )}
         {/* Topbar */}
         <header className="h-16 bg-white dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-800 flex items-center justify-between px-4 md:px-8 shrink-0">
           <div className="flex items-center gap-3">
@@ -637,6 +702,15 @@ export const CRMLayout: React.FC = () => {
                   {unreadTasksCount}
                 </span>
               )}
+            </button>
+
+            {/* Кнопка техподдержки */}
+            <button 
+              onClick={() => navigate('/crm/support')}
+              className="p-2 text-gray-500 dark:text-zinc-400 hover:text-[#F95700] dark:hover:text-[#F95700] transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800/60 active:scale-95 cursor-pointer relative"
+              title="Служба Поддержки & Helpdesk"
+            >
+              <HelpCircle className="w-5 h-5 text-blue-500" />
             </button>
 
             {/* Кнопка отправки email */}

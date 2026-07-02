@@ -62,6 +62,16 @@ def apply_tenant_filter(query: Query) -> Query:
     return query
 
 
+# Автоматическое присвоение tenant_id при создании новых записей (SaaS RLS)
+@event.listens_for(SessionLocal, "before_flush")
+def auto_set_tenant_id(session, flush_context, instances):
+    tenant_id = current_tenant_id.get()
+    if tenant_id is not None:
+        for obj in session.new:
+            if hasattr(obj, "tenant_id") and getattr(obj, "tenant_id", None) is None:
+                setattr(obj, "tenant_id", tenant_id)
+
+
 def get_db():
     db = SessionLocal()
     try:
