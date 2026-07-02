@@ -5,6 +5,7 @@ import { IntegrationsSettings } from '../components/IntegrationsSettings';
 import { WhiteLabelSettings } from '../components/WhiteLabelSettings';
 import { RoleMatrixSettings } from '../components/RoleMatrixSettings';
 import { AuditLogs } from './AuditLogs';
+import { AIFineTuneSettings } from '../components/AIFineTuneSettings';
 
 interface UserItem {
   id: number;
@@ -30,7 +31,7 @@ interface AuthLogItem {
 }
 
 export const AdminSettings: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'users' | 'matrix' | 'audit' | 'security' | 'backup' | 'integrations' | 'billing' | 'whitelabel' | 'referral'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'matrix' | 'audit' | 'security' | 'backup' | 'integrations' | 'billing' | 'whitelabel' | 'referral' | 'ai_finetune'>('users');
   const [copiedRef, setCopiedRef] = useState(false);
   
   // User Management States
@@ -473,6 +474,12 @@ export const AdminSettings: React.FC = () => {
         >
           <Gift className="w-4 h-4 text-emerald-500" /> Реферальная программа
         </button>
+        <button
+          onClick={() => setActiveTab('ai_finetune')}
+          className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'ai_finetune' ? 'bg-[#F95700] text-white' : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800'}`}
+        >
+          <Sparkles className="w-4 h-4 text-purple-500 animate-pulse" /> ИИ Обучение (Fine-Tune)
+        </button>
       </div>
 
       {/* Tab Contents */}
@@ -480,6 +487,9 @@ export const AdminSettings: React.FC = () => {
         
         {/* Tab: Matrix */}
         {activeTab === 'matrix' && <RoleMatrixSettings />}
+
+        {/* Tab: AI Fine-Tune */}
+        {activeTab === 'ai_finetune' && <AIFineTuneSettings />}
 
         {/* Tab 5: Billing & Invoices */}
         {activeTab === 'billing' && (

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Building2, Wallet, Package, PenTool, LogOut, FileText, Sun, Moon, ShieldCheck, Gavel, TrendingUp, Menu, X, Mail, CheckSquare, Bell, Crown, LifeBuoy, HelpCircle, HardHat } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, Wallet, Package, PenTool, LogOut, FileText, Sun, Moon, ShieldCheck, Gavel, TrendingUp, Menu, X, Mail, CheckSquare, Bell, Crown, LifeBuoy, HelpCircle, HardHat, Globe } from 'lucide-react';
 import { CommandMenu } from './components/CommandMenu';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useToast } from '../components/ui/Toast';
@@ -239,6 +239,7 @@ export const CRMLayout: React.FC = () => {
 
   const allMenuItems = [
     { name: 'Дашборд', path: '/crm', icon: LayoutDashboard, module: null }, // Всегда доступен (главная)
+    { name: 'Биржа Заказов', path: '/crm/marketplace', icon: Globe, module: null }, // Внутренний SaaS маркетплейс
     { name: 'Задачи', path: '/crm/tasks', icon: CheckSquare, module: 'tasks' },
     { name: 'Техподдержка', path: '/crm/support', icon: LifeBuoy, module: 'support' },
     { name: 'Аналитика', path: '/crm/analytics', icon: TrendingUp, module: 'analytics' },

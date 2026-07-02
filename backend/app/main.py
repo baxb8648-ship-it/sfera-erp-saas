@@ -151,7 +151,7 @@ async def lifespan(app: FastAPI):
         pass
 
 
-from .api import clients, auth, objects, finance, documents, inventory, equipment, dashboard, settings, users, tenders, tender_integrations, templates, backup, analytics, websocket_route, tasks, export, audit, telegram_webhook, biurs_route, special_tasks_route, leads_route, ops_route, decision_log_route, devbrain_route, oblakocrm_bot, tenants, billing_route, ai_rag_route, support_route, permissions_route, field_templates_route, construction_route
+from .api import clients, auth, objects, finance, documents, inventory, equipment, dashboard, settings, users, tenders, tender_integrations, templates, backup, analytics, websocket_route, tasks, export, audit, telegram_webhook, biurs_route, special_tasks_route, leads_route, ops_route, decision_log_route, devbrain_route, oblakocrm_bot, tenants, billing_route, ai_rag_route, support_route, permissions_route, field_templates_route, construction_route, langgraph_route, marketplace_route, ai_finetune_route
 
 
 
@@ -191,7 +191,7 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     import os
     is_prod = os.getenv("ENVIRONMENT", "development") == "production"
-    script_src = "script-src 'self' 'unsafe-inline';" if is_prod else "script-src 'self' 'unsafe-inline' 'unsafe-eval';"
+    script_src = "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com;" if is_prod else "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com;"
     
     # Content Security Policy (CSP): разрешаем выполнение скриптов и загрузку стилей только из доверенных источников (Режим 10)
     # connect-src включает домен Cloudflare-туннеля API (punycode), чтобы браузер не блокировал fetch-запросы
@@ -200,9 +200,9 @@ async def add_security_headers(request: Request, call_next):
         f"default-src 'self' http://localhost:* http://127.0.0.1:* "
         f"https://api.xn--56-6kctpmeri.xn--p1ai; "
         f"{script_src} "
-        f"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-        f"font-src 'self' data: https://fonts.gstatic.com; "
-        f"img-src 'self' data: blob: http://localhost:* http://127.0.0.1:*; "
+        f"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; "
+        f"font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; "
+        f"img-src 'self' data: blob: http://localhost:* http://127.0.0.1:* https://fastapi.tiangolo.com https://cdn.jsdelivr.net; "
         f"connect-src 'self' http://localhost:* http://127.0.0.1:* "
         f"https://api.xn--56-6kctpmeri.xn--p1ai wss://api.xn--56-6kctpmeri.xn--p1ai;"
     )
@@ -275,8 +275,9 @@ app.include_router(support_route.router)
 app.include_router(permissions_route.router)  # Фаза 3.3 — Глубокий RBAC
 app.include_router(field_templates_route.router)  # Фаза 3.1 & 3.2 — Конструктор полей
 app.include_router(construction_route.router)  # Фаза 4.1 — Строительство
-
-
+app.include_router(langgraph_route.router)  # Фаза 5.1 — Оркестратор LangGraph
+app.include_router(marketplace_route.router)  # Фаза 6.1 — Глобальный Маркетплейс B2B
+app.include_router(ai_finetune_route.router)  # Фаза 7 — AI Fine-tuning
 
 
 

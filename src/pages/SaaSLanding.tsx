@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Building2, Sparkles, CheckCircle2, ArrowRight, 
-  Bot, Smartphone, CreditCard, BarChart3, Package, 
+import {
+  Building2, Sparkles, CheckCircle2, ArrowRight,
+  Bot, Smartphone, CreditCard, BarChart3, Package,
   Globe, Lock, Check
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -70,7 +70,7 @@ export const SaaSLanding: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0F0F11] text-zinc-100 selection:bg-[#F95700]/30 font-['Inter'] overflow-hidden">
-      
+
       {/* ================= HERO SECTION ================= */}
       <section className="relative pt-32 pb-24 px-6 md:px-12 max-w-7xl mx-auto flex flex-col items-center text-center">
         {/* Glow Effects */}
@@ -160,7 +160,7 @@ export const SaaSLanding: React.FC = () => {
       <section id="fns-onboard" className="py-20 px-6 max-w-5xl mx-auto relative z-10">
         <div className="bg-gradient-to-b from-zinc-900/90 to-zinc-950/90 border border-zinc-800/80 rounded-3xl p-8 sm:p-12 shadow-2xl relative overflow-hidden backdrop-blur-xl">
           <div className="absolute -right-20 -top-20 w-60 h-60 bg-[#F95700]/10 rounded-full blur-3xl pointer-events-none" />
-          
+
           <div className="text-center max-w-2xl mx-auto mb-10">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-950/60 border border-orange-800/50 text-[#F95700] text-xs font-bold mb-4 uppercase tracking-wider">
               <Sparkles className="w-3.5 h-3.5" />

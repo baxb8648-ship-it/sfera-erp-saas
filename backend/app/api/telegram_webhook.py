@@ -6,7 +6,11 @@ import logging
 import threading
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import Tender, CompanySetting, User, TempVoiceTask, Task, Client
+from ..models import Tender, CompanySetting, User, TempVoiceTask, Task, Client, DecisionLog
+try:
+    from ..services.pm_copilot_engine import PMCopilotEngine
+except ImportError:
+    PMCopilotEngine = None
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -142,6 +146,12 @@ def process_telegram_update_internal(update: dict, db: Session):
                 ack_text = "Отменено"
             elif data.startswith("delete_tender_"):
                 ack_text = "Удаляем..."
+            elif data.startswith("hitl_approve_"):
+                ack_text = "Решение утверждается..."
+            elif data.startswith("hitl_reject_"):
+                ack_text = "Решение отклоняется..."
+            elif data.startswith("hitl_details_"):
+                ack_text = "Готовим сводку PM Copilot..."
             
             ans_url = f"https://api.telegram.org/bot{token}/answerCallbackQuery"
             ans_payload = {"callback_query_id": callback_id, "text": ack_text}
@@ -168,6 +178,63 @@ def process_telegram_update_internal(update: dict, db: Session):
                 
             if token and chat_id and message_id:
                 run_in_background(delete_telegram_message, token, chat_id, message_id)
+
+        elif data.startswith("hitl_approve_"):
+            try:
+                proposal_id = int(data.split("_")[-1])
+            except ValueError:
+                return
+            username = callback.get("from", {}).get("username") or callback.get("from", {}).get("first_name") or "Руководитель"
+            
+            db_proposal = db.query(DecisionLog).filter(DecisionLog.id == proposal_id).first()
+            if db_proposal:
+                db_proposal.tags = "hitl,approved"
+                db_proposal.decision += f" [УТВЕРЖДЕНО @{username}]"
+                db.commit()
+                logger.info(f"HITL proposal #{proposal_id} approved by @{username}.")
+            
+            if token and chat_id and message_id:
+                new_text = f"<b>✅ РЕШЕНИЕ #{proposal_id} УТВЕРЖДЕНО</b>\n\nСанкционировано руководителем: <b>@{username}</b>\n<i>Затраты официально внесены в финансовый график PM Copilot.</i>"
+                run_in_background(edit_message_text, token, chat_id, message_id, new_text)
+
+        elif data.startswith("hitl_reject_"):
+            try:
+                proposal_id = int(data.split("_")[-1])
+            except ValueError:
+                return
+            username = callback.get("from", {}).get("username") or callback.get("from", {}).get("first_name") or "Руководитель"
+            
+            db_proposal = db.query(DecisionLog).filter(DecisionLog.id == proposal_id).first()
+            if db_proposal:
+                db_proposal.tags = "hitl,rejected"
+                db_proposal.decision += f" [ОТКЛОНЕНО @{username}]"
+                db.commit()
+                logger.info(f"HITL proposal #{proposal_id} rejected by @{username}.")
+            
+            if token and chat_id and message_id:
+                new_text = f"<b>❌ РЕШЕНИЕ #{proposal_id} ОТКЛОНЕНО</b>\n\nЗаблокировано руководителем: <b>@{username}</b>\n<i>Оплата или закупка остановлена по решению руководства.</i>"
+                run_in_background(edit_message_text, token, chat_id, message_id, new_text)
+
+        elif data.startswith("hitl_details_"):
+            try:
+                proposal_id = int(data.split("_")[-1])
+            except ValueError:
+                return
+            
+            if token and chat_id and PMCopilotEngine:
+                copilot = PMCopilotEngine()
+                summary = copilot.generate_executive_summary(db)
+                fin = summary.get("finances", {})
+                
+                details_text = (
+                    f"<b>📊 Аналитическая сводка PM Copilot к решению #{proposal_id}</b>\n\n"
+                    f"💰 Текущий баланс: <code>{fin.get('current_balance', 0):,.2f} руб.</code>\n"
+                    f"🔥 Скорость сжигания (Burn Rate): <code>{fin.get('daily_burn_rate', 0):,.2f} руб/день</code>\n"
+                    f"⏳ Запас прочности (Runway): <b>{fin.get('runway_days', 0)} дней</b>\n"
+                    f"🎯 Финансовый статус: <b>{fin.get('cash_gap_status', 'UNKNOWN')}</b>\n\n"
+                    f"💡 <i>Резюме ИИ:</i> {summary.get('copilot_verdict', '')}"
+                )
+                run_in_background(send_message_to_topic, token, str(chat_id), message.get("message_thread_id") or 0, details_text)
 
         elif data.startswith("take_"):
             try:

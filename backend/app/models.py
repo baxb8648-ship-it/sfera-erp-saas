@@ -762,3 +762,84 @@ class FieldTemplate(Base):
     created_at   = Column(DateTime, default=datetime.utcnow)
 
     tenant = relationship("Tenant")
+
+# ═══════════════════════════════════════════════════════
+# ФАЗА 6.1 — ГЛОБАЛЬНЫЙ МАРКЕТПЛЕЙС B2B-ЗАЯВОК
+# ═══════════════════════════════════════════════════════
+
+class MarketplaceListing(Base):
+    """
+    Заявка на внутренней бирже субподрядов/аренды (Marketplace).
+    Видна всем активным тенантам в системе (cross-tenant).
+    """
+    __tablename__ = "marketplace_listings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    author_tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    author_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    title = Column(String, nullable=False, index=True)
+    description = Column(Text, nullable=False)
+    category = Column(String, nullable=False, index=True) # subcontracting, equipment_rental, materials, services
+    budget = Column(Float, nullable=True)                 # Бюджет/Цена
+    currency = Column(String, default="RUB")
+    status = Column(String, default="open")               # open, in_progress, closed, cancelled
+    is_active = Column(Boolean, default=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    author_tenant = relationship("Tenant", foreign_keys=[author_tenant_id])
+    author_user = relationship("User", foreign_keys=[author_user_id])
+    responses = relationship("MarketplaceResponse", back_populates="listing", cascade="all, delete-orphan")
+
+
+class MarketplaceResponse(Base):
+    """
+    Отклик другой компании (тенанта) на заявку в маркетплейсе.
+    """
+    __tablename__ = "marketplace_responses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    listing_id = Column(Integer, ForeignKey("marketplace_listings.id"), nullable=False, index=True)
+    responder_tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False)
+    responder_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    message = Column(Text, nullable=False)
+    contact_info = Column(String, nullable=True) # Телефон или email для связи
+    status = Column(String, default="pending")   # pending, accepted, rejected
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    listing = relationship("MarketplaceListing", back_populates="responses")
+    responder_tenant = relationship("Tenant", foreign_keys=[responder_tenant_id])
+    responder_user = relationship("User", foreign_keys=[responder_user_id])
+
+
+# ═══════════════════════════════════════════════════════
+# ФАЗА 7 — ПЕРСОНАЛЬНЫЙ FINE-TUNING ИИ (AI CUSTOMIZATION)
+# ═══════════════════════════════════════════════════════
+
+class AIFineTuneJob(Base):
+    """
+    Фоновые задачи дообучения ИИ (LoRA Fine-tuning).
+    Отслеживает процесс экспорта данных и "прожарки" нейросети.
+    """
+    __tablename__ = "ai_finetune_jobs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    status = Column(String, default="idle")          # idle, extracting, training, completed, failed
+    progress_percent = Column(Integer, default=0)    # 0-100
+    logs = Column(JSON, nullable=True, default=[])   # Массив строк логов (для терминала)
+    adapter_path = Column(String, nullable=True)     # Путь к сгенерированному LoRA-файлу
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+
+    tenant = relationship("Tenant")
+    user = relationship("User")
