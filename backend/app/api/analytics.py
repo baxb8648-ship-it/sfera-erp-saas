@@ -33,13 +33,17 @@ def get_analytics_stats(
             pass
 
     # --- 1. Cohort Analysis (LTV / CAC) ---
-    # Group clients by month of registration
-    # strftime('%Y-%m', created_at)
+    dialect_name = db.get_bind().dialect.name
+    if dialect_name == 'sqlite':
+        month_expr = func.strftime('%Y-%m', Client.created_at)
+    else:
+        month_expr = func.to_char(Client.created_at, 'YYYY-MM')
+
     cohort_query = db.query(
-        func.strftime('%Y-%m', Client.created_at).label('cohort_month'),
+        month_expr.label('cohort_month'),
         func.count(Client.id).label('cohort_size'),
         func.sum(Client.acquisition_cost).label('total_cac')
-    )
+    ).filter(Client.tenant_id == current_user.tenant_id)
     
     if s_date:
         cohort_query = cohort_query.filter(Client.created_at >= s_date)
@@ -64,10 +68,14 @@ def get_analytics_stats(
             month_label = cohort_month
             
         # Get client IDs in this cohort
-        client_ids = [c.id for c in db.query(Client.id).filter(func.strftime('%Y-%m', Client.created_at) == cohort_month).all()]
+        client_ids = [c.id for c in db.query(Client.id).filter(
+            Client.tenant_id == current_user.tenant_id,
+            month_expr == cohort_month
+        ).all()]
         
         # Sum income transactions for these clients
         finance_filter = [
+            FinanceTransaction.tenant_id == current_user.tenant_id,
             FinanceTransaction.client_id.in_(client_ids),
             FinanceTransaction.transaction_type == "income"
         ]
@@ -91,7 +99,7 @@ def get_analytics_stats(
         })
 
     # --- 2. Tender Conversion Funnel ---
-    tender_filter = []
+    tender_filter = [Tender.tenant_id == current_user.tenant_id]
     if s_date:
         tender_filter.append(Tender.created_at >= s_date)
     if e_date:
@@ -175,7 +183,10 @@ def get_analytics_stats(
 
     # --- 3. Financial Expense Breakdown & Segment Distribution ---
     # Expense categories
-    expense_filter = [FinanceTransaction.transaction_type == "expense"]
+    expense_filter = [
+        FinanceTransaction.tenant_id == current_user.tenant_id,
+        FinanceTransaction.transaction_type == "expense"
+    ]
     if s_date:
         expense_filter.append(FinanceTransaction.date >= s_date)
     if e_date:
@@ -204,6 +215,8 @@ def get_analytics_stats(
     # Segment revenue & profit breakdown
     # Revenue by segment
     segment_revenue_filter = [
+        FinanceTransaction.tenant_id == current_user.tenant_id,
+        Client.tenant_id == current_user.tenant_id,
         FinanceTransaction.transaction_type == "income"
     ]
     if s_date:
@@ -223,6 +236,8 @@ def get_analytics_stats(
     
     # Expense by segment
     segment_expense_filter = [
+        FinanceTransaction.tenant_id == current_user.tenant_id,
+        Client.tenant_id == current_user.tenant_id,
         FinanceTransaction.transaction_type == "expense"
     ]
     if s_date:
@@ -255,7 +270,10 @@ def get_analytics_stats(
         })
 
     # Summary metrics
-    revenue_filter = [FinanceTransaction.transaction_type == "income"]
+    revenue_filter = [
+        FinanceTransaction.tenant_id == current_user.tenant_id,
+        FinanceTransaction.transaction_type == "income"
+    ]
     if s_date:
         revenue_filter.append(FinanceTransaction.date >= s_date)
     if e_date:

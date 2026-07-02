@@ -37,6 +37,17 @@ def get_objects(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), 
         q = q.filter(Object.owner_id == current_user.id)
     return q.offset(skip).limit(limit).all()
 
+
+@router.get("/{obj_id}", response_model=ObjectResponse)
+def get_object(obj_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user), perm = Depends(require_permission("objects", "read"))):
+    q = db.query(Object).filter(Object.id == obj_id, Object.tenant_id == current_user.tenant_id)
+    if perm.own_only:
+        q = q.filter(Object.owner_id == current_user.id)
+    db_obj = q.first()
+    if not db_obj:
+        raise HTTPException(status_code=404, detail="Object not found")
+    return db_obj
+
 @router.patch("/{obj_id}/status", response_model=ObjectResponse)
 def update_object_status(obj_id: int, status: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user), perm = Depends(require_permission("objects", "write"))):
     q = db.query(Object).filter(Object.id == obj_id, Object.tenant_id == current_user.tenant_id)
