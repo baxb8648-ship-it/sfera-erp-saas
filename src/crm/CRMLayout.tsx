@@ -219,19 +219,18 @@ export const CRMLayout: React.FC = () => {
   const usernameVal = user?.username ? user.username.charAt(0).toUpperCase() : 'А';
 
   const allMenuItems = [
-    { name: 'Дашборд', path: '/crm', icon: LayoutDashboard, roles: ['admin', 'manager', 'accountant'] },
-    { name: 'Задачи', path: '/crm/tasks', icon: CheckSquare, roles: ['admin', 'manager', 'accountant'] },
-    { name: 'Аналитика', path: '/crm/analytics', icon: TrendingUp, roles: ['admin', 'accountant'] },
-    { name: 'Клиенты', path: '/crm/clients', icon: Users, roles: ['admin', 'manager'] },
-    { name: 'Объекты', path: '/crm/objects', icon: Building2, roles: ['admin', 'manager', 'accountant'] },
-    { name: 'Тендеры', path: '/crm/tenders', icon: Gavel, roles: ['admin', 'manager'] },
-    { name: 'Финансы', path: '/crm/finance', icon: Wallet, roles: ['admin', 'accountant'] },
-    { name: 'Склад', path: '/crm/inventory', icon: Package, roles: ['admin', 'accountant'] },
-    { name: 'Оборудование', path: '/crm/equipment', icon: PenTool, roles: ['admin', 'accountant'] },
-    { name: 'Шаблоны и Контент', path: '/crm/templates', icon: FileText, roles: ['admin', 'manager', 'accountant'] },
+    { name: 'Дашборд', path: '/crm', icon: LayoutDashboard, roles: ['admin', 'manager', 'accountant', 'superadmin'] },
+    { name: 'Задачи', path: '/crm/tasks', icon: CheckSquare, roles: ['admin', 'manager', 'accountant', 'superadmin'] },
+    { name: 'Аналитика', path: '/crm/analytics', icon: TrendingUp, roles: ['admin', 'accountant', 'superadmin'] },
+    { name: 'Клиенты', path: '/crm/clients', icon: Users, roles: ['admin', 'manager', 'superadmin'] },
+    { name: 'Объекты', path: '/crm/objects', icon: Building2, roles: ['admin', 'manager', 'accountant', 'superadmin'] },
+    { name: 'Тендеры', path: '/crm/tenders', icon: Gavel, roles: ['admin', 'manager', 'superadmin'] },
+    { name: 'Финансы', path: '/crm/finance', icon: Wallet, roles: ['admin', 'accountant', 'superadmin'] },
+    { name: 'Склад', path: '/crm/inventory', icon: Package, roles: ['admin', 'accountant', 'superadmin'] },
+    { name: 'Оборудование', path: '/crm/equipment', icon: PenTool, roles: ['admin', 'accountant', 'superadmin'] },
+    { name: 'Шаблоны и Контент', path: '/crm/templates', icon: FileText, roles: ['admin', 'manager', 'accountant', 'superadmin'] },
     { name: 'Администрирование', path: '/crm/admin', icon: ShieldCheck, roles: ['admin', 'superadmin'] },
     { name: 'Супер-Админ (SaaS)', path: '/crm/superadmin', icon: Crown, roles: ['superadmin'] },
-
   ];
 
   React.useEffect(() => {
