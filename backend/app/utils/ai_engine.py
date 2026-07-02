@@ -1,6 +1,11 @@
+import os
+import math
+import hashlib
+import random
 import urllib.request
 import json
 import logging
+from typing import List, Optional
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -8,6 +13,13 @@ logger = logging.getLogger("uvicorn.error")
 OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
 # Модель, отлично понимающая русский (Qwen2 7B или Llama3)
 MODEL_NAME = "qwen2:7b" 
+
+# Настройки генерации эмбеддингов
+OLLAMA_EMBED_URL = "http://127.0.0.1:11434/api/embeddings"
+EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME", "nomic-embed-text")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_EMBED_URL = "https://api.openai.com/v1/embeddings"
+OPENAI_EMBED_MODEL = "text-embedding-3-small" 
 
 def ask_ollama(prompt: str) -> str:
     """
@@ -161,3 +173,160 @@ def ai_extract_task_entities(text: str) -> dict:
             "task_title": text[:60] if text else "Задача из голосового сообщения",
             "task_description": text,
         }
+
+
+# ─── ФАЗА 2: ГЕНЕРАТОР ЭМБЕДДИНГОВ (RAG & PINECONE) ─────────────────────────────
+
+def _normalize_and_resize(vec: List[float], target_dim: int) -> List[float]:
+    """
+    Приводит вектор к нужной размерности (для Pinecone по умолчанию 1536) 
+    и нормализует (L2 norm = 1.0) для корректного расчета косинусного расстояния.
+    """
+    if not vec:
+        vec = [0.0] * target_dim
+    
+    if len(vec) > target_dim:
+        vec = vec[:target_dim]
+    elif len(vec) < target_dim:
+        repeats = (target_dim // len(vec)) + 1
+        vec = (vec * repeats)[:target_dim]
+        
+    norm = math.sqrt(sum(x * x for x in vec))
+    if norm > 1e-12:
+        vec = [x / norm for x in vec]
+    else:
+        vec = [1.0 / math.sqrt(target_dim)] * target_dim
+    return vec
+
+
+def _get_fallback_embedding(text: str, target_dim: int) -> List[float]:
+    """
+    Генерация детерминированного вектора на основе SHA-256 хеша текста (failsafe/офлайн режим).
+    Позволяет тестировать RAG-индексацию и поиск в Pinecone без запущенной Ollama и без ключей OpenAI.
+    """
+    h = hashlib.sha256(text.encode("utf-8", errors="ignore")).hexdigest()
+    seed_val = int(h, 16)
+    rng = random.Random(seed_val)
+    vec = [rng.uniform(-1.0, 1.0) for _ in range(target_dim)]
+    return _normalize_and_resize(vec, target_dim)
+
+
+def get_embedding(text: str, target_dim: int = 1536) -> List[float]:
+    """
+    Генерирует векторное представление (embedding) для текста.
+    
+    Стратегия:
+    1. Если задан OPENAI_API_KEY в .env, использует OpenAI (text-embedding-3-small, размерность 1536).
+    2. Если нет, пытается использовать локальный Ollama API (/api/embeddings или /api/embed).
+    3. При сбое или отсутствии сети/модели возвращает детерминированный нормализованный вектор (failsafe).
+    """
+    if not text or not text.strip():
+        return [0.0] * target_dim
+
+    # 1. Попытка через OpenAI API
+    if OPENAI_API_KEY:
+        try:
+            payload = {
+                "model": OPENAI_EMBED_MODEL,
+                "input": text.strip()
+            }
+            data = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(
+                OPENAI_EMBED_URL,
+                data=data,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {OPENAI_API_KEY}"
+                },
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                res_json = json.loads(resp.read().decode("utf-8"))
+                embedding = res_json["data"][0]["embedding"]
+                return _normalize_and_resize(embedding, target_dim)
+        except Exception as e:
+            logger.warning(f"[ai_engine] OpenAI embedding failed: {e}. Falling back to Ollama/failsafe.")
+
+    # 2. Попытка через локальный Ollama
+    try:
+        payload = {
+            "model": EMBEDDING_MODEL_NAME,
+            "prompt": text.strip()
+        }
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            OLLAMA_EMBED_URL,
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            res_json = json.loads(resp.read().decode("utf-8"))
+            embedding = res_json.get("embedding")
+            if not embedding and "embeddings" in res_json and res_json["embeddings"]:
+                embedding = res_json["embeddings"][0]
+            if embedding:
+                return _normalize_and_resize(embedding, target_dim)
+    except Exception as e:
+        logger.debug(f"[ai_engine] Ollama embedding failed: {e}. Using deterministic failsafe embedding.")
+
+    # 3. Failsafe: детерминированный вектор
+    return _get_fallback_embedding(text.strip(), target_dim)
+
+
+def get_embeddings_batch(texts: List[str], target_dim: int = 1536) -> List[List[float]]:
+    """
+    Пакетная генерация эмбеддингов для списка текстовых фрагментов.
+    """
+    if not texts:
+        return []
+    
+    results = []
+    for t in texts:
+        results.append(get_embedding(t, target_dim=target_dim))
+    return results
+
+
+def generate_rag_answer(query: str, context_chunks: List[dict], model_name: Optional[str] = None) -> str:
+    """
+    Генерирует ответ на основе RAG-контекста с помощью локальной LLM (Qwen / Ollama).
+    Если контекст найден, формирует строгий промпт, запрещающий галлюцинировать.
+    Если Ollama недоступна, возвращает информативное сообщение с данными из найденных чанков.
+    """
+    if not context_chunks:
+        prompt = f"""Ты — интеллектуальный бизнес-ассистент СФЕРА ERP.
+Вопрос пользователя: {query}
+В базе знаний компании не найдено прямых документов по этому вопросу. Ответь профессионально и кратко на основе общих знаний о бизнес-процессах и ERP-системах, но укажи, что в корпоративной базе нет специального документа на эту тему.
+Ответ на русском языке:"""
+    else:
+        context_str = "\n\n".join([
+            f"[Фрагмент #{i+1} | Источник: {c.get('source') or c.get('metadata', {}).get('source_file') or 'База знаний'} | Релевантность: {round(c.get('score', 0)*100, 1)}%]\n{c.get('text', '')}"
+            for i, c in enumerate(context_chunks)
+        ])
+        prompt = f"""Ты — интеллектуальный бизнес-ассистент СФЕРА ERP. Ответь на вопрос пользователя на русском языке, опираясь СТРОГО на предоставленные ниже фрагменты из корпоративной базы знаний.
+Правила:
+1. Используй только факты из предоставленного контекста. Не выдумывай цены, сроки или условия, если их нет в тексте.
+2. Если в тексте есть ответ, сформулируй его четко, структурированно и понятно для сотрудника или руководителя.
+3. Можно делать ссылки на названия документов/источников, из которых взята информация.
+
+КОНТЕКСТ ИЗ БАЗЫ ЗНАНИЙ:
+=========================================
+{context_str}
+=========================================
+
+ВОПРОС ПОЛЬЗОВАТЕЛЯ: {query}
+
+ОТВЕТ АССИСТЕНТА:"""
+
+    answer = ask_ollama(prompt)
+    if not answer:
+        if context_chunks:
+            top_text = context_chunks[0].get('text', '')
+            source = context_chunks[0].get('source') or context_chunks[0].get('metadata', {}).get('source_file') or 'База знаний'
+            return f"[Офлайн-режим RAG: локальная LLM ({MODEL_NAME}) временно не отвечает]\n\nНаиболее релевантный ответ из базы знаний (источник: {source}):\n«{top_text}»"
+        else:
+            return "[Офлайн-режим: локальная нейросеть временно недоступна, а в базе знаний нет информации по вашему вопросу]"
+            
+    return answer
+
+

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ShieldCheck, UserCheck, ShieldAlert, Plus, RefreshCw, Search, ChevronLeft, ChevronRight, Lock, Unlock, Database, Download, Upload, Settings, Eye, EyeOff, Key, Trash2, Mail, History, CreditCard, FileText, Calendar, Sparkles } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { IntegrationsSettings } from '../components/IntegrationsSettings';
+import { WhiteLabelSettings } from '../components/WhiteLabelSettings';
 import { AuditLogs } from './AuditLogs';
 
 interface UserItem {
@@ -28,7 +29,7 @@ interface AuthLogItem {
 }
 
 export const AdminSettings: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'users' | 'audit' | 'security' | 'backup' | 'integrations' | 'billing'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'audit' | 'security' | 'backup' | 'integrations' | 'billing' | 'whitelabel'>('users');
   
   // User Management States
   const [users, setUsers] = useState<UserItem[]>([]);
@@ -451,6 +452,12 @@ export const AdminSettings: React.FC = () => {
           className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'billing' ? 'bg-[#F95700] text-white' : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800'}`}
         >
           <CreditCard className="w-4 h-4" /> Оплата и подписка
+        </button>
+        <button
+          onClick={() => setActiveTab('whitelabel')}
+          className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'whitelabel' ? 'bg-[#F95700] text-white' : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800'}`}
+        >
+          <Sparkles className="w-4 h-4 text-amber-500" /> White-Label Брендирование
         </button>
       </div>
 
@@ -1067,6 +1074,13 @@ export const AdminSettings: React.FC = () => {
             </div>
             
             <IntegrationsSettings />
+          </div>
+        )}
+
+        {/* Tab 6: White-Label Branding */}
+        {activeTab === 'whitelabel' && (
+          <div className="space-y-6">
+            <WhiteLabelSettings />
           </div>
         )}
 

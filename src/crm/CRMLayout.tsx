@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Building2, Wallet, Package, PenTool, LogOut, FileText, Sun, Moon, ShieldCheck, Gavel, TrendingUp, Menu, X, Mail, CheckSquare, Bell } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, Wallet, Package, PenTool, LogOut, FileText, Sun, Moon, ShieldCheck, Gavel, TrendingUp, Menu, X, Mail, CheckSquare, Bell, Crown } from 'lucide-react';
 import { CommandMenu } from './components/CommandMenu';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useToast } from '../components/ui/Toast';
@@ -31,8 +31,31 @@ export const CRMLayout: React.FC = () => {
   const { data: settings = {} } = useQuery({
     queryKey: ['settings'],
     queryFn: () => apiClient.get('/settings/'),
-    enabled: isEmailModalOpen
+    enabled: true
   });
+
+  React.useEffect(() => {
+    if (settings && (settings as any).brand_color) {
+      document.documentElement.style.setProperty('--brand-color', (settings as any).brand_color);
+      localStorage.setItem('brand_color', (settings as any).brand_color);
+    } else {
+      const savedColor = localStorage.getItem('brand_color');
+      if (savedColor) {
+        document.documentElement.style.setProperty('--brand-color', savedColor);
+      }
+    }
+  }, [settings]);
+
+  React.useEffect(() => {
+    const handleBrandUpdate = (e: any) => {
+      if (e.detail && e.detail.brand_color) {
+        document.documentElement.style.setProperty('--brand-color', e.detail.brand_color);
+      }
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+    };
+    window.addEventListener('brand_settings_updated', handleBrandUpdate);
+    return () => window.removeEventListener('brand_settings_updated', handleBrandUpdate);
+  }, [queryClient]);
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
@@ -206,7 +229,8 @@ export const CRMLayout: React.FC = () => {
     { name: 'Склад', path: '/crm/inventory', icon: Package, roles: ['admin', 'accountant'] },
     { name: 'Оборудование', path: '/crm/equipment', icon: PenTool, roles: ['admin', 'accountant'] },
     { name: 'Шаблоны и Контент', path: '/crm/templates', icon: FileText, roles: ['admin', 'manager', 'accountant'] },
-    { name: 'Администрирование', path: '/crm/admin', icon: ShieldCheck, roles: ['admin'] },
+    { name: 'Администрирование', path: '/crm/admin', icon: ShieldCheck, roles: ['admin', 'superadmin'] },
+    { name: 'Супер-Админ (SaaS)', path: '/crm/superadmin', icon: Crown, roles: ['admin', 'superadmin'] },
 
   ];
 
@@ -457,9 +481,18 @@ export const CRMLayout: React.FC = () => {
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-800 flex flex-col shadow-sm transform transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6 border-b border-gray-200 dark:border-zinc-800 flex items-center justify-between">
-          <h1 className="text-2xl font-bold font-['Montserrat'] tracking-tight text-[#1a1a1a] dark:text-white">
-            СФЕРА <span className="text-[#F95700]">ERP</span>
-          </h1>
+          <Link to="/crm" className="flex items-center gap-2.5 overflow-hidden">
+            {(settings as any).brand_logo_url ? (
+              <img src={(settings as any).brand_logo_url} alt="Logo" className="h-8 w-auto object-contain max-w-[120px]" />
+            ) : null}
+            <h1 className="text-2xl font-bold font-['Montserrat'] tracking-tight text-[#1a1a1a] dark:text-white truncate">
+              {(settings as any).brand_name ? (
+                <span style={{ color: (settings as any).brand_color || '#F95700' }}>{(settings as any).brand_name}</span>
+              ) : (
+                <>СФЕРА <span style={{ color: (settings as any).brand_color || '#F95700' }}>ERP</span></>
+              )}
+            </h1>
+          </Link>
           <button 
             type="button" 
             onClick={() => setIsSidebarOpen(false)} 
@@ -482,11 +515,12 @@ export const CRMLayout: React.FC = () => {
                         ? 'bg-[#F95700]/10 dark:bg-[#F95700]/20 text-[#F95700] font-medium' 
                         : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800/60 hover:text-[#1a1a1a] dark:hover:text-white'
                     }`}
+                    style={isActive ? { color: (settings as any).brand_color || '#F95700', backgroundColor: `${(settings as any).brand_color || '#F95700'}20` } : {}}
                   >
-                    <Icon className={`w-5 h-5 mr-3 ${isActive ? 'text-[#F95700]' : 'text-gray-400 dark:text-zinc-500'}`} />
+                    <Icon className={`w-5 h-5 mr-3 ${isActive ? 'text-[#F95700]' : 'text-gray-400 dark:text-zinc-500'}`} style={isActive ? { color: (settings as any).brand_color || '#F95700' } : {}} />
                     <span className="flex-1">{item.name}</span>
                     {item.path === '/crm/tasks' && unreadTasksCount > 0 && (
-                      <span className="bg-[#F95700] text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center ml-2 animate-pulse">
+                      <span className="bg-[#F95700] text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center ml-2 animate-pulse" style={{ backgroundColor: (settings as any).brand_color || '#F95700' }}>
                         {unreadTasksCount}
                       </span>
                     )}
@@ -499,13 +533,13 @@ export const CRMLayout: React.FC = () => {
         <div className="p-4 border-t border-gray-200 dark:border-zinc-800 flex flex-col gap-2 bg-gray-50/50 dark:bg-zinc-900/30">
           <div className="flex items-center gap-3 relative">
             <div className="relative">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-orange-500 to-[#F95700] text-white flex items-center justify-center font-extrabold text-sm shadow-md shadow-orange-500/10">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-orange-500 to-[#F95700] text-white flex items-center justify-center font-extrabold text-sm shadow-md shadow-orange-500/10" style={{ backgroundColor: (settings as any).brand_color || '#F95700', backgroundImage: 'none' }}>
                 {usernameVal}
               </div>
               {unreadTasksCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-[#F95700] border border-white dark:border-zinc-900"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" style={{ backgroundColor: (settings as any).brand_color || '#F95700' }}></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-[#F95700] border border-white dark:border-zinc-900" style={{ backgroundColor: (settings as any).brand_color || '#F95700' }}></span>
                 </span>
               )}
             </div>

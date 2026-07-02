@@ -1,7 +1,7 @@
 # 🌐 СФЕРА ERP SaaS — Полный анализ и Дорожная карта
 
 > Составлен: 2026-07-01 | На основе аудита всех документов `/docs` и структуры кода
-> Обновлён: 2026-07-01 — Активированы Neon PostgreSQL, GitHub MCP, Pinecone
+> Обновлён: 2026-07-02 — Завершены Фаза 0 и Фаза 1 (GitHub CI/CD, SuperAdmin-панель, White-Label MVP, Pinecone RAG)
 
 ---
 
@@ -82,11 +82,11 @@
 
 | Сервис | Ключ/Данные | Статус |
 |---|---|---|
-| **GitHub Token** | `github_pat_11B2VFINQ0QkP1eP...` | ✅ Активирован |
-| **Pinecone** | `pcsk_7NooBS_Rniz8BqkiTvGVUeE...` | 🔄 Подключается |
+| **GitHub Token** | `github_pat_11B2VFINQ0QkP1eP...` | ✅ Активирован (репо sfera-erp-saas) |
+| **Pinecone** | `pcsk_7NooBS_Rniz8BqkiTvGVUeE...` | ✅ Активирован (индекс sphera-knowledge-base) |
 | **Neon PostgreSQL** | `...@ep-hidden-block-as6m7hld.c-4.eu-central-1.aws.neon.tech` | ✅ Активирован! |
 | **MCP: StitchMCP** | UI & Design System Builder | ✅ Подключён |
-| **MCP: GitHub** | github-mcp-server | 🔄 Настройка (Docker) |
+| **MCP: GitHub** | github-mcp-server | ✅ Настроен |
 | **Ollama qwen2:7b** | Локально | ✅ Работает |
 | **Groq Whisper API** | `gsk_7XweqamHy...` | ✅ Работает |
 | **api-fns.ru** | 100 запросов/год | ✅ Работает |
@@ -102,27 +102,27 @@
 - [x] **0.2** Проверить соединение `test_neon.py` — PostgreSQL 18.4 отвечает
 - [x] **0.3** Запустить `migrate_sqlite_to_postgres.py` — данные перенесены
 - [x] **0.4** Сохранить аналитический документ в `/docs`
-- [ ] **0.5** Подключить GitHub репозиторий (токен готов)
-- [ ] **0.6** Интеграция Pinecone SDK
+- [x] **0.5** Подключить GitHub репозиторий — репозиторий `sfera-erp-saas` создан и настроен
+- [x] **0.6** Интеграция Pinecone SDK — RAG-сервис `pinecone_rag.py` и индекс подключены
 
 ---
 
-### 🟠 ФАЗА 1 — SaaS-фундамент (1-2 недели)
+### 🟠 ФАЗА 1 — SaaS-фундамент (1-2 недели) — 🟢 ВЫПОЛНЕНО (90%)
 
-- [ ] **1.1** Тестирование биллинга (статус, счета, тестовая оплата)
+- [x] **1.1** Тестирование биллинга (статус, счета, тестовая оплата)
 - [x] **1.2** Landing page / Страница регистрации компании по ИНН
-- [ ] **1.3** Супер-админ панель (список тенантов, статус лицензий, блокировка)
-- [ ] **1.4** Email-уведомления о регистрации и выставлении счёта
-- [ ] **1.5** GitHub Actions — авто-деплой на изменения в main ветке
-- [ ] **1.6** White-label MVP: логотип + акцентный цвет (CSS vars)
+- [x] **1.3** Супер-админ панель (список тенантов, статус лицензий, блокировка)
+- [ ] **1.4** Email-уведомления о регистрации и выставлении счёта (в процессе / планируется)
+- [x] **1.5** GitHub Actions CI/CD — авто-проверка и сборка проекта в `.github/workflows/ci.yml`
+- [x] **1.6** White-label MVP: логотип + акцентный цвет в реальном времени (CSS vars)
 
 ---
 
 ### 🟡 ФАЗА 2 — RAG и Pinecone (2-3 недели)
 
-- [ ] **2.1** Интеграция Pinecone SDK — namespace per tenant
-- [ ] **2.2** Core база знаний тенанта (профиль компании, прайс, шаблоны)
-- [ ] **2.3** RAG-эндпоинт `/ai/ask` — вопрос → Pinecone → Ollama ответ
+- [x] **2.1** Интеграция Pinecone SDK — namespace per tenant
+- [x] **2.2** Core база знаний тенанта (профиль компании, прайс, шаблоны, нарезка чанков и эмбеддинги)
+- [x] **2.3** RAG-эндпоинт `/ai/ask` — вопрос → Pinecone → Ollama (Qwen) ответ
 - [ ] **2.4** Улучшение AI-копилота: отвечает на основе RAG
 - [ ] **2.5** Загрузка PDF/Word в базу знаний через UI
 
@@ -173,14 +173,14 @@
 | **Backend** | FastAPI (async) | ✅ Работает (порт 8001) |
 | **БД** | Neon PostgreSQL 18.4 (Cloud Serverless) | ✅ Активирована! |
 | **Мультитенантность** | RLS через SQLAlchemy ContextVar | ✅ Реализовано |
-| **Векторная БД** | **Pinecone** | 🔄 Подключается |
+| **Векторная БД** | **Pinecone** | ✅ Работает (sphera-knowledge-base) |
 | **LLM (текст)** | Ollama / Qwen2:7b | ✅ Работает локально |
 | **STT (голос)** | Groq Whisper API | ✅ Работает |
 | **Оркестрация агентов** | LangGraph | ❌ Запланировано |
 | **Telegram** | Bot (long polling) + Mini App | ✅ Работает |
 | **Биллинг** | python-docx (Word счета) | ✅ Реализован |
 | **UI Design** | StitchMCP | ✅ Подключён |
-| **Version Control** | GitHub | 🔄 Настройка |
+| **Version Control** | GitHub | ✅ Настроен (репо + Actions CI/CD) |
 
 ---
 

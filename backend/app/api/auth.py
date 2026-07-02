@@ -79,9 +79,18 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
         raise credentials_exception
         
     user = db.query(User).filter(User.username == username).first()
-    if user is None:
+    if user is None or user.is_active == 0:
         raise credentials_exception
         
+    if user.tenant_id is not None:
+        from ..models import Tenant
+        tenant = db.query(Tenant).filter(Tenant.id == user.tenant_id).first()
+        if tenant and not tenant.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Доступ приостановлен. Компания заблокирована за неуплату или решением администрации."
+            )
+
     # Устанавливаем tenant_id текущего пользователя в контекст запроса
     current_tenant_id.set(user.tenant_id)
     return user
@@ -145,6 +154,24 @@ def login(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is deactivated"
         )
+        
+    if user.tenant_id is not None:
+        from ..models import Tenant
+        tenant = db.query(Tenant).filter(Tenant.id == user.tenant_id).first()
+        if tenant and not tenant.is_active:
+            log_entry = AuthLog(
+                user_id=user.id,
+                username=form_data.username,
+                status="tenant_blocked",
+                ip_address=ip_addr,
+                user_agent=user_agent
+            )
+            db.add(log_entry)
+            db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Доступ приостановлен. Компания заблокирована за неуплату или решением администрации."
+            )
         
     # Successful login
     log_entry = AuthLog(

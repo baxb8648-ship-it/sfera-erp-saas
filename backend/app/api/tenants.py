@@ -3,14 +3,15 @@ import urllib.request
 import urllib.parse
 import json
 import logging
-from typing import Optional
+from typing import Optional, List
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 
 from ..database import get_db, current_tenant_id
 from ..models import Tenant, User, Organization
-from .auth import get_password_hash
+from .auth import get_password_hash, get_current_user
 
 logger = logging.getLogger("uvicorn.error")
 router = APIRouter(prefix="/tenants", tags=["SaaS Tenants Management"])
@@ -200,3 +201,115 @@ def register_tenant(body: TenantRegister, db: Session = Depends(get_db)):
         db.rollback()
         logger.error(f"[SaaS Tenant] Registration failed: {e}")
         raise HTTPException(status_code=500, detail=f"Ошибка регистрации компании: {e}")
+
+
+class TenantAdminOut(BaseModel):
+    id: int
+    name: str
+    full_name: Optional[str] = None
+    inn: str
+    kpp: Optional[str] = None
+    ogrn: Optional[str] = None
+    address: Optional[str] = None
+    director: Optional[str] = None
+    sphere: str
+    is_active: bool
+    subscription_ends_at: Optional[datetime] = None
+    created_at: datetime
+    users_count: int = 0
+
+    class Config:
+        from_attributes = True
+
+
+def require_superadmin(current_user: User = Depends(get_current_user)):
+    if current_user.role != "superadmin" and not (current_user.role == "admin" and current_user.tenant_id is None):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Доступ запрещен. Требуются права Супер-Администратора платформы."
+        )
+    return current_user
+
+
+@router.get("/all", response_model=List[TenantAdminOut])
+def get_all_tenants(db: Session = Depends(get_db), superadmin: User = Depends(require_superadmin)):
+    current_tenant_id.set(None)
+    tenants = db.query(Tenant).order_by(Tenant.created_at.desc()).all()
+    result = []
+    for t in tenants:
+        u_count = db.query(User).filter(User.tenant_id == t.id).count()
+        t_dict = {
+            "id": t.id,
+            "name": t.name,
+            "full_name": t.full_name,
+            "inn": t.inn,
+            "kpp": t.kpp,
+            "ogrn": t.ogrn,
+            "address": t.address,
+            "director": t.director,
+            "sphere": t.sphere,
+            "is_active": t.is_active,
+            "subscription_ends_at": t.subscription_ends_at,
+            "created_at": t.created_at,
+            "users_count": u_count
+        }
+        result.append(t_dict)
+    return result
+
+
+class ToggleStatusBody(BaseModel):
+    is_active: bool
+
+
+@router.patch("/{tenant_id}/status", response_model=TenantAdminOut)
+def update_tenant_status(tenant_id: int, body: ToggleStatusBody, db: Session = Depends(get_db), superadmin: User = Depends(require_superadmin)):
+    current_tenant_id.set(None)
+    t = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not t:
+        raise HTTPException(status_code=404, detail="Компания не найдена")
+    t.is_active = body.is_active
+    db.commit()
+    db.refresh(t)
+    u_count = db.query(User).filter(User.tenant_id == t.id).count()
+    return {**t.__dict__, "users_count": u_count}
+
+
+class SubscriptionBody(BaseModel):
+    subscription_ends_at: Optional[datetime] = None
+    months_to_add: Optional[int] = None
+
+
+@router.patch("/{tenant_id}/subscription", response_model=TenantAdminOut)
+def update_tenant_subscription(tenant_id: int, body: SubscriptionBody, db: Session = Depends(get_db), superadmin: User = Depends(require_superadmin)):
+    current_tenant_id.set(None)
+    t = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not t:
+        raise HTTPException(status_code=404, detail="Компания не найдена")
+    if body.months_to_add:
+        current_end = t.subscription_ends_at or datetime.utcnow()
+        if current_end < datetime.utcnow():
+            current_end = datetime.utcnow()
+        t.subscription_ends_at = current_end + timedelta(days=30 * body.months_to_add)
+    elif body.subscription_ends_at is not None:
+        t.subscription_ends_at = body.subscription_ends_at
+    db.commit()
+    db.refresh(t)
+    u_count = db.query(User).filter(User.tenant_id == t.id).count()
+    return {**t.__dict__, "users_count": u_count}
+
+
+@router.post("/create-superadmin-init")
+def create_initial_superadmin(db: Session = Depends(get_db)):
+    current_tenant_id.set(None)
+    user = db.query(User).filter(User.username == "superadmin").first()
+    if user:
+        return {"msg": "Superadmin already exists"}
+    new_super = User(
+        username="superadmin",
+        hashed_password=get_password_hash("superadmin123"),
+        role="superadmin",
+        is_active=1
+    )
+    db.add(new_super)
+    db.commit()
+    return {"msg": "Superadmin created (superadmin / superadmin123)"}

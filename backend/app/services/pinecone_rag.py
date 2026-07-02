@@ -98,15 +98,39 @@ def search_similar(tenant_id: int, query_vector: list[float], top_k: int = 5) ->
     
     matches = []
     for match in results.get("matches", []):
+        meta = match.get("metadata", {})
         matches.append({
             "id": match["id"],
             "score": match["score"],
-            "text": match.get("metadata", {}).get("text", ""),
-            "source": match.get("metadata", {}).get("source", ""),
-            "type": match.get("metadata", {}).get("type", ""),
+            "text": meta.get("text", ""),
+            "source": meta.get("source", ""),
+            "type": meta.get("type", ""),
+            "metadata": meta
         })
     
     return matches
+
+
+def search_similar_by_text(tenant_id: int, query_text: str, top_k: int = 5) -> list[dict]:
+    """
+    Удобный поиск в векторной БД по текстовому запросу.
+    Автоматически генерирует эмбеддинг вопроса через ai_engine и ищет в namespace тенанта.
+    """
+    from ..utils.ai_engine import get_embedding
+    query_vector = get_embedding(query_text, target_dim=1536)
+    return search_similar(tenant_id=tenant_id, query_vector=query_vector, top_k=top_k)
+
+
+def delete_document_vectors(tenant_id: int, doc_id: str) -> bool:
+    """Удалить все векторы конкретного документа из векторной БД тенанта"""
+    idx = get_index()
+    namespace = get_tenant_namespace(tenant_id)
+    try:
+        idx.delete(filter={"doc_id": {"$eq": str(doc_id)}}, namespace=namespace)
+        return True
+    except Exception as e:
+        print(f"⚠️ Ошибка удаления векторов по фильтру doc_id {doc_id}: {e}")
+        return False
 
 
 def delete_tenant_data(tenant_id: int) -> bool:
@@ -121,3 +145,4 @@ def get_index_stats() -> dict:
     """Статистика индекса (для мониторинга / Ops Monitor)"""
     idx = get_index()
     return idx.describe_index_stats()
+

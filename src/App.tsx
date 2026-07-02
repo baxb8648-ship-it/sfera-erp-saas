@@ -58,6 +58,7 @@ const Tasks = React.lazy(() => import('./crm/pages/Tasks').then(m => ({ default:
 const AuditLogs = React.lazy(() => import('./crm/pages/AuditLogs').then(m => ({ default: m.AuditLogs })));
 const SpecialTasks = React.lazy(() => import('./crm/pages/SpecialTasks').then(m => ({ default: m.SpecialTasks })));
 const TmaKanban = React.lazy(() => import('./crm/pages/TmaKanban').then(m => ({ default: m.TmaKanban })));
+const SuperAdmin = React.lazy(() => import('./crm/pages/SuperAdmin').then(m => ({ default: m.SuperAdmin })));
 
 // Premium Skeleton Loader Fallback
 const PageSkeleton: React.FC = () => {
@@ -142,6 +143,7 @@ const App: React.FC = () => {
                   <Route path="analytics" element={<Analytics />} />
                   <Route path="audit" element={<AuditLogs />} />
                   <Route path="special-tasks" element={<SpecialTasks />} />
+                  <Route path="superadmin" element={<SuperAdmin />} />
 
                 </Route>
               </Route>

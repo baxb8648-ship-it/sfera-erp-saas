@@ -162,6 +162,14 @@ export const TemplatesAndContent: React.FC = () => {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
+  // AI Knowledge Base (RAG) upload state
+  const [isAiUploadModalOpen, setIsAiUploadModalOpen] = useState(false);
+  const [aiUploadTitle, setAiUploadTitle] = useState('');
+  const [aiUploadCategory, setAiUploadCategory] = useState('tech');
+  const [aiUploadFile, setAiUploadFile] = useState<File | null>(null);
+  const [isAiUploading, setIsAiUploading] = useState(false);
+  const [aiUploadResult, setAiUploadResult] = useState<{status: string; chunks_created: number; vectors_upserted: number; message?: string} | null>(null);
+
   // Send Email modal state
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [emailDocId, setEmailDocId] = useState<number | null>(null);
@@ -299,6 +307,50 @@ export const TemplatesAndContent: React.FC = () => {
       alert("Сетевая ошибка при загрузке документа");
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleAiUploadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!aiUploadFile) {
+      alert("Выберите файл для загрузки в базу знаний");
+      return;
+    }
+    setIsAiUploading(true);
+    setAiUploadResult(null);
+    const formData = new FormData();
+    formData.append('file', aiUploadFile);
+    if (aiUploadTitle) {
+      formData.append('title', aiUploadTitle);
+    }
+    formData.append('category', aiUploadCategory);
+
+    try {
+      const response = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/ai/index-file', {
+        method: 'POST',
+        headers: {},
+        body: formData
+      });
+      if (response.ok) {
+        const resData = await response.json();
+        setAiUploadResult(resData);
+        setMessage(`🤖 Документ успешно проиндексирован! (Чанков: ${resData.chunks_created})`);
+        setAiUploadTitle('');
+        setAiUploadFile(null);
+        setTimeout(() => {
+          setIsAiUploadModalOpen(false);
+          setAiUploadResult(null);
+          setMessage('');
+        }, 4000);
+      } else {
+        const err = await response.json();
+        alert(err.detail || "Ошибка индексации в векторную базу данных");
+      }
+    } catch (error) {
+      console.error("AI Upload Error:", error);
+      alert("Сетевая ошибка при загрузке в Pinecone");
+    } finally {
+      setIsAiUploading(false);
     }
   };
 
@@ -1718,20 +1770,35 @@ export const TemplatesAndContent: React.FC = () => {
                 <h3 className="text-lg font-bold text-gray-900 dark:text-zinc-200 font-['Montserrat']">Реестр документов и скан-копий</h3>
                 <p className="text-xs text-gray-500 dark:text-zinc-400">Список всех созданных коммерческих предложений, договоров, счетов, актов и загруженных сканов</p>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setUploadClientId('');
-                  setUploadObjectId('');
-                  setUploadDocType('other');
-                  setUploadName('');
-                  setUploadFile(null);
-                  setIsUploadModalOpen(true);
-                }}
-                className="flex items-center justify-center px-4 py-2.5 bg-[#F95700] hover:bg-[#E04D00] text-white rounded-lg transition-all font-bold text-sm select-none cursor-pointer"
-              >
-                <Plus className="w-4 h-4 mr-1.5" /> Загрузить скан / файл
-              </button>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUploadClientId('');
+                    setUploadObjectId('');
+                    setUploadDocType('other');
+                    setUploadName('');
+                    setUploadFile(null);
+                    setIsUploadModalOpen(true);
+                  }}
+                  className="flex items-center justify-center px-4 py-2.5 bg-[#F95700] hover:bg-[#E04D00] text-white rounded-lg transition-all font-bold text-sm select-none cursor-pointer"
+                >
+                  <Plus className="w-4 h-4 mr-1.5" /> Загрузить скан / файл
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAiUploadTitle('');
+                    setAiUploadCategory('tech');
+                    setAiUploadFile(null);
+                    setAiUploadResult(null);
+                    setIsAiUploadModalOpen(true);
+                  }}
+                  className="flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg transition-all font-bold text-sm select-none cursor-pointer shadow-md shadow-indigo-500/20"
+                >
+                  <span className="mr-1.5">🤖</span> В Базу Знаний ИИ
+                </button>
+              </div>
             </div>
 
             {/* Filter section */}
@@ -2142,6 +2209,106 @@ export const TemplatesAndContent: React.FC = () => {
                     "Загрузить"
                   )}
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* AI Knowledge Base Upload Modal */}
+      {isAiUploadModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 font-['Inter']">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-purple-500/30 dark:border-purple-500/30 w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-gradient-to-r from-purple-900/40 to-indigo-900/40 px-6 py-4 border-b border-purple-500/20 flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-sm text-purple-950 dark:text-purple-200 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>🤖</span> Загрузка в Базу Знаний ИИ (RAG)
+                </h3>
+                <p className="text-[10px] text-purple-800/80 dark:text-purple-300/80 mt-0.5">Документ будет нарезан на чанки и добавлен в Pinecone</p>
+              </div>
+              <button
+                onClick={() => setIsAiUploadModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 dark:text-zinc-400 font-bold text-lg cursor-pointer border-0 bg-transparent"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleAiUploadSubmit} className="p-6 space-y-4">
+              {aiUploadResult ? (
+                <div className="p-4 bg-green-50 dark:bg-green-950/40 border border-green-300 dark:border-green-800 rounded-xl space-y-2 text-center animate-in zoom-in-95 duration-200">
+                  <CheckCircle className="w-10 h-10 text-green-500 mx-auto" />
+                  <h4 className="font-bold text-sm text-green-900 dark:text-green-200">Успешно проиндексировано!</h4>
+                  <p className="text-xs text-green-800 dark:text-green-300">
+                    Векторы загружены в базу Pinecone.<br/>
+                    <b>Создано чанков:</b> {aiUploadResult.chunks_created}<br/>
+                    <b>Векторов:</b> {aiUploadResult.vectors_upserted}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-600 dark:text-zinc-400 uppercase">Название / Тема документа</label>
+                    <input
+                      type="text"
+                      value={aiUploadTitle}
+                      onChange={(e) => setAiUploadTitle(e.target.value)}
+                      placeholder="Регламент нанесения АКЗ (опционально)"
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-zinc-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50 bg-white dark:bg-zinc-900"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-600 dark:text-zinc-400 uppercase">Категория знаний</label>
+                    <select
+                      value={aiUploadCategory}
+                      onChange={(e) => setAiUploadCategory(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-zinc-800 rounded-lg text-sm bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-purple-500/50 cursor-pointer"
+                    >
+                      <option value="tech">Технологии и инструкции (АКЗ, огнезащита)</option>
+                      <option value="price">Прайс-листы, нормы расхода, тарифы</option>
+                      <option value="legal">Договоры, СНиП, ГОСТ, юриспруденция</option>
+                      <option value="hr">Регламенты для сотрудников (HR)</option>
+                      <option value="general">Общая база знаний</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-600 dark:text-zinc-400 uppercase">Файл (.pdf, .docx, .txt, .md) <span className="text-red-500">*</span></label>
+                    <input
+                      type="file"
+                      onChange={(e) => setAiUploadFile(e.target.files?.[0] || null)}
+                      accept=".pdf,.docx,.txt,.md,.html"
+                      className="w-full text-xs text-gray-500 dark:text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-purple-500/10 file:text-purple-600 hover:file:bg-purple-500/20 cursor-pointer"
+                      required
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setIsAiUploadModalOpen(false)}
+                  className="px-4 py-2 border border-gray-200 dark:border-zinc-800 rounded-lg text-xs font-bold text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 cursor-pointer"
+                >
+                  Закрыть
+                </button>
+                {!aiUploadResult && (
+                  <button
+                    type="submit"
+                    disabled={isAiUploading}
+                    className="flex items-center justify-center px-5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg text-xs font-bold select-none cursor-pointer shadow-md shadow-indigo-500/20"
+                  >
+                    {isAiUploading ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Индексация в Pinecone...
+                      </>
+                    ) : (
+                      "🚀 Проиндексировать в RAG"
+                    )}
+                  </button>
+                )}
               </div>
             </form>
           </div>

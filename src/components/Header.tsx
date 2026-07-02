@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Menu, X, Sun, Moon } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export const Header: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -61,20 +62,17 @@ export const Header: React.FC = () => {
 
         {/* Desktop Links */}
         <div className="hidden md:flex space-x-8 text-[11px] font-black tracking-widest uppercase text-text-muted">
-          <button onClick={() => handleNavClick('sectors')} className="hover:text-[#F95700] transition cursor-pointer">
-            Отрасли
+          <button onClick={() => handleNavClick('platform')} className="hover:text-[#E64D00] transition cursor-pointer">
+            Платформа
           </button>
-          <button onClick={() => handleNavClick('services')} className="hover:text-[#F95700] transition cursor-pointer">
-            Технологии
+          <button onClick={() => handleNavClick('solutions')} className="hover:text-[#E64D00] transition cursor-pointer">
+            Решения
           </button>
-          <button onClick={() => handleNavClick('materials')} className="hover:text-[#F95700] transition cursor-pointer">
-            Материалы
+          <button onClick={() => handleNavClick('integrations')} className="hover:text-[#E64D00] transition cursor-pointer">
+            Интеграции
           </button>
-          <button onClick={() => handleNavClick('standards')} className="hover:text-[#F95700] transition cursor-pointer">
-            Регламенты
-          </button>
-          <button onClick={() => handleNavClick('contacts')} className="hover:text-[#F95700] transition cursor-pointer">
-            Контакты
+          <button onClick={() => handleNavClick('security')} className="hover:text-[#E64D00] transition cursor-pointer">
+            Безопасность
           </button>
         </div>
 
@@ -95,7 +93,7 @@ export const Header: React.FC = () => {
                 navigate('/crm/login?tab=register');
               }
             }}
-            className="px-4 py-2 rounded-xl bg-[#F95700] hover:bg-orange-600 text-white text-xs font-bold transition cursor-pointer shadow-sm shadow-[#F95700]/20"
+            className="px-4 py-2 rounded-xl bg-[#E64D00] hover:bg-orange-600 text-white text-xs font-bold transition cursor-pointer shadow-sm shadow-[#E64D00]/20"
           >
             Регистрация B2B
           </button>
@@ -126,51 +124,49 @@ export const Header: React.FC = () => {
       </div>
 
       {/* Mobile Menu */}
-      <div
-        className={`md:hidden absolute top-20 left-0 w-full bg-bg/95 border-b border-border backdrop-blur-xl transition-all duration-300 overflow-hidden ${
-          isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'
-        }`}
-      >
-        <div className="px-6 py-8 flex flex-col space-y-6 text-sm font-black tracking-widest uppercase text-text-muted">
-          <button onClick={() => handleNavClick('sectors')} className="text-left hover:text-[#F95700] transition">
-            Отрасли
-          </button>
-          <button onClick={() => handleNavClick('services')} className="text-left hover:text-[#F95700] transition">
-            Технологии
-          </button>
-          <button onClick={() => handleNavClick('materials')} className="text-left hover:text-[#F95700] transition">
-            Материалы
-          </button>
-          <button onClick={() => handleNavClick('standards')} className="text-left hover:text-[#F95700] transition">
-            Регламенты
-          </button>
-          <button onClick={() => handleNavClick('contacts')} className="text-left hover:text-[#F95700] transition">
-            Контакты
-          </button>
-          <div className="pt-4 border-t border-border flex flex-col space-y-3">
-            <button
-              onClick={() => { setIsOpen(false); navigate('/crm/login'); }}
-              className="w-full py-3 rounded-xl bg-surface border border-border text-center text-xs font-bold text-text transition cursor-pointer"
-            >
-              Войти в ERP
-            </button>
-            <button
-              onClick={() => {
-                setIsOpen(false);
-                if (location.pathname === '/') {
-                  const el = document.getElementById('fns-onboard');
-                  el?.scrollIntoView({ behavior: 'smooth' });
-                } else {
-                  navigate('/crm/login?tab=register');
-                }
-              }}
-              className="w-full py-3 rounded-xl bg-[#F95700] hover:bg-orange-600 text-center text-white text-xs font-bold transition cursor-pointer shadow-sm shadow-[#F95700]/20"
-            >
-              Регистрация B2B (по ИНН)
-            </button>
-          </div>
-        </div>
-      </div>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="md:hidden absolute top-20 left-0 w-full bg-white dark:bg-[#0A0D14] border-b border-zinc-200 dark:border-zinc-800 backdrop-blur-xl overflow-hidden"
+          >
+            <div className="px-6 py-8 flex flex-col space-y-6 text-sm font-black tracking-widest uppercase text-zinc-500 dark:text-zinc-400">
+              <button onClick={() => handleNavClick('platform')} className="text-left hover:text-[#E64D00] transition">
+                Платформа
+              </button>
+              <button onClick={() => handleNavClick('solutions')} className="text-left hover:text-[#E64D00] transition">
+                Решения
+              </button>
+              <button onClick={() => handleNavClick('integrations')} className="text-left hover:text-[#E64D00] transition">
+                Интеграции
+              </button>
+              <button onClick={() => handleNavClick('security')} className="text-left hover:text-[#E64D00] transition">
+                Безопасность
+              </button>
+              <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 flex flex-col space-y-3">
+                <button
+                  onClick={() => { setIsOpen(false); navigate('/crm/login'); }}
+                  className="w-full py-4 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-center text-xs font-bold text-zinc-900 dark:text-white transition cursor-pointer"
+                >
+                  Войти в ERP
+                </button>
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    navigate('/crm/login?tab=register');
+                  }}
+                  className="w-full py-4 bg-[#E64D00] hover:bg-[#CC4400] text-center text-white text-xs font-bold transition cursor-pointer shadow-lg"
+                >
+                  Регистрация B2B
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 };

@@ -288,11 +288,12 @@ def get_or_create_ai_user(db: Session) -> User:
         db.refresh(ai_user)
     return ai_user
 
-async def generate_and_broadcast_ai_response(task_id: Optional[int], user_query: str):
+async def generate_and_broadcast_ai_response(task_id: Optional[int], user_query: str, tenant_id: int = 1):
     import asyncio
     import logging
     from ..database import SessionLocal
-    from ..utils.ai_engine import ask_ollama
+    from ..utils.ai_engine import generate_rag_answer
+    from ..services.pinecone_rag import search_similar_by_text
 
     logger = logging.getLogger("uvicorn.error")
 
@@ -302,18 +303,31 @@ async def generate_and_broadcast_ai_response(task_id: Optional[int], user_query:
         clean_query = clean_query.replace(trigger, "")
     clean_query = clean_query.strip()
 
-    system_prompt = (
-        "Ты — ИИ-Копилот, интеллектуальный помощник компании ООО СФЕРА, эксперт по антикоррозийной защите (АКЗ), "
-        "огнезащите металлоконструкций, подготовке поверхностей (Sa 2.5, Sa 3, ГОСТ 9.402) и расходу ЛКМ. "
-        "Твоя задача — давать профессиональные, точные, емкие ответы на технические вопросы сотрудников. "
-        "Приводи ссылки на стандарты (ГОСТ, СНиП, ISO), если применимо, и формулы/расчеты расхода ЛКМ при указании толщины слоя. "
-        "Отвечай на русском языке, кратко, по существу, профессионально и уверенно.\n\n"
-        f"Вопрос сотрудника: {clean_query}"
+    # 1. Поиск релевантных чанков в Pinecone (RAG)
+    loop = asyncio.get_event_loop()
+    try:
+        matches = await loop.run_in_executor(
+            None,
+            lambda: search_similar_by_text(tenant_id=tenant_id, query_text=clean_query, top_k=3)
+        )
+    except Exception as e:
+        logger.warning(f"[RAG] Не удалось выполнить поиск в Pinecone для тенанта {tenant_id}: {e}")
+        matches = []
+
+    # 2. Генерация ответа через RAG
+    ai_response = await loop.run_in_executor(
+        None,
+        lambda: generate_rag_answer(clean_query, matches)
     )
 
-    # Run ask_ollama in executor since it is synchronous
-    loop = asyncio.get_event_loop()
-    ai_response = await loop.run_in_executor(None, ask_ollama, system_prompt)
+    if matches:
+        sources_list = []
+        for m in matches:
+            src = m.get("source") or m.get("metadata", {}).get("source_file") or m.get("metadata", {}).get("title") or "База знаний"
+            score_pct = round(m.get("score", 0) * 100, 1)
+            sources_list.append(f"• [{score_pct}%] {src}")
+        if sources_list:
+            ai_response += "\n\n📚 <b>Источники из базы знаний:</b>\n" + "\n".join(sorted(set(sources_list), reverse=True))
 
     if not ai_response:
         ai_response = (
@@ -419,6 +433,6 @@ async def send_chat_message(
             "status": "thinking",
             "task_id": payload.task_id
         })
-        background_tasks.add_task(generate_and_broadcast_ai_response, payload.task_id, payload.message)
+        background_tasks.add_task(generate_and_broadcast_ai_response, payload.task_id, payload.message, current_user.tenant_id or 1)
 
     return new_msg

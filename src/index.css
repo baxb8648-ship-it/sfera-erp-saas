@@ -7,7 +7,8 @@
 @theme {
   --font-sans: 'Inter', sans-serif;
   --font-title: 'Montserrat', sans-serif;
-  --color-primary: #F95700;
+  --color-primary: var(--brand-color, #F95700);
+  --color-brand: var(--brand-color, #F95700);
   --color-bg: var(--bg-color);
   --color-surface: var(--surface-color);
   --color-text: var(--text-color);
@@ -30,6 +31,7 @@
 }
 
 :root {
+  --brand-color: #F95700;
   --bg-color: #FFFFFF;
   --surface-color: #F4F4F5;
   --text-color: #18181B;

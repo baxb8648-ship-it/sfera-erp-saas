@@ -851,7 +851,10 @@ def send_telegram_reply_message(token: str, chat_id: int, text: str, reply_to_me
         logger.error(f"Failed to send telegram reply message: {e}")
 
 def handle_telegram_ai_query(token: str, chat_id: int, text: str, reply_to_message_id: int, thread_id: int = None):
-    from ..utils.ai_engine import ask_ollama
+    from ..database import SessionLocal
+    from ..models import User
+    from ..utils.ai_engine import generate_rag_answer
+    from ..services.pinecone_rag import search_similar_by_text
     
     # Send typing action
     send_chat_action(token, chat_id, "typing", thread_id)
@@ -862,16 +865,34 @@ def handle_telegram_ai_query(token: str, chat_id: int, text: str, reply_to_messa
         clean_query = clean_query.replace(trigger, "")
     clean_query = clean_query.strip()
     
-    system_prompt = (
-        "Ты — ИИ-Копилот, интеллектуальный помощник компании ООО СФЕРА, эксперт по антикоррозийной защите (АКЗ), "
-        "огнезащите металлоконструкций, подготовке поверхностей (Sa 2.5, Sa 3, ГОСТ 9.402) и расходу ЛКМ. "
-        "Твоя задача — давать профессиональные, точные, емкие ответы на технические вопросы сотрудников. "
-        "Приводи ссылки на стандарты (ГОСТ, СНиП, ISO), если применимо, и формулы/расчеты расхода ЛКМ при указании толщины слоя. "
-        "Отвечай на русском языке, кратко, по существу, профессионально и уверенно.\n\n"
-        f"Вопрос: {clean_query}"
-    )
+    db = SessionLocal()
+    tenant_id = 1
+    try:
+        user = db.query(User).filter(User.telegram_chat_id == str(chat_id)).first()
+        if user and user.tenant_id:
+            tenant_id = user.tenant_id
+    except Exception as e:
+        logger.warning(f"[RAG Telegram] Ошибка определения тенанта для chat_id {chat_id}: {e}")
+    finally:
+        db.close()
+        
+    try:
+        matches = search_similar_by_text(tenant_id=tenant_id, query_text=clean_query, top_k=3)
+    except Exception as e:
+        logger.warning(f"[RAG Telegram] Не удалось выполнить поиск в Pinecone для тенанта {tenant_id}: {e}")
+        matches = []
+        
+    ai_response = generate_rag_answer(clean_query, matches)
     
-    ai_response = ask_ollama(system_prompt)
+    if matches:
+        sources_list = []
+        for m in matches:
+            src = m.get("source") or m.get("metadata", {}).get("source_file") or m.get("metadata", {}).get("title") or "База знаний"
+            score_pct = round(m.get("score", 0) * 100, 1)
+            sources_list.append(f"• [{score_pct}%] {src}")
+        if sources_list:
+            ai_response += "\n\n📚 <b>Источники из базы знаний:</b>\n" + "\n".join(sorted(set(sources_list), reverse=True))
+
     if not ai_response:
         ai_response = (
             "Извините, локальный сервер ИИ (Ollama) временно недоступен или модель не загружена. "
