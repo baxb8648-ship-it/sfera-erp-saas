@@ -61,7 +61,7 @@ export const AIFineTuneSettings: React.FC = () => {
           // Fallback simulation for demonstration while backend is in development
           runSimulationStep();
         }
-      }, 2000);
+      }, 1000);
     }
 
     return () => {
@@ -423,7 +423,7 @@ export const AIFineTuneSettings: React.FC = () => {
 
           <div className="flex items-center gap-3">
             <span className="text-[11px] text-zinc-500 bg-zinc-800/80 px-2 py-0.5 rounded border border-zinc-700">
-              Полинг GET /ai/finetune/status (2s)
+              Полинг GET /ai/finetune/status (1s)
             </span>
             <button
               onClick={handleCopyLogs}
