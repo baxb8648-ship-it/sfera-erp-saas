@@ -12,7 +12,9 @@ router = APIRouter(prefix="/objects", tags=["Objects"])
 
 @router.post("/", response_model=ObjectResponse)
 def create_object(obj: ObjectCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user), perm = Depends(require_permission("objects", "write"))):
-    db_obj = Object(**obj.model_dump(), tenant_id=current_user.tenant_id, owner_id=current_user.id)
+    from ..database import current_tenant_id
+    tid = current_tenant_id.get() or current_user.tenant_id or 1
+    db_obj = Object(**obj.model_dump(), tenant_id=tid, owner_id=current_user.id)
     db.add(db_obj)
     db.commit()
     db.refresh(db_obj)
@@ -32,7 +34,9 @@ def create_object(obj: ObjectCreate, db: Session = Depends(get_db), current_user
 
 @router.get("/", response_model=List[ObjectResponse])
 def get_objects(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user), perm = Depends(require_permission("objects", "read"))):
-    q = db.query(Object).filter(Object.tenant_id == current_user.tenant_id)
+    q = db.query(Object)
+    if current_user.role != "superadmin":
+        q = q.filter(Object.tenant_id == current_user.tenant_id)
     if perm.own_only:
         q = q.filter(Object.owner_id == current_user.id)
     return q.offset(skip).limit(limit).all()
@@ -40,7 +44,9 @@ def get_objects(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), 
 
 @router.get("/{obj_id}", response_model=ObjectResponse)
 def get_object(obj_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user), perm = Depends(require_permission("objects", "read"))):
-    q = db.query(Object).filter(Object.id == obj_id, Object.tenant_id == current_user.tenant_id)
+    q = db.query(Object).filter(Object.id == obj_id)
+    if current_user.role != "superadmin":
+        q = q.filter(Object.tenant_id == current_user.tenant_id)
     if perm.own_only:
         q = q.filter(Object.owner_id == current_user.id)
     db_obj = q.first()
@@ -50,7 +56,9 @@ def get_object(obj_id: int, db: Session = Depends(get_db), current_user: User = 
 
 @router.patch("/{obj_id}/status", response_model=ObjectResponse)
 def update_object_status(obj_id: int, status: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user), perm = Depends(require_permission("objects", "write"))):
-    q = db.query(Object).filter(Object.id == obj_id, Object.tenant_id == current_user.tenant_id)
+    q = db.query(Object).filter(Object.id == obj_id)
+    if current_user.role != "superadmin":
+        q = q.filter(Object.tenant_id == current_user.tenant_id)
     if perm.own_only:
         q = q.filter(Object.owner_id == current_user.id)
     db_obj = q.first()
@@ -83,7 +91,9 @@ def update_object_status(obj_id: int, status: str, db: Session = Depends(get_db)
 
 @router.delete("/{obj_id}")
 def delete_object(obj_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user), perm = Depends(require_permission("objects", "delete"))):
-    q = db.query(Object).filter(Object.id == obj_id, Object.tenant_id == current_user.tenant_id)
+    q = db.query(Object).filter(Object.id == obj_id)
+    if current_user.role != "superadmin":
+        q = q.filter(Object.tenant_id == current_user.tenant_id)
     if perm.own_only:
         q = q.filter(Object.owner_id == current_user.id)
     db_obj = q.first()

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../../api/client';
-import { ArrowLeft, Camera, FileText, MapPin, CloudRain } from 'lucide-react';
+import { ArrowLeft, Camera, FileText, MapPin, CloudRain, AlertTriangle } from 'lucide-react';
 import { useToast } from '../../../components/ui/Toast';
 
 export default function ConstructionProjectView() {
@@ -10,7 +10,7 @@ export default function ConstructionProjectView() {
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState('overview');
 
-  const { data: object } = useQuery({
+  const { data: object, isLoading: isObjLoading, isError: isObjError } = useQuery({
     queryKey: ['objects', id],
     queryFn: () => apiClient.get(`/objects/${id}`)
   });
@@ -59,7 +59,37 @@ export default function ConstructionProjectView() {
     }
   };
 
-  if (!object) return <div className="p-8 text-center animate-pulse">Загрузка...</div>;
+  if (isObjLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+        <div className="w-8 h-8 border-4 border-[#F95700] border-t-transparent rounded-full animate-spin" />
+        <span className="text-gray-500 dark:text-zinc-400 font-medium animate-pulse">Загрузка данных строительного объекта...</span>
+      </div>
+    );
+  }
+
+  if (isObjError || !object) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 text-center p-8 bg-white dark:bg-zinc-900 rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-sm max-w-lg mx-auto my-8">
+        <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full">
+          <AlertTriangle className="w-8 h-8" />
+        </div>
+        <div>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">Объект не найден или недоступен</h3>
+          <p className="text-sm text-gray-500 dark:text-zinc-400 mt-1">
+            Возможно, у вас недостаточно прав для просмотра данного объекта, или он был удален.
+          </p>
+        </div>
+        <Link 
+          to="/crm/construction" 
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#F95700] hover:bg-[#d84a00] text-white font-semibold rounded-xl shadow-md transition-all active:scale-95"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Вернуться к списку строительства</span>
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -87,7 +117,7 @@ export default function ConstructionProjectView() {
             onClick={() => setActiveTab('estimate')}
             className={`px-6 py-3 text-sm font-semibold whitespace-nowrap transition-colors ${activeTab === 'estimate' ? 'text-[#F95700] border-b-2 border-[#F95700]' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
           >
-            Смета и Расход ЛКМ
+            Смета и Расходы
           </button>
           <button 
             onClick={() => setActiveTab('reports')}

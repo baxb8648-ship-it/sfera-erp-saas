@@ -5,7 +5,7 @@ import { apiClient } from '../../../api/client';
 
 export default function ConstructionDashboard() {
   const { data: objects = [], isLoading } = useQuery({
-    queryKey: ['objects'],
+    queryKey: ['construction_objects'],
     queryFn: () => apiClient.get('/objects/')
   });
 

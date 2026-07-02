@@ -58,7 +58,10 @@ class DailyReportResponseSchema(BaseModel):
 
 @router.get("/objects/{object_id}/estimate", response_model=List[EstimateResponseSchema])
 def get_object_estimate(object_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    obj = db.query(Object).filter(Object.id == object_id, Object.tenant_id == current_user.tenant_id).first()
+    q = db.query(Object).filter(Object.id == object_id)
+    if current_user.role != "superadmin":
+        q = q.filter(Object.tenant_id == current_user.tenant_id)
+    obj = q.first()
     if not obj:
         raise HTTPException(status_code=404, detail="Object not found")
 
@@ -86,11 +89,17 @@ def get_object_estimate(object_id: int, db: Session = Depends(get_db), current_u
 
 @router.post("/objects/{object_id}/estimate")
 def add_estimate_item(object_id: int, payload: EstimateItemSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    obj = db.query(Object).filter(Object.id == object_id, Object.tenant_id == current_user.tenant_id).first()
+    q = db.query(Object).filter(Object.id == object_id)
+    if current_user.role != "superadmin":
+        q = q.filter(Object.tenant_id == current_user.tenant_id)
+    obj = q.first()
     if not obj:
         raise HTTPException(status_code=404, detail="Object not found")
         
-    inv = db.query(InventoryItem).filter(InventoryItem.id == payload.inventory_id, InventoryItem.tenant_id == current_user.tenant_id).first()
+    q_inv = db.query(InventoryItem).filter(InventoryItem.id == payload.inventory_id)
+    if current_user.role != "superadmin":
+        q_inv = q_inv.filter(InventoryItem.tenant_id == current_user.tenant_id)
+    inv = q_inv.first()
     if not inv:
         raise HTTPException(status_code=404, detail="Inventory item not found")
 
@@ -103,8 +112,10 @@ def add_estimate_item(object_id: int, payload: EstimateItemSchema, db: Session =
         est.planned_quantity = payload.planned_quantity
         est.unit_price = payload.unit_price
     else:
+        from ..database import current_tenant_id
+        tid = obj.tenant_id or current_tenant_id.get() or current_user.tenant_id or 1
         est = ConstructionEstimate(
-            tenant_id=current_user.tenant_id,
+            tenant_id=tid,
             object_id=object_id,
             inventory_id=payload.inventory_id,
             planned_quantity=payload.planned_quantity,
@@ -135,7 +146,10 @@ def get_daily_reports(object_id: int, db: Session = Depends(get_db), current_use
 
 @router.post("/objects/{object_id}/daily-reports")
 def create_daily_report(object_id: int, payload: DailyReportSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    obj = db.query(Object).filter(Object.id == object_id, Object.tenant_id == current_user.tenant_id).first()
+    q = db.query(Object).filter(Object.id == object_id)
+    if current_user.role != "superadmin":
+        q = q.filter(Object.tenant_id == current_user.tenant_id)
+    obj = q.first()
     if not obj:
         raise HTTPException(status_code=404, detail="Object not found")
         
@@ -144,8 +158,10 @@ def create_daily_report(object_id: int, payload: DailyReportSchema, db: Session 
     except:
         dt = datetime.utcnow()
     
+    from ..database import current_tenant_id
+    tid = obj.tenant_id or current_tenant_id.get() or current_user.tenant_id or 1
     report = DailyReport(
-        tenant_id=current_user.tenant_id,
+        tenant_id=tid,
         object_id=object_id,
         user_id=current_user.id,
         date=dt,
@@ -162,11 +178,14 @@ def create_daily_report(object_id: int, payload: DailyReportSchema, db: Session 
 
 @router.post("/objects/{object_id}/generate-ks2")
 def generate_ks2(object_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    obj = db.query(Object).filter(Object.id == object_id, Object.tenant_id == current_user.tenant_id).first()
+    q = db.query(Object).filter(Object.id == object_id)
+    if current_user.role != "superadmin":
+        q = q.filter(Object.tenant_id == current_user.tenant_id)
+    obj = q.first()
     if not obj:
         raise HTTPException(status_code=404, detail="Object not found")
         
-    tenant = db.query(Tenant).filter(Tenant.id == current_user.tenant_id).first()
+    tenant = db.query(Tenant).filter(Tenant.id == (obj.tenant_id or current_user.tenant_id or 1)).first()
     
     estimates = db.query(ConstructionEstimate).filter(ConstructionEstimate.object_id == object_id).all()
     consumptions = db.query(
@@ -208,11 +227,14 @@ def generate_ks2(object_id: int, db: Session = Depends(get_db), current_user: Us
 
 @router.post("/objects/{object_id}/generate-ks3")
 def generate_ks3(object_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    obj = db.query(Object).filter(Object.id == object_id, Object.tenant_id == current_user.tenant_id).first()
+    q = db.query(Object).filter(Object.id == object_id)
+    if current_user.role != "superadmin":
+        q = q.filter(Object.tenant_id == current_user.tenant_id)
+    obj = q.first()
     if not obj:
         raise HTTPException(status_code=404, detail="Object not found")
         
-    tenant = db.query(Tenant).filter(Tenant.id == current_user.tenant_id).first()
+    tenant = db.query(Tenant).filter(Tenant.id == (obj.tenant_id or current_user.tenant_id or 1)).first()
     
     estimates = db.query(ConstructionEstimate).filter(ConstructionEstimate.object_id == object_id).all()
     consumptions = db.query(
