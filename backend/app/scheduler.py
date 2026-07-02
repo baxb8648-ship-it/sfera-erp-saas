@@ -31,15 +31,14 @@ def send_morning_digest():
     db: Session = SessionLocal()
     try:
         # Get Telegram Bot Token and Chat ID
-        token_setting = db.query(CompanySetting).filter(CompanySetting.key == "telegram_bot_token").first()
-        chat_id_setting = db.query(CompanySetting).filter(CompanySetting.key == "telegram_channel_id").first()
+        bot = db.query(TelegramBot).first()
         
-        if not token_setting or not token_setting.value or not chat_id_setting or not chat_id_setting.value:
-            logger.warning("Morning digest skipped: Telegram token or channel_id is missing.")
+        if not bot or not bot.bot_token or not bot.telegram_chat_id:
+            logger.warning("Morning digest skipped: Telegram bot configuration is missing.")
             return
 
-        token = token_setting.value
-        chat_id = chat_id_setting.value
+        token = bot.bot_token
+        chat_id = bot.telegram_chat_id
 
         # Time bounds
         now = datetime.utcnow()

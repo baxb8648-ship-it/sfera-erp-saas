@@ -419,64 +419,64 @@ export const AdminSettings: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-1 bg-white dark:bg-zinc-900 p-1 rounded-lg border border-gray-200 dark:border-zinc-800 w-full sm:w-fit overflow-x-auto custom-scrollbar scrollbar-none">
+      <div className="flex flex-wrap gap-1.5 bg-gray-100/70 dark:bg-zinc-900/90 p-1.5 rounded-xl border border-gray-200/80 dark:border-zinc-800 w-full shadow-sm">
         <button
           onClick={() => setActiveTab('users')}
-          className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'users' ? 'bg-[#F95700] text-white' : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800'}`}
+          className={`px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'users' ? 'bg-[#F95700] text-white shadow-md' : 'text-gray-600 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-800 hover:shadow-2xs'}`}
         >
           <UserCheck className="w-4 h-4" /> Сотрудники
         </button>
         <button
           onClick={() => setActiveTab('matrix')}
-          className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'matrix' ? 'bg-[#F95700] text-white' : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800'}`}
+          className={`px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'matrix' ? 'bg-[#F95700] text-white shadow-md' : 'text-gray-600 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-800 hover:shadow-2xs'}`}
         >
           <Key className="w-4 h-4" /> Матрица ролей
         </button>
         <button
           onClick={() => setActiveTab('audit')}
-          className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'audit' ? 'bg-[#F95700] text-white' : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800'}`}
+          className={`px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'audit' ? 'bg-[#F95700] text-white shadow-md' : 'text-gray-600 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-800 hover:shadow-2xs'}`}
         >
           <History className="w-4 h-4" /> История изменений
         </button>
         <button
           onClick={() => setActiveTab('security')}
-          className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'security' ? 'bg-[#F95700] text-white' : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800'}`}
+          className={`px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'security' ? 'bg-[#F95700] text-white shadow-md' : 'text-gray-600 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-800 hover:shadow-2xs'}`}
         >
           <ShieldAlert className="w-4 h-4" /> Логи безопасности
         </button>
         <button
           onClick={() => setActiveTab('backup')}
-          className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'backup' ? 'bg-[#F95700] text-white' : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800'}`}
+          className={`px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'backup' ? 'bg-[#F95700] text-white shadow-md' : 'text-gray-600 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-800 hover:shadow-2xs'}`}
         >
           <Database className="w-4 h-4" /> Данные (Бэкап)
         </button>
         <button
           onClick={() => setActiveTab('integrations')}
-          className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'integrations' ? 'bg-[#F95700] text-white' : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800'}`}
+          className={`px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'integrations' ? 'bg-[#F95700] text-white shadow-md' : 'text-gray-600 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-800 hover:shadow-2xs'}`}
         >
           <Settings className="w-4 h-4" /> Интеграции
         </button>
         <button
           onClick={() => setActiveTab('billing')}
-          className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'billing' ? 'bg-[#F95700] text-white' : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800'}`}
+          className={`px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'billing' ? 'bg-[#F95700] text-white shadow-md' : 'text-gray-600 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-800 hover:shadow-2xs'}`}
         >
           <CreditCard className="w-4 h-4" /> Оплата и подписка
         </button>
         <button
           onClick={() => setActiveTab('whitelabel')}
-          className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'whitelabel' ? 'bg-[#F95700] text-white' : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800'}`}
+          className={`px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'whitelabel' ? 'bg-[#F95700] text-white shadow-md' : 'text-gray-600 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-800 hover:shadow-2xs'}`}
         >
           <Sparkles className="w-4 h-4 text-amber-500" /> White-Label Брендирование
         </button>
         <button
           onClick={() => setActiveTab('referral')}
-          className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'referral' ? 'bg-[#F95700] text-white' : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800'}`}
+          className={`px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'referral' ? 'bg-[#F95700] text-white shadow-md' : 'text-gray-600 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-800 hover:shadow-2xs'}`}
         >
           <Gift className="w-4 h-4 text-emerald-500" /> Реферальная программа
         </button>
         <button
           onClick={() => setActiveTab('ai_finetune')}
-          className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'ai_finetune' ? 'bg-[#F95700] text-white' : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800'}`}
+          className={`px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'ai_finetune' ? 'bg-[#F95700] text-white shadow-md' : 'text-gray-600 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-800 hover:shadow-2xs'}`}
         >
           <Sparkles className="w-4 h-4 text-purple-500 animate-pulse" /> ИИ Обучение (Fine-Tune)
         </button>

@@ -151,7 +151,7 @@ async def lifespan(app: FastAPI):
         pass
 
 
-from .api import clients, auth, objects, finance, documents, inventory, equipment, dashboard, settings, users, tenders, tender_integrations, templates, backup, analytics, websocket_route, tasks, export, audit, telegram_webhook, biurs_route, special_tasks_route, leads_route, ops_route, decision_log_route, devbrain_route, oblakocrm_bot, tenants, billing_route, ai_rag_route, support_route, permissions_route, field_templates_route, construction_route, langgraph_route, marketplace_route, ai_finetune_route
+from .api import clients, auth, objects, finance, documents, inventory, equipment, dashboard, settings, users, tenders, tender_integrations, templates, backup, analytics, websocket_route, tasks, export, audit, telegram_webhook, biurs_route, special_tasks_route, leads_route, ops_route, decision_log_route, devbrain_route, oblakocrm_bot, tenants, billing_route, ai_rag_route, support_route, permissions_route, field_templates_route, construction_route, langgraph_route, marketplace_route, ai_finetune_route, telegram_bots_route
 
 
 
@@ -278,6 +278,7 @@ app.include_router(construction_route.router)  # Фаза 4.1 — Строите
 app.include_router(langgraph_route.router)  # Фаза 5.1 — Оркестратор LangGraph
 app.include_router(marketplace_route.router)  # Фаза 6.1 — Глобальный Маркетплейс B2B
 app.include_router(ai_finetune_route.router)  # Фаза 7 — AI Fine-tuning
+app.include_router(telegram_bots_route.router) # Фаза 8 — Мульти-Боты
 
 
 

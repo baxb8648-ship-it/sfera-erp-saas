@@ -843,3 +843,23 @@ class AIFineTuneJob(Base):
 
     tenant = relationship("Tenant")
     user = relationship("User")
+
+
+# ═══════════════════════════════════════════════════════
+# ФАЗА 8 — МУЛЬТИ-БОТЫ TELEGRAM (БЕЗОПАСНОСТЬ)
+# ═══════════════════════════════════════════════════════
+
+class TelegramBot(Base):
+    """
+    Таблица для управления Telegram-ботами тенанта (разделение Внутренних и Внешних).
+    """
+    __tablename__ = "telegram_bots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    bot_token = Column(String, unique=True, nullable=False, index=True)
+    bot_name = Column(String, nullable=True)
+    role = Column(String, nullable=False, default="internal_copilot") # 'internal_copilot' или 'external_sales'
+    is_active = Column(Boolean, default=True)
+    
+    tenant = relationship("Tenant")

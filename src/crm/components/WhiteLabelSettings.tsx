@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Upload, Palette, Eye, Check, AlertCircle, RefreshCw } from 'lucide-react';
+import { apiClient } from '../../api/client';
 
 export const WhiteLabelSettings: React.FC = () => {
   const [settings, setSettings] = useState<any>({
@@ -10,8 +11,6 @@ export const WhiteLabelSettings: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
-
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
   const presets = [
     { name: 'СФЕРА Оранж (По умолчанию)', color: '#F95700' },
@@ -29,9 +28,8 @@ export const WhiteLabelSettings: React.FC = () => {
   const fetchSettings = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch(`${baseUrl}/settings/`);
-      if (res.ok) {
-        const data = await res.json();
+      const data = await apiClient.get('/settings/');
+      if (data) {
         const loaded = {
           brand_name: data.brand_name || 'СФЕРА ERP',
           brand_color: data.brand_color || '#F95700',
@@ -50,7 +48,6 @@ export const WhiteLabelSettings: React.FC = () => {
   const applyBrandColor = (colorHex: string) => {
     if (!colorHex) return;
     document.documentElement.style.setProperty('--brand-color', colorHex);
-    // Дополнительно можно обновить цвет в localStorage для сохранения сессии
     localStorage.setItem('brand_color', colorHex);
   };
 
@@ -80,9 +77,7 @@ export const WhiteLabelSettings: React.FC = () => {
     setIsSaving(true);
     setSaveStatus(null);
     try {
-      // Load all settings first to merge without overriding
-      const resGet = await fetch(`${baseUrl}/settings/`);
-      const currentAll = resGet.ok ? await resGet.json() : {};
+      const currentAll = await apiClient.get('/settings/').catch(() => ({}));
 
       const finalSettings = {
         ...currentAll,
@@ -91,21 +86,12 @@ export const WhiteLabelSettings: React.FC = () => {
         brand_logo_url: settings.brand_logo_url
       };
 
-      const resPost = await fetch(`${baseUrl}/settings/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(finalSettings)
-      });
-
-      if (resPost.ok) {
-        setSaveStatus({ type: 'success', msg: 'Настройки White-Label успешно сохранены и применены к интерфейсу!' });
-        applyBrandColor(settings.brand_color);
-        window.dispatchEvent(new CustomEvent('brand_settings_updated', { detail: settings }));
-      } else {
-        setSaveStatus({ type: 'error', msg: 'Ошибка сохранения на сервере' });
-      }
+      await apiClient.post('/settings/', finalSettings);
+      setSaveStatus({ type: 'success', msg: 'Настройки White-Label успешно сохранены и применены к интерфейсу!' });
+      applyBrandColor(settings.brand_color);
+      window.dispatchEvent(new CustomEvent('brand_settings_updated', { detail: settings }));
     } catch (err) {
-      setSaveStatus({ type: 'error', msg: 'Сбой соединения при сохранении' });
+      setSaveStatus({ type: 'error', msg: 'Ошибка сохранения на сервере' });
     } finally {
       setIsSaving(false);
       setTimeout(() => setSaveStatus(null), 5000);

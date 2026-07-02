@@ -7,15 +7,16 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
-from .models import CompanySetting, Tender, User
+from .models import TelegramBot, Tender, User
 
 logger = logging.getLogger("uvicorn.error")
 
 def send_telegram_notification(text: str, db: Session, reply_markup: dict = None):
-    token_setting = db.query(CompanySetting).filter(CompanySetting.key == "telegram_bot_token").first()
+    from .models import CompanySetting, TelegramBot
+    bot = db.query(TelegramBot).filter(TelegramBot.role == "internal_copilot").first()
     channel_setting = db.query(CompanySetting).filter(CompanySetting.key == "telegram_channel_id").first()
     
-    token = token_setting.value if token_setting else None
+    token = bot.bot_token if bot else None
     chat_id = channel_setting.value if channel_setting else None
     
     if not token or not chat_id or token.strip() == "" or chat_id.strip() == "":
@@ -45,8 +46,9 @@ def send_telegram_notification(text: str, db: Session, reply_markup: dict = None
         logger.error(f"Failed to send Telegram notification: {e}")
 
 def send_personal_telegram_notification(user_id: int, text: str, db: Session, fallback_to_general: bool = True):
-    token_setting = db.query(CompanySetting).filter(CompanySetting.key == "telegram_bot_token").first()
-    token = token_setting.value if token_setting else None
+    from .models import CompanySetting, TelegramBot
+    bot = db.query(TelegramBot).filter(TelegramBot.role == "internal_copilot").first()
+    token = bot.bot_token if bot else None
     
     if not token or token.strip() == "":
         logger.info(f"[Telegram Personal Bypass] User ID {user_id} - {text}")

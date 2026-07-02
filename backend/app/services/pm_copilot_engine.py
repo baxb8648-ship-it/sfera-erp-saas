@@ -311,18 +311,15 @@ class PMCopilotEngine:
         }
 
         # Отправка в Telegram через Bot API
-        if send_telegram and db and CompanySetting:
+        if send_telegram and db and TelegramBot:
             try:
-                token_setting = db.query(CompanySetting).filter(CompanySetting.key == "telegram_bot_token").first()
-                chat_setting = db.query(CompanySetting).filter(CompanySetting.key == "ops_chat_id").first()
-                
-                token = token_setting.value if token_setting else None
-                chat_id = chat_setting.value if chat_setting else None
-
-                if token and chat_id:
-                    self.send_telegram_hitl_message(token, chat_id, hitl_card)
+                from .models import TelegramBot
+                bot = db.query(TelegramBot).filter(TelegramBot.tenant_id == tenant_id, TelegramBot.role == "internal_copilot", TelegramBot.is_active == True).first()
+                if bot and bot.bot_token:
+                    # Логика отправки сообщения через выбранного бота
+                    self.send_telegram_hitl_message(bot.bot_token, bot.ops_chat_id, hitl_card)
                 else:
-                    logger.warning("Telegram токен или chat_id не настроены в CompanySetting. Сообщение сформировано локально.")
+                    logger.warning("TelegramBot не настроен для данного тенанта. Сообщение сформировано локально.")
             except Exception as e:
                 logger.error(f"Ошибка проверки настроек Telegram: {e}")
 

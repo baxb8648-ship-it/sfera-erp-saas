@@ -102,28 +102,36 @@ def send_message_to_topic(token: str, chat_id: str, thread_id: int, text: str):
     except Exception as e:
         logger.error(f"Failed to send to topic: {e}")
 
-@router.post("/webhook")
-async def telegram_webhook(request: Request, db: Session = Depends(get_db)):
+@router.post("/webhook/{token}")
+async def telegram_webhook(token: str, request: Request, db: Session = Depends(get_db)):
     try:
         update = await request.json()
     except Exception:
         return {"status": "error", "message": "Invalid JSON"}
 
     # Process the update in a background thread to respond immediately
-    run_in_background(process_telegram_update_sync, update)
+    run_in_background(process_telegram_update_sync, update, token)
     return {"status": "ok"}
 
-def process_telegram_update_sync(update: dict):
+def process_telegram_update_sync(update: dict, token: str):
     from ..database import SessionLocal
     db = SessionLocal()
     try:
-        process_telegram_update_internal(update, db)
+        process_telegram_update_internal(update, db, token)
     except Exception as e:
         logger.error(f"Error processing telegram update: {e}")
     finally:
         db.close()
 
-def process_telegram_update_internal(update: dict, db: Session):
+def process_telegram_update_internal(update: dict, db: Session, token: str):
+    from ..models import TelegramBot
+    bot = db.query(TelegramBot).filter(TelegramBot.bot_token == token, TelegramBot.is_active == True).first()
+    if not bot:
+        logger.warning(f"Received webhook for unknown token: {token[:10]}...")
+        return
+        
+    role = bot.role
+
     if "callback_query" in update:
         callback = update["callback_query"]
         callback_id = callback.get("id")
@@ -132,10 +140,6 @@ def process_telegram_update_internal(update: dict, db: Session):
         
         chat_id = message.get("chat", {}).get("id")
         message_id = message.get("message_id")
-        
-        # Answer callback query to stop loading state on Telegram client
-        token_setting = db.query(CompanySetting).filter(CompanySetting.key == "telegram_bot_token").first()
-        token = token_setting.value if token_setting else None
         
         if token and callback_id:
             # Определяем текст уведомления для Telegram клиента
@@ -415,8 +419,11 @@ def process_telegram_update_internal(update: dict, db: Session):
         voice = message.get("voice")  # Голосовое сообщение
         from_user = message.get("from", {})
         
-        token_setting = db.query(CompanySetting).filter(CompanySetting.key == "telegram_bot_token").first()
-        token = token_setting.value if token_setting else None
+        # Блокировка внутренних команд для внешних ботов
+        if role == "external_sales":
+            if text:
+                send_telegram_reply_message(token, chat_id, "Здравствуйте! Я ИИ-ассистент компании. Внешний бот пока работает в режиме чтения.", reply_to_message_id=message.get("message_id"))
+            return
         
         # ---- ОБРАБОТКА ГОЛОСОВЫХ СООБЩЕНИЙ ----
         if token and chat_id and voice:

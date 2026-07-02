@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { KanbanBoard } from '../components/KanbanBoard';
 import { Plus, X, Building2, MapPin, Layers } from 'lucide-react';
 import { apiClient } from '../../api/client';
@@ -39,8 +39,134 @@ const CITIES = [
   { name: 'Владивосток', x: 590, y: 185, region: 'Приморье' },
 ];
 
+const CITIES_GEO: Record<string, [number, number]> = {
+  'Москва': [55.7558, 37.6173],
+  'Санкт-Петербург': [59.9343, 30.3351],
+  'Мурманск': [68.9585, 33.0827],
+  'Самара': [53.1959, 50.1002],
+  'Уфа': [54.7388, 55.9721],
+  'Тюмень': [57.1523, 65.5272],
+  'Екатеринбург': [56.8389, 60.6057],
+  'Новосибирск': [55.0084, 82.9357],
+  'Красноярск': [56.0153, 92.8932],
+  'Иркутск': [52.2978, 104.2964],
+  'Хабаровск': [48.4802, 135.0719],
+  'Владивосток': [43.1198, 131.8869],
+  'Оренбург': [51.7666, 55.1005],
+  'Бузулук': [52.7807, 52.2635],
+  'Казань': [55.7961, 49.1064]
+};
+
+const TwoGisMapViewer: React.FC<{
+  objects: CRMObject[];
+  getObjectCity: (id: number) => any;
+  onSelectObject: (obj: CRMObject) => void;
+}> = ({ objects, getObjectCity, onSelectObject }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const initMap = () => {
+      if (!isMounted) return;
+      try {
+        if (!(window as any).DG) return;
+        (window as any).DG.then(() => {
+          if (!isMounted) return;
+          const container = document.getElementById('2gis-map-container');
+          if (!container) return;
+          container.innerHTML = '';
+          const map = (window as any).DG.map('2gis-map-container', {
+            center: [55.7558, 60.6057], // Центр РФ (Урал)
+            zoom: 4,
+            fullscreenControl: true,
+            zoomControl: true
+          });
+
+          objects.forEach(obj => {
+            const city = getObjectCity(obj.id);
+            const baseCoords = CITIES_GEO[city.name] || [55.7558, 37.6173];
+            const offsetLat = (Math.random() - 0.5) * 0.08;
+            const offsetLng = (Math.random() - 0.5) * 0.08;
+            const coords = [baseCoords[0] + offsetLat, baseCoords[1] + offsetLng];
+
+            const marker = (window as any).DG.marker(coords).addTo(map);
+            marker.bindPopup(`
+              <div style="font-family: 'Montserrat', sans-serif; padding: 6px; max-w: 220px; line-height: 1.4;">
+                <div style="font-size: 10px; font-weight: 800; color: #F95700; text-transform: uppercase;">📍 ${city.name} (${city.region})</div>
+                <div style="font-size: 13px; font-weight: bold; color: #1a1a1a; margin-top: 4px;">${obj.name}</div>
+                <div style="font-size: 11px; color: #666; margin-top: 4px;"><b>Заказчик:</b> ${obj.client_name || 'N/A'}</div>
+                <div style="font-size: 11px; margin-top: 4px; display: flex; justify-content: space-between;">
+                  <span><b>Статус:</b> <span style="color: #2e7d32; font-weight: bold;">${obj.status}</span></span>
+                </div>
+                <div style="font-size: 11px; margin-top: 4px; border-top: 1px solid #eee; padding-top: 4px; color: #444;">
+                  <b>Работы:</b> ${obj.service_required}
+                </div>
+              </div>
+            `);
+            marker.on('click', () => {
+              onSelectObject(obj);
+            });
+          });
+          setIsLoaded(true);
+        });
+      } catch (e) {
+        console.error('2GIS init error:', e);
+        setError(true);
+      }
+    };
+
+    if (!(window as any).DG) {
+      const existingScript = document.getElementById('2gis-script');
+      if (!existingScript) {
+        const script = document.createElement('script');
+        script.id = '2gis-script';
+        script.src = 'https://maps.api.2gis.ru/2.0/loader.js?pkg=full';
+        script.async = true;
+        script.onload = () => initMap();
+        script.onerror = () => setError(true);
+        document.body.appendChild(script);
+      } else {
+        existingScript.addEventListener('load', () => initMap());
+      }
+    } else {
+      initMap();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [objects]);
+
+  return (
+    <div className="w-full h-full min-h-[420px] relative rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-800/80 flex flex-col shadow-inner">
+      <div id="2gis-map-container" className="w-full flex-1 min-h-[420px]" style={{ background: '#1e1e1e' }}></div>
+      {!isLoaded && !error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/80 backdrop-blur-sm z-10 animate-fade-in">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 border-3 border-[#F95700] border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-xs font-bold text-zinc-200 tracking-wider">Загрузка интерактивной карты 2ГИС...</span>
+          </div>
+        </div>
+      )}
+      {error && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 z-10 p-6 text-center animate-fade-in">
+          <MapPin className="w-12 h-12 text-red-500 mb-3 animate-bounce" />
+          <span className="text-sm font-bold text-white mb-1">Не удалось загрузить API 2ГИС</span>
+          <span className="text-xs text-zinc-400 max-w-sm">Проверьте подключение к интернету или переключитесь на векторную схему РФ (SVG).</span>
+        </div>
+      )}
+      <div className="absolute top-4 left-4 z-10 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-lg flex items-center gap-2 pointer-events-none">
+        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span className="text-[11px] font-extrabold text-zinc-800 dark:text-zinc-100 tracking-wide">2ГИС Live API • РФ & СНГ</span>
+      </div>
+    </div>
+  );
+};
+
 export const Objects: React.FC = () => {
   const [viewMode, setViewMode] = useState<'board' | 'map'>('board');
+  const [mapProvider, setMapProvider] = useState<'2gis' | 'svg'>('2gis');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [hoveredObject, setHoveredObject] = useState<CRMObject | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
@@ -50,7 +176,7 @@ export const Objects: React.FC = () => {
     client_id: '',
     area_sqm: '',
     surface_type: 'Металл',
-    service_required: 'АКЗ',
+    service_required: 'Строительно-монтажные',
     status: 'Выезд на аудит',
     object_type: 'construction',
     custom_fields: {} as Record<string, any>
@@ -77,7 +203,7 @@ export const Objects: React.FC = () => {
   });
 
   const surfaceTypes = ["Металл", "Бетон", "Дерево", "Кирпич", "Другое"];
-  const serviceTypes = ["АКЗ", "Пескоструйная очистка", "Гидроизоляция", "Огнезащита", "Другое"];
+  const serviceTypes = ["Строительно-монтажные", "Инженерные сети", "Отделочные работы", "Капитальный ремонт", "Другое"];
   const statuses = ["Выезд на аудит", "КП отправлено", "Договор", "В работе", "Завершено"];
 
   const handleOpenModal = () => {
@@ -121,7 +247,7 @@ export const Objects: React.FC = () => {
         client_id: clients.length > 0 ? clients[0].id.toString() : '',
         area_sqm: '',
         surface_type: 'Металл',
-        service_required: 'АКЗ',
+        service_required: 'Строительно-монтажные',
         status: 'Выезд на аудит',
         object_type: 'construction',
         custom_fields: {}
@@ -190,157 +316,190 @@ export const Objects: React.FC = () => {
         {viewMode === 'board' ? (
           <KanbanBoard key={boardKey} />
         ) : (
-          /* Interactive High-Tech SVG Map View (Режим 4: Консьерж-Клуб) */
+          /* Interactive High-Tech SVG & 2GIS Map View (Режим 4: Консьерж-Клуб) */
           <div className="glass-panel w-full h-fit lg:h-full rounded-3xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.015)] border border-white/25 dark:border-zinc-800/60 flex flex-col lg:flex-row gap-6 overflow-y-auto lg:overflow-hidden animate-fade-in relative">
             {/* Map Canvas Container */}
-            <div className="flex-1 bg-zinc-950/5 dark:bg-zinc-950/40 border border-zinc-200/40 dark:border-zinc-850 rounded-2xl relative flex items-center justify-center p-4 overflow-hidden min-h-[300px]">
-              {/* Grid backdrop effect */}
-              <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
-              
-              {/* High-tech stylized SVG Russia Map contours */}
-              <svg viewBox="0 0 650 250" className="w-full h-full max-h-[420px] select-none overflow-visible">
-                <defs>
-                  <radialGradient id="dotGlow" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stopColor="#F95700" stopOpacity="0.4"/>
-                    <stop offset="100%" stopColor="#F95700" stopOpacity="0"/>
-                  </radialGradient>
-                </defs>
-
-                {/* Russia Map Silhouette Image (from user provided file) */}
-                <image 
-                  href={russiaMapImg}
-                  x="10" 
-                  y="5" 
-                  width="630" 
-                  height="240" 
-                  preserveAspectRatio="none"
-                  className="opacity-70 dark:opacity-35 mix-blend-multiply dark:mix-blend-screen dark:invert pointer-events-none"
-                />
-
-                {/* Highlighted regions as paths */}
-                <circle cx="120" cy="110" r="45" className="fill-blue-500/5 dark:fill-blue-400/3 stroke-blue-500/10 stroke-1 stroke-dasharray-[2_4]" />
-                <circle cx="230" cy="125" r="50" className="fill-orange-500/5 dark:fill-orange-400/3 stroke-orange-500/10 stroke-1 stroke-dasharray-[2_4]" />
-                <circle cx="580" cy="170" r="55" className="fill-purple-500/5 dark:fill-purple-400/3 stroke-purple-500/10 stroke-1 stroke-dasharray-[2_4]" />
-
-                {/* Cities text references */}
-                {CITIES.map(city => {
-                  const hasObjects = objects.some(obj => getObjectCity(obj.id).name === city.name);
-                  return (
-                    <text
-                      key={city.name}
-                      x={city.x}
-                      y={city.y + 16}
-                      className={`text-[7px] font-bold ${hasObjects ? 'fill-[#F95700] dark:fill-orange-400' : 'fill-zinc-400/60 dark:fill-zinc-650'}`}
-                      textAnchor="middle"
-                    >
-                      {city.name}
-                    </text>
-                  );
-                })}
-
-                {/* Interactive Project Pins (Pulsing orange dots) */}
-                {objects.map(obj => {
-                  const city = getObjectCity(obj.id);
-                  const isHovered = hoveredObject?.id === obj.id;
-                  
-                  return (
-                    <g
-                      key={obj.id}
-                      className="cursor-pointer group"
-                      onMouseEnter={() => {
-                        setHoveredObject(obj);
-                        setTooltipPos({ x: city.x, y: city.y - 12 });
-                      }}
-                      onMouseLeave={() => setHoveredObject(null)}
-                    >
-                      {/* Outer pulse effect (ping animation) */}
-                      <circle 
-                        cx={city.x} 
-                        cy={city.y} 
-                        r={isHovered ? 16 : 8} 
-                        className="fill-orange-500/20 stroke-none transition-all duration-300"
-                        style={{ transformOrigin: `${city.x}px ${city.y}px` }}
-                      />
-                      <circle 
-                        cx={city.x} 
-                        cy={city.y} 
-                        r="6" 
-                        className="fill-orange-500/40 stroke-none animate-ping" 
-                      />
-                      {/* Core point */}
-                      <circle 
-                        cx={city.x} 
-                        cy={city.y} 
-                        r={isHovered ? "5" : "4"} 
-                        className={`transition-all duration-300 ${
-                          obj.status === 'В работе' 
-                            ? 'fill-[#F95700] stroke-white dark:stroke-zinc-950' 
-                            : obj.status === 'Завершено' 
-                            ? 'fill-emerald-500 stroke-white dark:stroke-zinc-950' 
-                            : 'fill-blue-500 stroke-white dark:stroke-zinc-950'
-                        } stroke-[1.5] shadow-lg`} 
-                      />
-                    </g>
-                  );
-                })}
-              </svg>
-
-              {/* Rich Tooltip Popup overlay inside Map */}
-              {hoveredObject && (() => {
-                const city = getObjectCity(hoveredObject.id);
-                // Dynamic alignment based on x-coordinate to prevent off-screen clipping on mobile
-                let translateX = '-50%';
-                if (city.x < 140) {
-                  translateX = '-10%';
-                } else if (city.x > 510) {
-                  translateX = '-90%';
-                }
-
-                return (
-                  <div 
-                    className="absolute z-10 hidden lg:flex bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md px-4 py-3 rounded-xl shadow-xl border border-zinc-200/50 dark:border-zinc-800/80 text-xs w-56 pointer-events-none animate-in fade-in zoom-in-95 duration-200 flex-col space-y-1.5"
-                    style={{
-                      left: `${(tooltipPos.x / 650) * 100}%`,
-                      top: `${(tooltipPos.y / 250) * 100}%`,
-                      transform: `translate(${translateX}, -100%) translateY(-10px)`
-                    }}
+            <div className="flex-1 flex flex-col min-h-[420px]">
+              <div className="flex items-center justify-between w-full mb-4 pb-3 border-b border-zinc-200/60 dark:border-zinc-800/80">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-extrabold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-[#F95700]" /> Геоинформационная система (ГИС)
+                  </span>
+                </div>
+                <div className="flex space-x-1 bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-lg border border-zinc-200 dark:border-zinc-700/60">
+                  <button
+                    onClick={() => setMapProvider('2gis')}
+                    className={`px-3 py-1 rounded text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1.5 ${mapProvider === '2gis' ? 'bg-[#F95700] text-white shadow-sm' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'}`}
                   >
-                    <div className="flex justify-between items-center border-b border-zinc-100 dark:border-zinc-800 pb-1.5">
-                      <span className="font-extrabold text-[#F95700] uppercase tracking-wider text-[9px]">
-                        {city.region}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                        hoveredObject.status === 'В работе' 
-                          ? 'bg-orange-50 text-[#F95700] dark:bg-orange-950/20' 
-                          : hoveredObject.status === 'Завершено' 
-                          ? 'bg-green-50 text-green-600 dark:bg-green-950/20' 
-                          : 'bg-blue-50 text-blue-600 dark:bg-blue-950/20'
-                      }`}>
-                        {hoveredObject.status}
-                      </span>
-                    </div>
+                    <MapPin className="w-3.5 h-3.5" /> 2ГИС Карта (API)
+                  </button>
+                  <button
+                    onClick={() => setMapProvider('svg')}
+                    className={`px-3 py-1 rounded text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1.5 ${mapProvider === 'svg' ? 'bg-[#F95700] text-white shadow-sm' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'}`}
+                  >
+                    <Layers className="w-3.5 h-3.5" /> Схема РФ (SVG)
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 bg-zinc-950/5 dark:bg-zinc-950/40 border border-zinc-200/40 dark:border-zinc-850 rounded-2xl relative flex items-center justify-center p-4 overflow-hidden min-h-[350px]">
+                {mapProvider === '2gis' ? (
+                  <TwoGisMapViewer 
+                    objects={objects} 
+                    getObjectCity={getObjectCity} 
+                    onSelectObject={(obj) => setHoveredObject(obj)} 
+                  />
+                ) : (
+                  <>
+                    {/* Grid backdrop effect */}
+                    <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
                     
-                    <div className="font-bold text-zinc-900 dark:text-zinc-100 text-sm truncate">
-                      {hoveredObject.name}
-                    </div>
-                    
-                    <div className="text-zinc-500 dark:text-zinc-400 font-medium">
-                      Заказчик: <span className="font-bold text-zinc-700 dark:text-zinc-300">{hoveredObject.client_name || 'N/A'}</span>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-1.5 pt-1.5 border-t border-zinc-100 dark:border-zinc-800 text-[10px] text-zinc-450 dark:text-zinc-550 font-bold">
-                      <div>
-                        <span>ПЛОЩАДЬ:</span>
-                        <p className="text-zinc-850 dark:text-zinc-300 text-xs mt-0.5 font-mono">{hoveredObject.area_sqm ? `${hoveredObject.area_sqm} м²` : '—'}</p>
-                      </div>
-                      <div>
-                        <span>ОБРАБОТКА:</span>
-                        <p className="text-zinc-850 dark:text-zinc-300 text-xs mt-0.5">{hoveredObject.surface_type} / {hoveredObject.service_required}</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
+                    {/* High-tech stylized SVG Russia Map contours */}
+                    <svg viewBox="0 0 650 250" className="w-full h-full max-h-[420px] select-none overflow-visible">
+                      <defs>
+                        <radialGradient id="dotGlow" cx="50%" cy="50%" r="50%">
+                          <stop offset="0%" stopColor="#F95700" stopOpacity="0.4"/>
+                          <stop offset="100%" stopColor="#F95700" stopOpacity="0"/>
+                        </radialGradient>
+                      </defs>
+
+                      {/* Russia Map Silhouette Image (from user provided file) */}
+                      <image 
+                        href={russiaMapImg}
+                        x="10" 
+                        y="5" 
+                        width="630" 
+                        height="240" 
+                        preserveAspectRatio="none"
+                        className="opacity-70 dark:opacity-35 mix-blend-multiply dark:mix-blend-screen dark:invert pointer-events-none"
+                      />
+
+                      {/* Highlighted regions as paths */}
+                      <circle cx="120" cy="110" r="45" className="fill-blue-500/5 dark:fill-blue-400/3 stroke-blue-500/10 stroke-1 stroke-dasharray-[2_4]" />
+                      <circle cx="230" cy="125" r="50" className="fill-orange-500/5 dark:fill-orange-400/3 stroke-orange-500/10 stroke-1 stroke-dasharray-[2_4]" />
+                      <circle cx="580" cy="170" r="55" className="fill-purple-500/5 dark:fill-purple-400/3 stroke-purple-500/10 stroke-1 stroke-dasharray-[2_4]" />
+
+                      {/* Cities text references */}
+                      {CITIES.map(city => {
+                        const hasObjects = objects.some(obj => getObjectCity(obj.id).name === city.name);
+                        return (
+                          <text
+                            key={city.name}
+                            x={city.x}
+                            y={city.y + 16}
+                            className={`text-[7px] font-bold ${hasObjects ? 'fill-[#F95700] dark:fill-orange-400' : 'fill-zinc-400/60 dark:fill-zinc-650'}`}
+                            textAnchor="middle"
+                          >
+                            {city.name}
+                          </text>
+                        );
+                      })}
+
+                      {/* Interactive Project Pins (Pulsing orange dots) */}
+                      {objects.map(obj => {
+                        const city = getObjectCity(obj.id);
+                        const isHovered = hoveredObject?.id === obj.id;
+                        
+                        return (
+                          <g
+                            key={obj.id}
+                            className="cursor-pointer group"
+                            onMouseEnter={() => {
+                              setHoveredObject(obj);
+                              setTooltipPos({ x: city.x, y: city.y - 12 });
+                            }}
+                            onMouseLeave={() => setHoveredObject(null)}
+                          >
+                            {/* Outer pulse effect (ping animation) */}
+                            <circle 
+                              cx={city.x} 
+                              cy={city.y} 
+                              r={isHovered ? 16 : 8} 
+                              className="fill-orange-500/20 stroke-none transition-all duration-300"
+                              style={{ transformOrigin: `${city.x}px ${city.y}px` }}
+                            />
+                            <circle 
+                              cx={city.x} 
+                              cy={city.y} 
+                              r="6" 
+                              className="fill-orange-500/40 stroke-none animate-ping" 
+                            />
+                            {/* Core point */}
+                            <circle 
+                              cx={city.x} 
+                              cy={city.y} 
+                              r={isHovered ? "5" : "4"} 
+                              className={`transition-all duration-300 ${
+                                obj.status === 'В работе' 
+                                  ? 'fill-[#F95700] stroke-white dark:stroke-zinc-950' 
+                                  : obj.status === 'Завершено' 
+                                  ? 'fill-emerald-500 stroke-white dark:stroke-zinc-950' 
+                                  : 'fill-blue-500 stroke-white dark:stroke-zinc-950'
+                              } stroke-[1.5] shadow-lg`} 
+                            />
+                          </g>
+                        );
+                      })}
+                    </svg>
+
+                    {/* Rich Tooltip Popup overlay inside Map */}
+                    {hoveredObject && (() => {
+                      const city = getObjectCity(hoveredObject.id);
+                      let translateX = '-50%';
+                      if (city.x < 140) {
+                        translateX = '-10%';
+                      } else if (city.x > 510) {
+                        translateX = '-90%';
+                      }
+
+                      return (
+                        <div 
+                          className="absolute z-10 hidden lg:flex bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md px-4 py-3 rounded-xl shadow-xl border border-zinc-200/50 dark:border-zinc-800/80 text-xs w-56 pointer-events-none animate-in fade-in zoom-in-95 duration-200 flex-col space-y-1.5"
+                          style={{
+                            left: `${(tooltipPos.x / 650) * 100}%`,
+                            top: `${(tooltipPos.y / 250) * 100}%`,
+                            transform: `translate(${translateX}, -100%) translateY(-10px)`
+                          }}
+                        >
+                          <div className="flex justify-between items-center border-b border-zinc-100 dark:border-zinc-800 pb-1.5">
+                            <span className="font-extrabold text-[#F95700] uppercase tracking-wider text-[9px]">
+                              {city.region}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                              hoveredObject.status === 'В работе' 
+                                ? 'bg-orange-50 text-[#F95700] dark:bg-orange-950/20' 
+                                : hoveredObject.status === 'Завершено' 
+                                ? 'bg-green-50 text-green-600 dark:bg-green-950/20' 
+                                : 'bg-blue-50 text-blue-600 dark:bg-blue-950/20'
+                            }`}>
+                              {hoveredObject.status}
+                            </span>
+                          </div>
+                          
+                          <div className="font-bold text-zinc-900 dark:text-zinc-100 text-sm truncate">
+                            {hoveredObject.name}
+                          </div>
+                          
+                          <div className="text-zinc-500 dark:text-zinc-400 font-medium">
+                            Заказчик: <span className="font-bold text-zinc-700 dark:text-zinc-300">{hoveredObject.client_name || 'N/A'}</span>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-1.5 pt-1.5 border-t border-zinc-100 dark:border-zinc-800 text-[10px] text-zinc-450 dark:text-zinc-550 font-bold">
+                            <div>
+                              <span>ПЛОЩАДЬ:</span>
+                              <p className="text-zinc-850 dark:text-zinc-300 text-xs mt-0.5 font-mono">{hoveredObject.area_sqm ? `${hoveredObject.area_sqm} м²` : '—'}</p>
+                            </div>
+                            <div>
+                              <span>ОБРАБОТКА:</span>
+                              <p className="text-zinc-850 dark:text-zinc-300 text-xs mt-0.5">{hoveredObject.surface_type} / {hoveredObject.service_required}</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Right sidebar: objects index list */}

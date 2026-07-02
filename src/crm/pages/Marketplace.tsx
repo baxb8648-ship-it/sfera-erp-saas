@@ -141,6 +141,7 @@ export const Marketplace: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('Все');
+  const [selectedRegion, setSelectedRegion] = useState<string>('Все области');
   
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -283,7 +284,29 @@ export const Marketplace: React.FC = () => {
       item.description.toLowerCase().includes(query) ||
       item.author_company.toLowerCase().includes(query) ||
       item.location.toLowerCase().includes(query);
-    return matchesCategory && matchesSearch;
+    let matchesRegion = true;
+    if (selectedRegion !== 'Все области') {
+      if (selectedRegion.includes('Оренбургская')) {
+        matchesRegion = item.location.includes('Оренбург') || item.location.includes('Бузулук');
+      } else if (selectedRegion.includes('Самарская')) {
+        matchesRegion = item.location.includes('Самара') || item.location.includes('Тольятти');
+      } else if (selectedRegion.includes('Башкортостан')) {
+        matchesRegion = item.location.includes('Уфа');
+      } else if (selectedRegion.includes('Москва')) {
+        matchesRegion = item.location.includes('Москва');
+      } else if (selectedRegion.includes('Санкт-Петербург')) {
+        matchesRegion = item.location.includes('Санкт-Петербург') || item.location.includes('СПб');
+      } else if (selectedRegion.includes('Свердловская')) {
+        matchesRegion = item.location.includes('Екатеринбург');
+      } else if (selectedRegion.includes('Татарстан')) {
+        matchesRegion = item.location.includes('Казань');
+      } else if (selectedRegion.includes('Тюменская')) {
+        matchesRegion = item.location.includes('Тюмень');
+      } else {
+        matchesRegion = item.location.toLowerCase().includes(selectedRegion.toLowerCase());
+      }
+    }
+    return matchesCategory && matchesSearch && matchesRegion;
   });
 
   const getCategoryIcon = (cat: string) => {
@@ -400,21 +423,47 @@ export const Marketplace: React.FC = () => {
           })}
         </div>
 
-        {/* Search */}
-        <div className="relative min-w-[280px]">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-zinc-500" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Поиск по заявкам, технике, компании..."
-            className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 dark:bg-zinc-800/70 border border-gray-200 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#F95700]/50"
-          />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300">
-              <X className="w-4 h-4" />
-            </button>
-          )}
+        {/* Search & Region Filter */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+          {/* Region Filter */}
+          <div className="relative min-w-[210px] flex-1 sm:flex-initial">
+            <MapPin className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#F95700]" />
+            <select
+              value={selectedRegion}
+              onChange={(e) => setSelectedRegion(e.target.value)}
+              className="w-full pl-10 pr-8 py-2 text-sm bg-gray-50 dark:bg-zinc-800/70 border border-gray-200 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#F95700]/50 appearance-none font-medium cursor-pointer"
+            >
+              <option value="Все области">📍 Все области (РФ)</option>
+              <option value="Оренбургская обл.">Оренбургская обл.</option>
+              <option value="Самарская обл.">Самарская обл.</option>
+              <option value="Респ. Башкортостан">Респ. Башкортостан</option>
+              <option value="Москва и МО">Москва и Московская обл.</option>
+              <option value="Санкт-Петербург и ЛО">Санкт-Петербург и ЛО</option>
+              <option value="Свердловская обл.">Свердловская обл.</option>
+              <option value="Респ. Татарстан">Респ. Татарстан</option>
+              <option value="Тюменская обл.">Тюменская обл.</option>
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-gray-500">
+              <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" /></svg>
+            </div>
+          </div>
+
+          {/* Search */}
+          <div className="relative min-w-[260px] flex-1 sm:flex-initial">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-zinc-500" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Поиск по заявкам, технике, компании..."
+              className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 dark:bg-zinc-800/70 border border-gray-200 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#F95700]/50"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300">
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

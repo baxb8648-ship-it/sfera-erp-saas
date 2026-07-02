@@ -58,6 +58,8 @@ const Tasks = React.lazy(() => import('./crm/pages/Tasks').then(m => ({ default:
 const AuditLogs = React.lazy(() => import('./crm/pages/AuditLogs').then(m => ({ default: m.AuditLogs })));
 const SpecialTasks = React.lazy(() => import('./crm/pages/SpecialTasks').then(m => ({ default: m.SpecialTasks })));
 const TmaKanban = React.lazy(() => import('./crm/pages/TmaKanban').then(m => ({ default: m.TmaKanban })));
+const ConstructionDashboard = React.lazy(() => import('./crm/pages/Construction/ConstructionDashboard'));
+const ConstructionProjectView = React.lazy(() => import('./crm/pages/Construction/ConstructionProjectView'));
 const SuperAdmin = React.lazy(() => import('./crm/pages/SuperAdmin').then(m => ({ default: m.SuperAdmin })));
 const SupportDesk = React.lazy(() => import('./crm/pages/SupportDesk'));
 const Marketplace = React.lazy(() => import('./crm/pages/Marketplace').then(m => ({ default: m.Marketplace })));
@@ -135,6 +137,8 @@ const App: React.FC = () => {
                   <Route path="tasks" element={<Tasks />} />
                   <Route path="clients" element={<Clients />} />
                   <Route path="objects" element={<Objects />} />
+                  <Route path="construction" element={<ConstructionDashboard />} />
+                  <Route path="construction/:id" element={<ConstructionProjectView />} />
                   <Route path="finance" element={<Finance />} />
                   <Route path="inventory" element={<Inventory />} />
                   <Route path="equipment" element={<Equipment />} />

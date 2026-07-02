@@ -27,7 +27,7 @@ export const Inventory: React.FC = () => {
     name: '',
     quantity: '',
     unit: 'кг',
-    category: 'Антикоррозийные грунты',
+    category: 'Строительные материалы',
     barcode: ''
   });
   const [formError, setFormError] = useState('');
@@ -64,12 +64,13 @@ export const Inventory: React.FC = () => {
 
   const categories = [
     'Все',
-    'Антикоррозийные грунты',
-    'Эмали и Лаки',
-    'Растворители',
-    'Абразивный порошок',
+    'Строительные материалы',
+    'Инструменты и оборудование',
+    'Спецодежда и СИЗ',
     'Расходные материалы',
-    'Спецодежда и СИЗ'
+    'Запчасти и комплектующие',
+    'Электрика и освещение',
+    'Сантехника и трубы'
   ];
 
   const units = ['кг', 'л', 'шт', 'т', 'м'];
@@ -542,7 +543,7 @@ export const Inventory: React.FC = () => {
       name: '',
       quantity: '0',
       unit: 'кг',
-      category: 'Антикоррозийные грунты',
+      category: 'Строительные материалы',
       barcode: prefilledBarcode
     });
     setFormError('');
@@ -556,7 +557,7 @@ export const Inventory: React.FC = () => {
       name: item.name,
       quantity: item.quantity.toString(),
       unit: item.unit,
-      category: item.category || 'Антикоррозийные грунты',
+      category: item.category || 'Строительные материалы',
       barcode: item.barcode || ''
     });
     setFormError('');
@@ -692,9 +693,7 @@ export const Inventory: React.FC = () => {
   // Inventory stats
   const totalItemsCount = items.length;
   const lowStockCount = items.filter(i => i.quantity < 10).length;
-  const totalWeightKg = items
-    .filter(i => i.unit === 'кг' || i.unit === 'т')
-    .reduce((acc, curr) => acc + (curr.unit === 'т' ? curr.quantity * 1000 : curr.quantity), 0);
+  const totalVolume = items.reduce((acc, curr) => acc + curr.quantity, 0);
 
   return (
     <div className="space-y-6">
@@ -725,13 +724,13 @@ export const Inventory: React.FC = () => {
 
         <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800 flex items-center justify-between hover:-translate-y-1 hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 ease-out cursor-default">
           <div>
-            <p className="text-sm text-gray-500 dark:text-zinc-400 mb-1">Общий вес ЛКМ</p>
+            <p className="text-sm text-gray-500 dark:text-zinc-400 mb-1">Общий объем запасов</p>
             <h3 className="text-2xl font-bold font-['Montserrat'] text-[#1a1a1a] dark:text-zinc-100">
-              {totalWeightKg.toLocaleString()} кг
+              {totalVolume.toLocaleString()} ед.
             </h3>
           </div>
-          <div className="p-3 rounded-lg bg-blue-50">
-            <RefreshCw className="w-6 h-6 text-blue-600" />
+          <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/40">
+            <RefreshCw className="w-6 h-6 text-blue-600 dark:text-blue-400" />
           </div>
         </div>
       </div>
