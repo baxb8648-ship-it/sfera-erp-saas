@@ -230,7 +230,7 @@ export const CRMLayout: React.FC = () => {
     { name: 'Оборудование', path: '/crm/equipment', icon: PenTool, roles: ['admin', 'accountant'] },
     { name: 'Шаблоны и Контент', path: '/crm/templates', icon: FileText, roles: ['admin', 'manager', 'accountant'] },
     { name: 'Администрирование', path: '/crm/admin', icon: ShieldCheck, roles: ['admin', 'superadmin'] },
-    { name: 'Супер-Админ (SaaS)', path: '/crm/superadmin', icon: Crown, roles: ['admin', 'superadmin'] },
+    { name: 'Супер-Админ (SaaS)', path: '/crm/superadmin', icon: Crown, roles: ['superadmin'] },
 
   ];
 
@@ -577,6 +577,16 @@ export const CRMLayout: React.FC = () => {
             </h2>
           </div>
           <div className="flex items-center space-x-4">
+            {userRole === 'superadmin' && (
+              <button
+                onClick={() => navigate('/crm/superadmin')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/40 text-amber-500 hover:text-white hover:bg-amber-500 text-xs font-bold uppercase tracking-wider transition-all shadow-sm active:scale-95 cursor-pointer"
+                title="👑 Консоль Владельца Платформы (SaaS SuperAdmin)"
+              >
+                <Crown className="w-4 h-4 animate-pulse" />
+                <span className="hidden sm:inline">SaaS Владелец</span>
+              </button>
+            )}
             <div className="hidden md:flex items-center gap-4 text-xs font-mono text-gray-500 dark:text-zinc-400 bg-gray-100 dark:bg-zinc-800/40 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-zinc-800 select-none">
               <div>
                 <span className="text-gray-400 dark:text-zinc-550 font-sans mr-1">МСК:</span>
