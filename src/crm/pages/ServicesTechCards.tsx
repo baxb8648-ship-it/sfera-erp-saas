@@ -185,7 +185,7 @@ export default function ServicesTechCards() {
                             <input
                                 type="text"
                                 className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                                placeholder="Например: Замена масла двигателя"
+                                placeholder="Например: Разработка проекта, Окрашивание, Установка"
                                 value={formData.name}
                                 onChange={(e) => setFormData({...formData, name: e.target.value})}
                             />

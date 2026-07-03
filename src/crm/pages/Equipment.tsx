@@ -22,7 +22,7 @@ interface ProjectObject {
 }
 
 export const Equipment: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'list' | 'fleet'>('fleet');
+  const [activeTab, setActiveTab] = useState<'list' | 'fleet'>('list');
   const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
   const [objects, setObjects] = useState<ProjectObject[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -569,7 +569,7 @@ export const Equipment: React.FC = () => {
               : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800'
           }`}
         >
-          <span>📋 Реестр инвентаря</span>
+          <span>📋 Реестр техники</span>
         </button>
       </div>
 
