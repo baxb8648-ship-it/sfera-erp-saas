@@ -863,3 +863,175 @@ class TelegramBot(Base):
     is_active = Column(Boolean, default=True)
     
     tenant = relationship("Tenant")
+
+# ═══════════════════════════════════════════════════════
+# ФАЗА 9.3 — МОДУЛЬ СНАБЖЕНИЯ И ЛОГИСТИКИ (SUPPLY PIPELINE)
+# ═══════════════════════════════════════════════════════
+
+class SupplyOrder(Base):
+    """
+    Заявка на снабжение (Kanban-карточка).
+    """
+    __tablename__ = "supply_orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    object_id = Column(Integer, ForeignKey("objects.id"), nullable=True)
+    creator_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    service_ticket_id = Column(Integer, ForeignKey("service_tickets.id"), nullable=True) # Связь с поломкой
+
+    item_name = Column(String, nullable=False)
+    quantity = Column(Float, nullable=False)
+    budget = Column(Float, nullable=True)
+    supplier_name = Column(String, nullable=True)
+    
+    status = Column(String, default="new") # new, approval, ordered, transit, gate, quality_control, received, rejected
+    expected_delivery_date = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    tenant = relationship("Tenant")
+    object = relationship("Object")
+    creator = relationship("User", foreign_keys=[creator_id])
+    service_ticket = relationship("ServiceTicket", foreign_keys=[service_ticket_id], post_update=True)
+
+
+class VehiclePass(Base):
+    """
+    Пропуск на авто для доставки груза (генерируется при статусе In-Transit).
+    """
+    __tablename__ = "vehicle_passes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    supply_order_id = Column(Integer, ForeignKey("supply_orders.id"), nullable=False)
+    
+    driver_name = Column(String, nullable=False)
+    driver_phone = Column(String, nullable=False)
+    vehicle_plate = Column(String, nullable=False)
+    vehicle_model = Column(String, nullable=True)
+    pass_code = Column(String, nullable=False, unique=True, index=True) # Сгенерированный код
+    status = Column(String, default="active") # active, used, expired
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    supply_order = relationship("SupplyOrder")
+
+
+class QualityControl(Base):
+    """
+    Входной контроль качества (ВКК) материалов на стройплощадке.
+    """
+    __tablename__ = "quality_controls"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    supply_order_id = Column(Integer, ForeignKey("supply_orders.id"), nullable=False)
+    inspector_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    is_passed = Column(Boolean, default=True)
+    defects_description = Column(Text, nullable=True)
+    photos = Column(JSON, nullable=True, default=[]) # Фото брака
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    supply_order = relationship("SupplyOrder")
+    inspector = relationship("User")
+
+
+# ═══════════════════════════════════════════════════════
+# ФАЗА 9.4 — ТОиР И ВЫЕЗДНЫЕ МЕХАНИКИ (MRO / FIELD SERVICE)
+# ═══════════════════════════════════════════════════════
+
+class ServiceTicket(Base):
+    """
+    Вызов механика / Заявка на ТО и ремонт.
+    Может быть создана через Telegram (AI Voice-to-Ticket).
+    """
+    __tablename__ = "service_tickets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    equipment_id = Column(Integer, ForeignKey("equipment.id"), nullable=True)
+    object_id = Column(Integer, ForeignKey("objects.id"), nullable=True)
+    creator_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    mechanic_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    issue_description = Column(Text, nullable=False)
+    audio_transcript = Column(Text, nullable=True) # Если создано голосом
+    status = Column(String, default="open") # open, in_transit, in_progress, waiting_for_parts, closed
+    resolution_notes = Column(Text, nullable=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    closed_at = Column(DateTime, nullable=True)
+
+    tenant = relationship("Tenant")
+    equipment = relationship("EquipmentItem")
+    object = relationship("Object")
+    creator = relationship("User", foreign_keys=[creator_id])
+    mechanic = relationship("User", foreign_keys=[mechanic_id])
+
+# ═══════════════════════════════════════════════════════
+# ФАЗА 9.1 — СФЕРА УСЛУГ И ОНЛАЙН-ЗАПИСЬ (B2C BOOKING)
+# ═══════════════════════════════════════════════════════
+
+class BookingCategory(Base):
+    """Категория услуг (например, Парикмахерский зал, Диагностика)"""
+    __tablename__ = "booking_categories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+
+    services = relationship("BookingService", back_populates="category", cascade="all, delete-orphan")
+
+class BookingService(Base):
+    """Конкретная услуга для записи"""
+    __tablename__ = "booking_services"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    category_id = Column(Integer, ForeignKey("booking_categories.id"), nullable=True)
+    name = Column(String, nullable=False)
+    price = Column(Float, default=0.0)
+    duration_minutes = Column(Integer, default=60)
+    is_active = Column(Boolean, default=True)
+
+    category = relationship("BookingCategory", back_populates="services")
+    tech_cards = relationship("TechCardItem", back_populates="service", cascade="all, delete-orphan")
+
+class TechCardItem(Base):
+    """Техкарта услуги: какой ТМЦ и сколько списывать при оказании услуги"""
+    __tablename__ = "tech_card_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    service_id = Column(Integer, ForeignKey("booking_services.id"), nullable=False)
+    inventory_id = Column(Integer, ForeignKey("inventory.id"), nullable=False)
+    quantity = Column(Float, nullable=False) # Количество для списания (в ед. изм. инвентаря)
+
+    service = relationship("BookingService", back_populates="tech_cards")
+    inventory_item = relationship("InventoryItem")
+
+class Appointment(Base):
+    """Запись клиента на услугу (Бронирование)"""
+    __tablename__ = "appointments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    service_id = Column(Integer, ForeignKey("booking_services.id"), nullable=False)
+    master_id = Column(Integer, ForeignKey("users.id"), nullable=False) # Мастер, который оказывает услугу
+    
+    client_name = Column(String, nullable=False)
+    client_phone = Column(String, nullable=True)
+    datetime_start = Column(DateTime, nullable=False)
+    datetime_end = Column(DateTime, nullable=False)
+    
+    # Статус: new, confirmed, completed, cancelled
+    status = Column(String, default="new")
+    notes = Column(Text, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    service = relationship("BookingService")
+    master = relationship("User")

@@ -63,6 +63,10 @@ const ConstructionProjectView = React.lazy(() => import('./crm/pages/Constructio
 const SuperAdmin = React.lazy(() => import('./crm/pages/SuperAdmin').then(m => ({ default: m.SuperAdmin })));
 const SupportDesk = React.lazy(() => import('./crm/pages/SupportDesk'));
 const Marketplace = React.lazy(() => import('./crm/pages/Marketplace').then(m => ({ default: m.Marketplace })));
+const SupplyPipeline = React.lazy(() => import('./crm/pages/SupplyPipeline'));
+const ServiceTickets = React.lazy(() => import('./crm/pages/ServiceTickets'));
+const ServicesTechCards = React.lazy(() => import('./crm/pages/ServicesTechCards'));
+const AppointmentsChessboard = React.lazy(() => import('./crm/pages/AppointmentsChessboard'));
 
 // Premium Skeleton Loader Fallback
 const PageSkeleton: React.FC = () => {
@@ -152,7 +156,12 @@ const App: React.FC = () => {
                   <Route path="superadmin" element={<SuperAdmin />} />
                   <Route path="support" element={<SupportDesk />} />
                   <Route path="marketplace" element={<Marketplace />} />
-
+                  <Route path="supply" element={<SupplyPipeline />} />
+                  <Route path="service" element={<ServiceTickets />} />
+                  <Route path="booking">
+                    <Route path="services" element={<ServicesTechCards />} />
+                    <Route path="appointments" element={<AppointmentsChessboard />} />
+                  </Route>
                 </Route>
               </Route>
             </Routes>

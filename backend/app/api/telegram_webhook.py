@@ -399,6 +399,28 @@ def process_telegram_update_internal(update: dict, db: Session, token: str):
                 token, chat_id, message_id, temp_id, create_client=True
             )
 
+        # ---- ГОЛОСОВЫЕ ЗАДАЧИ: ТОиР (Вызов механика) ----
+        elif data.startswith("confirm_voice_mro_"):
+            try:
+                temp_id = int(data.split("_")[-1])
+            except ValueError:
+                return
+            run_in_background(
+                handle_confirm_voice_mro_task,
+                token, chat_id, message_id, temp_id
+            )
+
+        # ---- ГОЛОСОВЫЕ ЗАДАЧИ: Снабжение (Заказ ТМЦ) ----
+        elif data.startswith("confirm_voice_supply_"):
+            try:
+                temp_id = int(data.split("_")[-1])
+            except ValueError:
+                return
+            run_in_background(
+                handle_confirm_voice_supply_task,
+                token, chat_id, message_id, temp_id
+            )
+
         # ---- ГОЛОСОВЫЕ ЗАДАЧИ: Отмена ----
         elif data.startswith("cancel_voice_"):
             try:
@@ -1129,6 +1151,14 @@ def handle_voice_message(token: str, chat_id: int, file_id: str, telegram_user_i
         "callback_data": f"confirm_voice_{temp_id}"
     }])
     keyboard.append([{
+        "text": "🔧 Вызвать механика (ТОиР)",
+        "callback_data": f"confirm_voice_mro_{temp_id}"
+    }])
+    keyboard.append([{
+        "text": "📦 Заказать ТМЦ (Снабжение)",
+        "callback_data": f"confirm_voice_supply_{temp_id}"
+    }])
+    keyboard.append([{
         "text": "❌ Отмена",
         "callback_data": f"cancel_voice_{temp_id}"
     }])
@@ -1228,6 +1258,105 @@ def handle_confirm_voice_task(token: str, chat_id: int, message_id: int,
         edit_message_text(token, chat_id, message_id, f"❌ Ошибка при создании задачи: {e}")
     finally:
         db.close()
+
+def handle_confirm_voice_mro_task(token: str, chat_id: int, message_id: int, temp_id: int):
+    """
+    Создаёт вызов механика (ServiceTicket) из голосового сообщения.
+    """
+    from ..database import SessionLocal
+    from ..models import ServiceTicket, TempVoiceTask, User
+    from datetime import datetime
+
+    db = SessionLocal()
+    try:
+        temp = db.query(TempVoiceTask).filter(TempVoiceTask.id == temp_id).first()
+        if not temp:
+            edit_message_text(token, chat_id, message_id, "❌ Сессия устарела. Пожалуйста, пришлите голосовое ещё раз.")
+            return
+
+        crm_user = db.query(User).filter(User.telegram_chat_id == temp.telegram_user_id).first()
+        creator_id = crm_user.id if crm_user else 1
+
+        new_ticket = ServiceTicket(
+            tenant_id=crm_user.tenant_id if crm_user else 1,
+            creator_id=creator_id,
+            issue_description=temp.task_description or temp.task_title or "Поломка техники",
+            audio_transcript=temp.original_text,
+            status="open"
+        )
+        db.add(new_ticket)
+        db.flush()
+        ticket_id = new_ticket.id
+
+        db.delete(temp)
+        db.commit()
+
+        parts = ["🟢 <b>Вызов механика создан!</b>\n"]
+        parts.append(f"<b>🔧 Заявка #{ticket_id} (ТОиР):</b> {new_ticket.issue_description[:100]}...")
+        parts.append(f"\n<a href='https://срм.леоника56.рф/#/service'>Открыть доску механика →</a>")
+
+        edit_message_text(token, chat_id, message_id, "\n".join(parts))
+
+    except Exception as e:
+        logger.error(f"handle_confirm_voice_mro_task error: {e}")
+        edit_message_text(token, chat_id, message_id, f"❌ Ошибка при вызове механика: {e}")
+    finally:
+        db.close()
+
+
+def handle_confirm_voice_supply_task(token: str, chat_id: int, message_id: int, temp_id: int):
+    """
+    Создаёт заявку на снабжение (SupplyOrder) из голосового сообщения.
+    """
+    from ..database import SessionLocal
+    from ..models import SupplyOrder, TempVoiceTask, User
+    import re
+
+    db = SessionLocal()
+    try:
+        temp = db.query(TempVoiceTask).filter(TempVoiceTask.id == temp_id).first()
+        if not temp:
+            edit_message_text(token, chat_id, message_id, "❌ Сессия устарела. Пожалуйста, пришлите голосовое ещё раз.")
+            return
+
+        crm_user = db.query(User).filter(User.telegram_chat_id == temp.telegram_user_id).first()
+        creator_id = crm_user.id if crm_user else 1
+        
+        # Пытаемся извлечь количество из текста (наивный парсинг)
+        quantity = 1.0
+        q_match = re.search(r'(\d+[\.,]?\d*)\s*(шт|т|тонн|кг|м|литров|л|упаковок)', temp.area or temp.task_description or "")
+        if q_match:
+            try:
+                quantity = float(q_match.group(1).replace(',', '.'))
+            except:
+                pass
+
+        new_order = SupplyOrder(
+            tenant_id=crm_user.tenant_id if crm_user else 1,
+            creator_id=creator_id,
+            item_name=temp.task_title or "Материалы по заявке",
+            quantity=quantity,
+            status="new"
+        )
+        db.add(new_order)
+        db.flush()
+        order_id = new_order.id
+
+        db.delete(temp)
+        db.commit()
+
+        parts = ["🟢 <b>Заявка на снабжение отправлена!</b>\n"]
+        parts.append(f"<b>📦 Заказ #{order_id}:</b> {new_order.item_name} ({new_order.quantity} ед.)")
+        parts.append(f"\n<a href='https://срм.леоника56.рф/#/supply'>Открыть Канбан снабжения →</a>")
+
+        edit_message_text(token, chat_id, message_id, "\n".join(parts))
+
+    except Exception as e:
+        logger.error(f"handle_confirm_voice_supply_task error: {e}")
+        edit_message_text(token, chat_id, message_id, f"❌ Ошибка при создании заявки на снабжение: {e}")
+    finally:
+        db.close()
+
 
 
 def handle_cancel_voice_task(token: str, chat_id: int, message_id: int, temp_id: int):

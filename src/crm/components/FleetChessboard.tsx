@@ -17,6 +17,7 @@ import {
   PhoneCall,
   Sparkles
 } from 'lucide-react';
+import { apiClient } from '../../api/client';
 
 // ==========================================
 // ТИПЫ И ИНТЕРФЕЙСЫ
@@ -394,6 +395,50 @@ export const FleetChessboard: React.FC = () => {
       return matchesCategory && matchesSearch;
     });
   }, [equipmentList, selectedCategory, searchQuery]);
+
+  // Интеграция ТОиР (ServiceTickets)
+  React.useEffect(() => {
+    const fetchServiceTickets = async () => {
+      try {
+        const tickets = await apiClient.get<any[]>('/service/');
+        if (tickets && Array.isArray(tickets)) {
+          const activeTickets = tickets.filter(t => t.status !== 'resolved');
+          
+          const maintenanceBookings: BookingItem[] = activeTickets.map(t => {
+            // Маппим реальный equipment_id (число) на моковый 'eq-0X'
+            const eqId = t.equipment_id ? `eq-0${t.equipment_id}` : 'eq-01';
+            
+            return {
+              id: `srv-${t.id}`,
+              equipmentId: eqId,
+              clientName: 'Внутренний сервис ТОиР',
+              clientInn: '—',
+              objectName: t.issue_description || 'Техническое обслуживание',
+              objectAddress: 'Ремонтная база',
+              startDate: new Date().toISOString().split('T')[0], // Сегодня
+              endDate: addDays(new Date().toISOString().split('T')[0], 3), // +3 дня на ремонт
+              status: 'maintenance',
+              totalCost: 0,
+              prepaidCost: 0,
+              managerName: 'Механик',
+              contractNumber: `Заявка ТОиР #${t.id}`,
+              notes: t.audio_transcript || ''
+            };
+          });
+
+          setBookings(prev => {
+            // Удаляем старые заявки ТОиР, чтобы не дублировались при ререндере
+            const withoutOldSrv = prev.filter(b => !b.id.startsWith('srv-'));
+            return [...withoutOldSrv, ...maintenanceBookings];
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch service tickets for chessboard', err);
+      }
+    };
+    
+    fetchServiceTickets();
+  }, []);
 
   // Генерация массива дней для сетки таймлайна
   const timelineDays = useMemo(() => {

@@ -469,4 +469,176 @@ class LeadDatabaseResponse(BaseModel):
         from_attributes = True
 
 
+# ═══════════════════════════════════════════════════════
+# ФАЗА 9.3 — СХЕМЫ СНАБЖЕНИЯ И ЛОГИСТИКИ
+# ═══════════════════════════════════════════════════════
 
+class SupplyOrderBase(BaseModel):
+    object_id: Optional[int] = None
+    service_ticket_id: Optional[int] = None
+    item_name: str
+    quantity: float
+    budget: Optional[float] = None
+    supplier_name: Optional[str] = None
+    status: str = "new"
+    expected_delivery_date: Optional[datetime] = None
+
+class SupplyOrderCreate(SupplyOrderBase):
+    pass
+
+class SupplyOrderResponse(SupplyOrderBase):
+    id: int
+    tenant_id: int
+    creator_id: int
+    created_at: datetime
+    creator_name: Optional[str] = None
+    object_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class VehiclePassBase(BaseModel):
+    supply_order_id: int
+    driver_name: str
+    driver_phone: str
+    vehicle_plate: str
+    vehicle_model: Optional[str] = None
+    status: str = "active"
+
+class VehiclePassCreate(VehiclePassBase):
+    pass
+
+class VehiclePassResponse(VehiclePassBase):
+    id: int
+    tenant_id: int
+    pass_code: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class QualityControlBase(BaseModel):
+    supply_order_id: int
+    is_passed: bool = True
+    defects_description: Optional[str] = None
+    photos: Optional[List[str]] = None
+
+class QualityControlCreate(QualityControlBase):
+    pass
+
+class QualityControlResponse(QualityControlBase):
+    id: int
+    tenant_id: int
+    inspector_id: int
+    created_at: datetime
+    inspector_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+# ═══════════════════════════════════════════════════════
+# ФАЗА 9.4 — СХЕМЫ ТОиР И ВЫЕЗДНЫЕ МЕХАНИКИ
+# ═══════════════════════════════════════════════════════
+
+class ServiceTicketBase(BaseModel):
+    equipment_id: Optional[int] = None
+    object_id: Optional[int] = None
+    mechanic_id: Optional[int] = None
+    issue_description: str
+    status: str = "open"
+    resolution_notes: Optional[str] = None
+
+class ServiceTicketCreate(ServiceTicketBase):
+    pass
+
+class ServiceTicketResponse(ServiceTicketBase):
+    id: int
+    tenant_id: int
+    creator_id: Optional[int] = None
+    audio_transcript: Optional[str] = None
+    created_at: datetime
+    closed_at: Optional[datetime] = None
+    creator_name: Optional[str] = None
+    mechanic_name: Optional[str] = None
+    equipment_name: Optional[str] = None
+    object_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+# ═══════════════════════════════════════════════════════
+# ФАЗА 9.1 — СХЕМЫ СФЕРЫ УСЛУГ И ОНЛАЙН-ЗАПИСИ
+# ═══════════════════════════════════════════════════════
+
+class BookingCategoryBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+class BookingCategoryCreate(BookingCategoryBase):
+    pass
+
+class BookingCategoryResponse(BookingCategoryBase):
+    id: int
+    tenant_id: int
+
+    class Config:
+        from_attributes = True
+
+class TechCardItemBase(BaseModel):
+    inventory_id: int
+    quantity: float
+
+class TechCardItemCreate(TechCardItemBase):
+    pass
+
+class TechCardItemResponse(TechCardItemBase):
+    id: int
+    tenant_id: int
+    service_id: int
+    inventory_name: Optional[str] = None
+    inventory_unit: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class BookingServiceBase(BaseModel):
+    category_id: Optional[int] = None
+    name: str
+    price: float = 0.0
+    duration_minutes: int = 60
+    is_active: bool = True
+
+class BookingServiceCreate(BookingServiceBase):
+    tech_cards: Optional[List[TechCardItemCreate]] = None
+
+class BookingServiceResponse(BookingServiceBase):
+    id: int
+    tenant_id: int
+    category_name: Optional[str] = None
+    tech_cards: List[TechCardItemResponse] = []
+
+    class Config:
+        from_attributes = True
+
+class AppointmentBase(BaseModel):
+    service_id: int
+    master_id: int
+    client_name: str
+    client_phone: Optional[str] = None
+    datetime_start: datetime
+    datetime_end: datetime
+    status: str = "new"
+    notes: Optional[str] = None
+
+class AppointmentCreate(AppointmentBase):
+    pass
+
+class AppointmentResponse(AppointmentBase):
+    id: int
+    tenant_id: int
+    created_at: datetime
+    service_name: Optional[str] = None
+    master_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True

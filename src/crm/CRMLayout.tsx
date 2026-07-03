@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Building2, Wallet, Package, PenTool, LogOut, FileText, Sun, Moon, ShieldCheck, Gavel, TrendingUp, Menu, X, Mail, CheckSquare, Bell, Crown, LifeBuoy, HelpCircle, HardHat, Globe } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, Wallet, Package, PenTool, LogOut, FileText, Sun, Moon, ShieldCheck, Gavel, TrendingUp, Menu, X, Mail, CheckSquare, Bell, Crown, LifeBuoy, HelpCircle, HardHat, Globe, Truck, Wrench, Scissors, CalendarDays } from 'lucide-react';
 import { CommandMenu } from './components/CommandMenu';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useToast } from '../components/ui/Toast';
@@ -248,8 +248,12 @@ export const CRMLayout: React.FC = () => {
     { name: 'Строительство', path: '/crm/construction', icon: HardHat, module: 'construction' },
     { name: 'Тендеры', path: '/crm/tenders', icon: Gavel, module: 'tenders' },
     { name: 'Финансы', path: '/crm/finance', icon: Wallet, module: 'finance' },
+    { name: 'Снабжение', path: '/crm/supply', icon: Truck, module: null },
     { name: 'Склад', path: '/crm/inventory', icon: Package, module: 'inventory' },
     { name: 'Оборудование', path: '/crm/equipment', icon: PenTool, module: 'equipment' },
+    { name: 'ТОиР (Механики)', path: '/crm/service', icon: Wrench, module: null },
+    { name: 'Услуги', path: '/crm/booking/services', icon: Scissors, module: null },
+    { name: 'Расписание', path: '/crm/booking/appointments', icon: CalendarDays, module: null },
     { name: 'Шаблоны и Контент', path: '/crm/templates', icon: FileText, module: 'templates' },
     { name: 'Администрирование', path: '/crm/admin', icon: ShieldCheck, module: 'audit' }, // Settings/Audit
     { name: 'Супер-Админ (SaaS)', path: '/crm/superadmin', icon: Crown, isSuperadminOnly: true },
