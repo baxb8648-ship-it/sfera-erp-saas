@@ -64,9 +64,9 @@ export default function AppointmentsChessboard() {
                 apiClient.get(`/booking/appointments?start_date=${currentDate}T00:00:00&end_date=${currentDate}T23:59:59`)
             ]);
             // For now, let's treat all active users as masters, or in a real app filter by role
-            setMasters(usersRes.data.filter((u: any) => u.is_active === 1));
-            setServices(svcRes.data);
-            setAppointments(appRes.data);
+            setMasters(Array.isArray(usersRes) ? usersRes.filter((u: any) => u.is_active === 1) : []);
+            setServices(Array.isArray(svcRes) ? svcRes : []);
+            setAppointments(Array.isArray(appRes) ? appRes : []);
         } catch (err) {
             console.error(err);
             error('Не удалось загрузить данные расписания');

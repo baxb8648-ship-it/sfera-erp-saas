@@ -55,8 +55,8 @@ export default function ServicesTechCards() {
                 apiClient.get('/booking/services'),
                 apiClient.get('/inventory/')
             ]);
-            setServices(svcRes.data);
-            setInventory(invRes.data);
+            setServices(Array.isArray(svcRes) ? svcRes : []);
+            setInventory(Array.isArray(invRes) ? invRes : []);
         } catch (err) {
             console.error(err);
             error('Не удалось загрузить каталог услуг');
