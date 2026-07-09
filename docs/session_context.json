@@ -39,6 +39,66 @@
   },
   "completed_work": [
     {
+      "task": "Аудит и улучшение UI/UX (Дашборд, Роутинг, Монетизация)",
+      "status": "Выполнено",
+      "details": "Добавлен виджет QuickStartWidget на Dashboard; Создана страница LeadsPage; Исправлены проблемы с роутингом (App.tsx); Внедрен UpsellBanner.tsx для апсейла FREE-тарифа; Обновлен CRMLayout: исправлен ws fallback port, убран дубль меню, кнопка оплаты ведет на /crm/admin.",
+      "date": "2026-07-03"
+    },
+    {
+      "task": "Завершение Фазы 8 (Архитектура Мульти-Ботов Telegram) и полный Дебагинг по Аудиту",
+      "status": "Выполнено",
+      "details": "Успешно завершена Фаза 8: реализована изоляция Внутренних и Внешних ботов, внедрен Омни-вебхук. Также полностью проведен дебагинг и решены все приоритетные задачи из файла СФЕРА_ERP_Полный_Аудит_и_Стратегия.md (BUG-001 - BUG-003, UX-001 - UX-005, MON-001 - MON-004, ONB-001, RET-001).",
+      "date": "2026-07-03"
+    },
+    {
+      "task": "P3 RET-001/002: Email-маркетинг и Retention триггеры (Soft Paywall)",
+      "status": "Выполнено",
+      "details": "В бэкенде: добавлены поля welcome_email_sent, day7_email_sent, trial_ending_email_sent в модель Tenant. Создана SQL-миграция (migrate_retention.py). Написан утилитный модуль email_retention.py с шаблонами писем для приветствия (Welcome), 7-го дня (Check-in) и окончания триала (Trial Ending Alert), который использует системные настройки SMTP (или пишет в лог как mock). Настроен асинхронный цикл scheduled_retention_emails_loop в main.py для ежедневной проверки и отправки триггерных писем. Вызов send_welcome_email интегрирован в API регистрации через BackgroundTasks. На фронтенде: в CRMLayout.tsx реализован Soft Paywall (желтый баннер с предупреждением за 3 дня до окончания подписки) для администраторов, основанный на поле subscription_ends_at. Сборка npm run build прошла успешно.",
+      "date": "2026-07-03"
+    },
+    {
+      "task": "P3 ONB-001: Setup Wizard после первой регистрации (Онбординг)",
+      "status": "Выполнено",
+      "details": "Создано поле is_onboarded в модели Tenant. Написана и выполнена SQL миграция для обновления существующих тенантов (установлено TRUE). В pydantic схему UserResponseSchema добавлен флаг is_onboarded и tenant_id. Реализован эндпоинт PUT /tenants/onboarding для обновления реквизитов компании (по ИНН) и настройки списка доступных модулей (plan_modules) в зависимости от выбранной ниши (construction, beauty, agro и т.д.). На фронтенде создан god-tier компонент SetupWizard.tsx (Framer Motion, 3 шага: Профиль, Ниша, Инвайты). Компонент интегрирован в CRMLayout.tsx, чтобы перекрывать интерфейс до прохождения онбординга. Сборка прошла успешно.",
+      "date": "2026-07-03"
+    },
+    {
+      "task": "P2 MON-004: UX для загрузки документов в RAG базу знаний (Pinecone)",
+      "status": "Выполнено",
+      "details": "В бэкенде добавлена таблица KnowledgeBaseDocument для хранения истории загрузок RAG-файлов в PostgreSQL и связи с Pinecone. В ai_rag_route.py внедрена система лимитов: 5 документов для Free-тенантов и 50 для тех, кто купил 'rag_assistant'. На фронтенде создан God-Tier компонент KnowledgeBase.tsx с Drag&Drop, таблицей проиндексированных файлов и динамическим счетчиком лимитов. Интегрирован upsell-баннер 'Базовый лимит исчерпан', который блокирует загрузку сверх 5 файлов и ведет на покупку агента. Маршрут /crm/knowledge-base добавлен в App.tsx и сайдбар CRMLayout. Сборка фронтенда успешна.",
+      "date": "2026-07-03"
+    },
+    {
+      "task": "P2 MON-001, MON-002: Backend и Frontend для системы лимитов ИИ-Агентов",
+      "status": "Выполнено",
+      "details": "Созданы модели AgentCatalog, TenantAgentSubscription, AgentUsageLog. Написан роутер agents_route.py с логикой проверки лимитов (usage) по tenant_id и seed-скриптом. Разработана premium страница /crm/ai-agents (AIAgentsPage.tsx) с двумя вкладками: Мои Агенты (отображение usage-баров, апсейл-баннеров при исчерпании) и Каталог агентов. Страница подключена в App.tsx и добавлена в боковое меню CRMLayout. Сборка прошла успешно.",
+      "date": "2026-07-03"
+    },
+    {
+      "task": "P1 UX: Полное обновление лендинга SaaSLanding + навигация Header",
+      "status": "Выполнено",
+      "details": "Полное переписание SaaSLanding.tsx. Добавлены секции: 1) Публичный маркетплейс (6 мок-заявок с blur-маской на контактах, живой счётчик новых заявок); 2) Секция '3 бесплатных агента' + 6 платных с ценами; 3) Тарифная сетка СТАРТ/БИЗНЕС/PRO с функциональными CTA-кнопками; 4) Блок доп-услуги 'Обучение бота на документах'; 5) Улучшен финальный CTA с двумя кнопками ('Начать бесплатно' + 'Смотреть маркетплейс'). В Header.tsx заменены пункты навигации 'Интеграции' и 'Безопасность' на 'Маркетплейс' (#marketplace-preview) и 'Тарифы' (#pricing) в desktop и mobile-меню. Сборка npm run build прошла успешно (built in 1.07s, 0 TypeScript-ошибок).",
+      "date": "2026-07-03"
+    },
+    {
+      "task": "BUG-001/002/003: Критические багфиксы фронтенда (Email порт, Paywall, Booking роут)",
+      "status": "Выполнено",
+      "details": "BUG-001: Исправлен fallback URL для email-отправки в CRMLayout.tsx:186 — было localhost:8000 (ЛЕОНИКА), стало localhost:8001 (СФЕРА). Аналогичная ошибка исправлена в LeadsDatabase.tsx (экспорт CSV). BUG-002: Кнопка 'Перейти к оплате' на paywall-экране была мёртвой (без onClick) — добавлен navigate('/crm/admin'). BUG-003: Маршрут /crm/booking давал белый экран — добавлен index-редирект на /crm/booking/appointments. Сборка прошла успешно.",
+      "date": "2026-07-03"
+    },
+    {
+      "task": "God-Tier Audit: Code Review, QA, Marketing & Monetization Strategy",
+      "status": "Completed",
+      "details": "Full audit of SPHERA ERP SaaS platform. Critical bugs found: 1) email send fallback URL points to port 8000 (LEONIKA CRM) instead of 8001 in CRMLayout.tsx:186; 2) Paywall 'Proceed to Payment' button has no onClick handler; 3) /crm/booking route has no index page (white screen); 4) LeadsDatabase.tsx (20KB file) not registered in any route. UX issues: duplicate sidebar items (Equipment + Fleet rental), 22 menu items shown regardless of tenant niche. Monetization strategy: '3 free agents + paid' model with pricing tiers STARTER/BUSINESS/PRO, add-on 'Bot training on company documents' via Pinecone RAG. Public marketplace showcase for non-registered users as main viral mechanic. Created audit document with 14 prioritized tasks (P0-P3).",
+      "date": "2026-07-03"
+    },
+    {
+      "task": "Рефакторинг главной панели Дашборда (Настраиваемые виджеты)",
+      "status": "Выполнено",
+      "details": "Заменена захардкоженная правая колонка в Dashboard.tsx на настраиваемый WidgetManager. Созданы отдельные виджеты для ленты активности, быстрых действий, стройки (СМР), спецтехники и салона красоты. Виджеты загружаются динамически в зависимости от прав доступа (permissions.plan_modules) и могут быть настроены/отключены пользователем. Модуль Beauty (Салон красоты) успешно интегрирован в права.",
+      "date": "2026-07-03"
+    },
+    {
       "task": "Добавление этапов 'Пропуск на объект авто' и 'Входной контроль' (Снабжение)",
       "status": "Выполнено",
       "details": "В Канбан-доску SupplyPipeline.tsx успешно добавлены две новые колонки: 'Пропуск авто' (идентификатор vehicle_pass, фиолетовый цвет) и 'Входной контроль' (идентификатор qc, янтарный цвет). Обновлен интерфейс перетаскивания (HTML5 DnD). Сборка фронтенда npm run build прошла успешно.",

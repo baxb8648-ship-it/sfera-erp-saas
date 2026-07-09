@@ -38,14 +38,14 @@ const standardMaterials = [
 ];
 
 const downloadDocumentFile = async (docId: number, docName: string) => {
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001';
   const url = `${baseUrl}/documents/download/${docId}`;
   try {
     const headers: Record<string, string> = {
       'ngrok-skip-browser-warning': '69420'
     };
     
-    const response = await fetch(url, { headers });
+    const response = await fetch(url, { headers, credentials: 'include' });
     if (response.ok) {
       const blob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
@@ -667,22 +667,14 @@ export const Clients: React.FC = () => {
     const queryString = params.toString() ? `?${params.toString()}` : '';
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || 'http://localhost:8000') + ''}/documents/generate/${selectedClient.id}/${docType}${queryString}`, {
-        method: 'POST',
-        headers: {}
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        // Force refresh documents
+      const data = await apiClient.post<any>(`/documents/generate/${selectedClient.id}/${docType}${queryString}`);
+      if (data) {
         await fetchRelatedData();
         downloadDocumentFile(data.id, '');
-      } else {
-        alert("Ошибка генерации документа");
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Сетевая ошибка");
+      alert(e.message || "Ошибка генерации документа");
     } finally {
       setIsGeneratingDoc(false);
     }
@@ -707,22 +699,14 @@ export const Clients: React.FC = () => {
     const queryString = params.toString() ? `?${params.toString()}` : '';
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || 'http://localhost:8000') + ''}/documents/generate-from-template/${selectedTemplateId}${queryString}`, {
-        method: 'POST',
-        headers: {}
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
+      const data = await apiClient.post<any>(`/documents/generate-from-template/${selectedTemplateId}${queryString}`);
+      if (data) {
         await fetchRelatedData();
         downloadDocumentFile(data.id, '');
-      } else {
-        const err = await response.json();
-        alert(err.detail || "Ошибка генерации документа по шаблону");
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Сетевая ошибка");
+      alert(e.message || "Ошибка генерации документа по шаблону");
     } finally {
       setIsGeneratingDoc(false);
     }
@@ -839,25 +823,15 @@ export const Clients: React.FC = () => {
     }
     
     try {
-      const response = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/documents/generate-kp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+      const data = await apiClient.post<any>('/documents/generate-kp', payload);
+      if (data) {
         setIsKPModalOpen(false);
         await fetchRelatedData();
         downloadDocumentFile(data.id, '');
-      } else {
-        alert("Ошибка генерации КП");
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Сетевая ошибка при генерации КП");
+      alert(e.message || "Ошибка генерации КП");
     } finally {
       setIsGeneratingDoc(false);
     }
@@ -934,25 +908,15 @@ export const Clients: React.FC = () => {
     }
 
     try {
-      const response = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/documents/generate-invoice', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+      const data = await apiClient.post<any>('/documents/generate-invoice', payload);
+      if (data) {
         setIsInvoiceModalOpen(false);
         await fetchRelatedData();
         downloadDocumentFile(data.id, '');
-      } else {
-        alert("Ошибка генерации счета");
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Сетевая ошибка при генерации счета");
+      alert(e.message || "Ошибка генерации счета");
     } finally {
       setIsGeneratingDoc(false);
     }
@@ -990,25 +954,15 @@ export const Clients: React.FC = () => {
     }
 
     try {
-      const response = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/documents/generate-factura', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+      const data = await apiClient.post<any>('/documents/generate-factura', payload);
+      if (data) {
         setIsInvoiceModalOpen(false);
         await fetchRelatedData();
         downloadDocumentFile(data.id, '');
-      } else {
-        alert("Ошибка генерации счет-фактуры");
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Сетевая ошибка при генерации счет-фактуры");
+      alert(e.message || "Ошибка генерации счет-фактуры");
     } finally {
       setIsGeneratingDoc(false);
     }
@@ -1046,25 +1000,15 @@ export const Clients: React.FC = () => {
     }
 
     try {
-      const response = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/documents/generate-upd', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+      const data = await apiClient.post<any>('/documents/generate-upd', payload);
+      if (data) {
         setIsInvoiceModalOpen(false);
         await fetchRelatedData();
         downloadDocumentFile(data.id, '');
-      } else {
-        alert("Ошибка генерации УПД");
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Сетевая ошибка при генерации УПД");
+      alert(e.message || "Ошибка генерации УПД");
     } finally {
       setIsGeneratingDoc(false);
     }
@@ -1825,48 +1769,54 @@ export const Clients: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full pt-3 border-t border-gray-200 dark:border-zinc-800">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 w-full pt-3 border-t border-gray-200 dark:border-zinc-800">
                         <button
                           onClick={handleOpenKPConstructor}
                           disabled={isGeneratingDoc}
-                          className="py-2 px-3 bg-[#F95700]/10 hover:bg-[#F95700]/20 text-[#F95700] border border-[#F95700]/20 text-xs font-bold rounded-lg transition-all active:scale-95 text-center select-none cursor-pointer disabled:opacity-50"
+                          className="py-2.5 px-3 bg-[#F95700]/10 hover:bg-[#F95700]/20 text-[#F95700] border border-[#F95700]/20 text-xs font-bold rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1.5 select-none cursor-pointer disabled:opacity-50"
                         >
-                          Создать КП
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>Создать КП</span>
                         </button>
                         <button
                           onClick={handleOpenInvoiceConstructor}
                           disabled={isGeneratingDoc}
-                          className="py-2 px-3 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 text-xs font-bold rounded-lg transition-all active:scale-95 text-center select-none cursor-pointer disabled:opacity-50"
+                          className="py-2.5 px-3 bg-green-50 dark:bg-green-950/20 hover:bg-green-100 dark:hover:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-900/40 text-xs font-bold rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1.5 select-none cursor-pointer disabled:opacity-50"
                         >
-                          Создать Счет
+                          <FileCheck className="w-3.5 h-3.5" />
+                          <span>Создать Счет</span>
                         </button>
                         <button
                           onClick={() => handleGenerateCardPDF('contract')}
                           disabled={isGeneratingDoc}
-                          className="py-2 px-3 bg-gray-50 dark:bg-zinc-800/50 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 text-gray-700 dark:text-zinc-200 border border-gray-200 dark:border-zinc-800 text-xs font-bold rounded-lg transition-all active:scale-95 text-center select-none cursor-pointer disabled:opacity-50"
+                          className="py-2.5 px-3 bg-gray-50 dark:bg-zinc-800/50 hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-700 dark:text-zinc-200 border border-gray-200 dark:border-zinc-700 text-xs font-bold rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1.5 select-none cursor-pointer disabled:opacity-50"
                         >
-                          Создать Договор
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>Создать Договор</span>
                         </button>
                         <button
                           onClick={() => handleGenerateCardPDF('act')}
                           disabled={isGeneratingDoc}
-                          className="py-2 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold rounded-lg transition-all active:scale-95 text-center select-none cursor-pointer disabled:opacity-50"
+                          className="py-2.5 px-3 bg-blue-50 dark:bg-blue-950/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/40 text-xs font-bold rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1.5 select-none cursor-pointer disabled:opacity-50"
                         >
-                          Создать Акт
+                          <FileCheck className="w-3.5 h-3.5" />
+                          <span>Создать Акт</span>
                         </button>
                         <button
                           onClick={() => handleGenerateCardPDF('ks2')}
                           disabled={isGeneratingDoc}
-                          className="py-2 px-3 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-bold rounded-lg transition-all active:scale-95 text-center select-none cursor-pointer disabled:opacity-50 dark:bg-purple-950/20 dark:text-purple-300 dark:border-purple-900/30"
+                          className="py-2.5 px-3 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-bold rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1.5 select-none cursor-pointer disabled:opacity-50 dark:bg-purple-950/20 dark:text-purple-300 dark:border-purple-900/30"
                         >
-                          Создать КС-2
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>Создать КС-2</span>
                         </button>
                         <button
                           onClick={() => handleGenerateCardPDF('ks3')}
                           disabled={isGeneratingDoc}
-                          className="py-2 px-3 bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 text-xs font-bold rounded-lg transition-all active:scale-95 text-center select-none cursor-pointer disabled:opacity-50 dark:bg-pink-950/20 dark:text-pink-300 dark:border-pink-900/30"
+                          className="py-2.5 px-3 bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 text-xs font-bold rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1.5 select-none cursor-pointer disabled:opacity-50 dark:bg-pink-950/20 dark:text-pink-300 dark:border-pink-900/30"
                         >
-                          Создать КС-3
+                          <FileCheck className="w-3.5 h-3.5" />
+                          <span>Создать КС-3</span>
                         </button>
                       </div>
                       
@@ -2636,7 +2586,7 @@ export const Clients: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F95700]/50 bg-white dark:bg-zinc-900 font-semibold text-[#1a1a1a] dark:text-zinc-100"
                   >
                     <option value="works">Услуги / Работы</option>
-                    <option value="materials">ЛКМ / Расходники</option>
+                    <option value="materials">Товары / Расходники</option>
                   </select>
                 </div>
 
@@ -2687,7 +2637,7 @@ export const Clients: React.FC = () => {
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-gray-600 dark:text-zinc-400 uppercase tracking-wider block">
                   {invoiceAccountType === 'materials' 
-                    ? 'Облако материалов/ЛКМ (кликните, чтобы добавить в счет):' 
+                    ? 'Облако ТМЦ/Товаров (кликните, чтобы добавить в счет):' 
                     : 'Облако услуг (кликните, чтобы добавить в счет):'}
                 </label>
                 <div className="flex flex-wrap gap-2 p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-lg border border-gray-150 dark:border-zinc-800">

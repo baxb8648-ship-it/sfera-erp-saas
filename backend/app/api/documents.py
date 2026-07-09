@@ -17,9 +17,9 @@ from ..services.document_generator import generate_tender_document
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
-def get_settings_dict(db: Session) -> dict:
+def get_settings_dict(db: Session, tenant_id: int = None) -> dict:
     from .settings import ensure_active_organization, DEFAULT_SETTINGS
-    active_org = ensure_active_organization(db)
+    active_org = ensure_active_organization(db, tenant_id=tenant_id)
     
     settings_dict = {
         "company_name": active_org.name or "",
@@ -46,7 +46,10 @@ def get_settings_dict(db: Session) -> dict:
     
     # Load general settings
     for key in ["contract_template", "invoice_disclaimer", "factura_disclaimer", "upd_disclaimer"]:
-        db_setting = db.query(CompanySetting).filter(CompanySetting.key == key).first()
+        query = db.query(CompanySetting).filter(CompanySetting.key == key)
+        if tenant_id:
+            query = query.filter(CompanySetting.tenant_id == tenant_id)
+        db_setting = query.first()
         settings_dict[key] = db_setting.value if db_setting else DEFAULT_SETTINGS.get(key)
         
     return settings_dict
@@ -214,15 +217,21 @@ def num2text_ru(amount: float) -> str:
 
 @router.post("/generate/{client_id}/{doc_type}")
 def generate_document(client_id: int, doc_type: str, object_id: int = None, custom_number: str = None, custom_date: str = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    client = db.query(Client).filter(Client.id == client_id).first()
+    client_query = db.query(Client).filter(Client.id == client_id)
+    if current_user.tenant_id:
+        client_query = client_query.filter(Client.tenant_id == current_user.tenant_id)
+    client = client_query.first()
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
         
     obj = None
     if object_id:
-        obj = db.query(Object).filter(Object.id == object_id).first()
+        obj_query = db.query(Object).filter(Object.id == object_id)
+        if current_user.tenant_id:
+            obj_query = obj_query.filter(Object.tenant_id == current_user.tenant_id)
+        obj = obj_query.first()
 
-    settings = get_settings_dict(db)
+    settings = get_settings_dict(db, tenant_id=current_user.tenant_id)
 
     # Create PDF
     temp_dir = tempfile.gettempdir()
@@ -609,7 +618,8 @@ def generate_document(client_id: int, doc_type: str, object_id: int = None, cust
         doc_type=doc_type,
         name=doc_name,
         is_uploaded=0,
-        file_url=file_path
+        file_url=file_path,
+        tenant_id=current_user.tenant_id
     )
     db.add(new_doc)
     db.commit()
@@ -619,15 +629,21 @@ def generate_document(client_id: int, doc_type: str, object_id: int = None, cust
 
 @router.post("/generate-kp")
 def generate_kp(payload: KPCreateSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    client = db.query(Client).filter(Client.id == payload.client_id).first()
+    client_query = db.query(Client).filter(Client.id == payload.client_id)
+    if current_user.tenant_id:
+        client_query = client_query.filter(Client.tenant_id == current_user.tenant_id)
+    client = client_query.first()
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
         
     obj = None
     if payload.object_id:
-        obj = db.query(Object).filter(Object.id == payload.object_id).first()
+        obj_query = db.query(Object).filter(Object.id == payload.object_id)
+        if current_user.tenant_id:
+            obj_query = obj_query.filter(Object.tenant_id == current_user.tenant_id)
+        obj = obj_query.first()
 
-    settings = get_settings_dict(db)
+    settings = get_settings_dict(db, tenant_id=current_user.tenant_id)
 
     # Create PDF
     temp_dir = tempfile.gettempdir()
@@ -741,7 +757,8 @@ def generate_kp(payload: KPCreateSchema, db: Session = Depends(get_db), current_
         doc_type="kp",
         name=f"Коммерческое предложение № {kp_number}",
         is_uploaded=0,
-        file_url=file_path
+        file_url=file_path,
+        tenant_id=current_user.tenant_id
     )
     db.add(new_doc)
     db.commit()
@@ -751,15 +768,21 @@ def generate_kp(payload: KPCreateSchema, db: Session = Depends(get_db), current_
 
 @router.post("/generate-invoice")
 def generate_invoice(payload: InvoiceCreateSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    client = db.query(Client).filter(Client.id == payload.client_id).first()
+    client_query = db.query(Client).filter(Client.id == payload.client_id)
+    if current_user.tenant_id:
+        client_query = client_query.filter(Client.tenant_id == current_user.tenant_id)
+    client = client_query.first()
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
         
     obj = None
     if payload.object_id:
-        obj = db.query(Object).filter(Object.id == payload.object_id).first()
+        obj_query = db.query(Object).filter(Object.id == payload.object_id)
+        if current_user.tenant_id:
+            obj_query = obj_query.filter(Object.tenant_id == current_user.tenant_id)
+        obj = obj_query.first()
 
-    settings = get_settings_dict(db)
+    settings = get_settings_dict(db, tenant_id=current_user.tenant_id)
 
     # Map materials bank details if requested
     if payload.account_type == "materials":
@@ -1014,7 +1037,8 @@ def generate_invoice(payload: InvoiceCreateSchema, db: Session = Depends(get_db)
         doc_type="invoice",
         name=f"Счет на оплату № {invoice_number}",
         is_uploaded=0,
-        file_url=file_path
+        file_url=file_path,
+        tenant_id=current_user.tenant_id
     )
     db.add(new_doc)
     db.commit()
@@ -1023,8 +1047,11 @@ def generate_invoice(payload: InvoiceCreateSchema, db: Session = Depends(get_db)
     return {"id": new_doc.id, "file_path": file_path, "message": "Счет на оплату успешно сгенерирован"}
 
 @router.get("/download/{doc_id}")
-def download_document(doc_id: int, db: Session = Depends(get_db)):
-    doc = db.query(Document).filter(Document.id == doc_id).first()
+def download_document(doc_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    query = db.query(Document).filter(Document.id == doc_id)
+    if current_user.tenant_id:
+        query = query.filter(Document.tenant_id == current_user.tenant_id)
+    doc = query.first()
     if not doc or not os.path.exists(doc.file_url):
         raise HTTPException(status_code=404, detail="Document not found")
     
@@ -1054,7 +1081,10 @@ def download_document(doc_id: int, db: Session = Depends(get_db)):
 
 @router.get("/", response_model=List[DocumentResponse])
 def get_documents(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return db.query(Document).order_by(Document.created_at.desc()).offset(skip).limit(limit).all()
+    query = db.query(Document)
+    if current_user.tenant_id:
+        query = query.filter(Document.tenant_id == current_user.tenant_id)
+    return query.order_by(Document.created_at.desc()).offset(skip).limit(limit).all()
 
 @router.post("/upload", response_model=DocumentResponse)
 def upload_document(
@@ -1551,29 +1581,69 @@ def generate_from_template(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    template = db.query(DocumentTemplate).filter(DocumentTemplate.id == template_id).first()
+    query = db.query(DocumentTemplate).filter(DocumentTemplate.id == template_id)
+    if current_user.tenant_id:
+        query = query.filter((DocumentTemplate.tenant_id == current_user.tenant_id) | (DocumentTemplate.tenant_id == None))
+    template = query.first()
     if not template or not template.is_active:
         raise HTTPException(status_code=404, detail="Template not found")
 
-    client = db.query(Client).filter(Client.id == client_id).first()
+    client = db.query(Client).filter(Client.id == client_id)
+    if current_user.tenant_id:
+        client = client.filter(Client.tenant_id == current_user.tenant_id)
+    client = client.first()
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
 
     obj = None
     if object_id:
-        obj = db.query(Object).filter(Object.id == object_id).first()
+        obj_query = db.query(Object).filter(Object.id == object_id)
+        if current_user.tenant_id:
+            obj_query = obj_query.filter(Object.tenant_id == current_user.tenant_id)
+        obj = obj_query.first()
 
-    settings = get_settings_dict(db)
+    settings = get_settings_dict(db, tenant_id=current_user.tenant_id)
 
     date_str = custom_date or datetime.now().strftime('%d.%m.%Y')
     doc_number = custom_number or f"{client_id}-{int(datetime.utcnow().timestamp()) % 100000:05d}"
 
+    # Если выбран стартовый системный шаблон СФЕРА, используем встроенный PDF генератор
+    if template.file_path == "system_default" or not os.path.exists(template.file_path):
+        doc_type_map = {
+            "kp": ("kp", "Коммерческое предложение", create_kp_pdf),
+            "invoice": ("invoice", "Счет на оплату", create_invoice_pdf),
+            "contract": ("contract", "Договор подряда", create_contract_pdf),
+            "act": ("act", "Акт выполненных работ", create_act_pdf),
+        }
+        mapped = doc_type_map.get(template.doc_type, doc_type_map.get("contract"))
+        mapped_type, type_label, pdf_generator = mapped
+        filename = f"{mapped_type}_{client.id}_{int(datetime.utcnow().timestamp())}.pdf"
+        file_path = os.path.join(PDF_DIR, filename)
+        pdf_generator(file_path, client, obj, doc_number, settings, custom_date=date_str)
+        
+        new_doc = Document(
+            client_id=client_id,
+            object_id=object_id,
+            doc_type=mapped_type,
+            name=f"{template.name} № {doc_number}",
+            is_uploaded=0,
+            file_url=file_path,
+            tenant_id=current_user.tenant_id
+        )
+        db.add(new_doc)
+        db.commit()
+        db.refresh(new_doc)
+        return {"id": new_doc.id, "file_path": file_path, "message": f"{type_label} успешно сгенерирован по стартовому шаблону"}
+
     context = {
         "company_name": settings.get("company_name", ""),
+        "company_legal_name": settings.get("company_legal_name", settings.get("company_name", "")),
         "company_inn": settings.get("company_inn", ""),
         "company_kpp": settings.get("company_kpp", ""),
         "company_director": settings.get("company_director", ""),
         "company_address": settings.get("company_address", ""),
+        "company_phone": settings.get("company_phone", ""),
+        "company_email": settings.get("company_email", ""),
         "company_bank_name": settings.get("company_bank_name", ""),
         "company_bik": settings.get("company_bik", ""),
         "company_rs": settings.get("company_rs", ""),
@@ -1584,6 +1654,8 @@ def generate_from_template(
         "client_kpp": client.kpp or "",
         "client_address": client.legal_address or "",
         "client_contact": client.contact_person or "",
+        "client_phone": client.phone or "",
+        "client_email": client.email or "",
         "client_bank_name": client.bank_name or "",
         "client_bik": client.bik or "",
         "client_rs": client.rs or "",
@@ -1615,7 +1687,8 @@ def generate_from_template(
         doc_type="custom_template",
         name=f"{template.name} № {doc_number}",
         is_uploaded=0,
-        file_url=output_path
+        file_url=output_path,
+        tenant_id=current_user.tenant_id
     )
     db.add(new_doc)
     db.commit()

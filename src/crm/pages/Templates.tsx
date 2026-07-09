@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, Trash2, FileText, FileCode, Search, HelpCircle, X } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
+import { apiClient } from '../../api/client';
 
 interface Template {
   id: number;
@@ -23,11 +24,8 @@ export const Templates: React.FC = () => {
   const fetchTemplates = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/templates/', {
-        headers: {}
-      });
-      if (response.ok) {
-        const data = await response.json();
+      const data = await apiClient.get<Template[]>('/templates/');
+      if (data) {
         setTemplates(data);
       }
     } catch (e) {
@@ -78,21 +76,11 @@ export const Templates: React.FC = () => {
 
     try {
       setIsLoading(true);
-      const response = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/templates/upload', {
-        method: 'POST',
-        headers: {
-        },
-        body: formData,
-      });
-      
-      if (response.ok) {
-        fetchTemplates();
-      } else {
-        alert('Ошибка при загрузке шаблона');
-      }
+      await apiClient.post('/templates/upload', formData);
+      fetchTemplates();
     } catch (error) {
       console.error(error);
-      alert('Сетевая ошибка при загрузке');
+      alert('Ошибка при загрузке шаблона');
     } finally {
       setIsLoading(false);
       if (fileInputRef.current) {
@@ -105,13 +93,8 @@ export const Templates: React.FC = () => {
     if (!confirm('Удалить этот шаблон?')) return;
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || 'http://localhost:8000') + ''}/templates/${id}`, {
-        method: 'DELETE',
-        headers: {}
-      });
-      if (response.ok) {
-        fetchTemplates();
-      }
+      await apiClient.delete(`/templates/${id}`);
+      fetchTemplates();
     } catch (e) {
       console.error('Failed to delete template', e);
     }
@@ -203,27 +186,46 @@ export const Templates: React.FC = () => {
                 <p className="text-sm">Нет загруженных шаблонов</p>
               </div>
             ) : (
-              <ul className="divide-y divide-gray-100">
+              <ul className="divide-y divide-gray-100 dark:divide-zinc-800">
                 {filteredTemplates.map(template => (
                   <li key={template.id} className="p-4 hover:bg-gray-50 dark:hover:bg-zinc-800/50 dark:bg-zinc-800/50 transition-colors flex items-center justify-between group">
                     <div className="flex items-center space-x-4">
-                      <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                      <div className={`p-3 rounded-xl ${
+                        template.file_path === 'system_default'
+                          ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400'
+                          : 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400'
+                      }`}>
                         <FileText className="w-5 h-5" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-[#1a1a1a] dark:text-zinc-100 text-sm">{template.name}</h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold text-[#1a1a1a] dark:text-zinc-100 text-sm">{template.name}</h4>
+                          {template.file_path === 'system_default' ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300">
+                              ⭐️ Стартовый шаблон (ГОСТ)
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300">
+                              Пользовательский .docx
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">
-                          Загружен: {new Date(template.created_at).toLocaleDateString('ru-RU')}
+                          {template.file_path === 'system_default'
+                            ? 'Предустановлен системой СФЕРА ERP'
+                            : `Загружен: ${new Date(template.created_at).toLocaleDateString('ru-RU')}`}
                         </p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleDelete(template.id)}
-                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                      title="Удалить"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {template.file_path !== 'system_default' && (
+                      <button
+                        onClick={() => handleDelete(template.id)}
+                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                        title="Удалить"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -261,10 +263,13 @@ export const Templates: React.FC = () => {
                   <h4 className="font-bold text-gray-900 dark:text-zinc-200 mb-3 border-b border-gray-100 dark:border-zinc-800 pb-2">О вашей компании</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                     <div className="flex items-center space-x-2"><code className="bg-gray-100 dark:bg-zinc-800 text-pink-600 px-1.5 py-0.5 rounded font-mono text-xs">{`{{ company_name }}`}</code> <span>Название</span></div>
+                    <div className="flex items-center space-x-2"><code className="bg-gray-100 dark:bg-zinc-800 text-pink-600 px-1.5 py-0.5 rounded font-mono text-xs">{`{{ company_legal_name }}`}</code> <span>Юр. название</span></div>
                     <div className="flex items-center space-x-2"><code className="bg-gray-100 dark:bg-zinc-800 text-pink-600 px-1.5 py-0.5 rounded font-mono text-xs">{`{{ company_inn }}`}</code> <span>ИНН</span></div>
                     <div className="flex items-center space-x-2"><code className="bg-gray-100 dark:bg-zinc-800 text-pink-600 px-1.5 py-0.5 rounded font-mono text-xs">{`{{ company_kpp }}`}</code> <span>КПП</span></div>
                     <div className="flex items-center space-x-2"><code className="bg-gray-100 dark:bg-zinc-800 text-pink-600 px-1.5 py-0.5 rounded font-mono text-xs">{`{{ company_director }}`}</code> <span>Директор</span></div>
                     <div className="flex items-center space-x-2"><code className="bg-gray-100 dark:bg-zinc-800 text-pink-600 px-1.5 py-0.5 rounded font-mono text-xs">{`{{ company_address }}`}</code> <span>Адрес</span></div>
+                    <div className="flex items-center space-x-2"><code className="bg-gray-100 dark:bg-zinc-800 text-pink-600 px-1.5 py-0.5 rounded font-mono text-xs">{`{{ company_phone }}`}</code> <span>Телефон</span></div>
+                    <div className="flex items-center space-x-2"><code className="bg-gray-100 dark:bg-zinc-800 text-pink-600 px-1.5 py-0.5 rounded font-mono text-xs">{`{{ company_email }}`}</code> <span>Email</span></div>
                     <div className="flex items-center space-x-2"><code className="bg-gray-100 dark:bg-zinc-800 text-pink-600 px-1.5 py-0.5 rounded font-mono text-xs">{`{{ company_bank_name }}`}</code> <span>Название банка</span></div>
                     <div className="flex items-center space-x-2"><code className="bg-gray-100 dark:bg-zinc-800 text-pink-600 px-1.5 py-0.5 rounded font-mono text-xs">{`{{ company_rs }}`}</code> <span>Расчетный счет</span></div>
                     <div className="flex items-center space-x-2"><code className="bg-gray-100 dark:bg-zinc-800 text-pink-600 px-1.5 py-0.5 rounded font-mono text-xs">{`{{ company_ks }}`}</code> <span>Корр. счет</span></div>
@@ -279,6 +284,8 @@ export const Templates: React.FC = () => {
                     <div className="flex items-center space-x-2"><code className="bg-gray-100 dark:bg-zinc-800 text-blue-600 px-1.5 py-0.5 rounded font-mono text-xs">{`{{ client_inn }}`}</code> <span>ИНН</span></div>
                     <div className="flex items-center space-x-2"><code className="bg-gray-100 dark:bg-zinc-800 text-blue-600 px-1.5 py-0.5 rounded font-mono text-xs">{`{{ client_kpp }}`}</code> <span>КПП</span></div>
                     <div className="flex items-center space-x-2"><code className="bg-gray-100 dark:bg-zinc-800 text-blue-600 px-1.5 py-0.5 rounded font-mono text-xs">{`{{ client_contact }}`}</code> <span>Конт. лицо</span></div>
+                    <div className="flex items-center space-x-2"><code className="bg-gray-100 dark:bg-zinc-800 text-blue-600 px-1.5 py-0.5 rounded font-mono text-xs">{`{{ client_phone }}`}</code> <span>Телефон</span></div>
+                    <div className="flex items-center space-x-2"><code className="bg-gray-100 dark:bg-zinc-800 text-blue-600 px-1.5 py-0.5 rounded font-mono text-xs">{`{{ client_email }}`}</code> <span>Email</span></div>
                     <div className="flex items-center space-x-2"><code className="bg-gray-100 dark:bg-zinc-800 text-blue-600 px-1.5 py-0.5 rounded font-mono text-xs">{`{{ client_address }}`}</code> <span>Адрес</span></div>
                     <div className="flex items-center space-x-2"><code className="bg-gray-100 dark:bg-zinc-800 text-blue-600 px-1.5 py-0.5 rounded font-mono text-xs">{`{{ client_bank_name }}`}</code> <span>Название банка</span></div>
                     <div className="flex items-center space-x-2"><code className="bg-gray-100 dark:bg-zinc-800 text-blue-600 px-1.5 py-0.5 rounded font-mono text-xs">{`{{ client_rs }}`}</code> <span>Расчетный счет</span></div>

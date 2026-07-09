@@ -16,6 +16,32 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 UPLOAD_DIR = os.path.join(BASE_DIR, "data", "templates")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+def ensure_default_templates(db: Session, tenant_id: int):
+    """
+    Создает стартовые профессиональные шаблоны документов для нового тенанта,
+    если у компании еще нет активных шаблонов.
+    """
+    existing = db.query(DocumentTemplate).filter(
+        DocumentTemplate.tenant_id == tenant_id,
+        DocumentTemplate.is_active == 1
+    ).first()
+    if not existing:
+        defaults = [
+            ("Стандартное Коммерческое Предложение (ГОСТ Р 7.0.97)", "kp"),
+            ("Типовой Договор подряда и оказания услуг", "contract"),
+            ("Стандартный Счет на оплату с реквизитами", "invoice"),
+            ("Акт сдачи-приемки выполненных работ (УПД)", "act"),
+        ]
+        for name, doc_type in defaults:
+            db.add(DocumentTemplate(
+                tenant_id=tenant_id,
+                name=name,
+                doc_type=doc_type,
+                file_path="system_default",
+                is_active=1
+            ))
+        db.commit()
+
 @router.post("/upload")
 async def upload_template(file: UploadFile = File(...), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if not file.filename.endswith('.docx'):
@@ -38,6 +64,7 @@ async def upload_template(file: UploadFile = File(...), db: Session = Depends(ge
     doc_type = file.filename.replace('.docx', '')
     
     new_template = DocumentTemplate(
+        tenant_id=current_user.tenant_id,
         name=file.filename,
         doc_type=doc_type,
         file_path=file_path,
@@ -52,12 +79,20 @@ async def upload_template(file: UploadFile = File(...), db: Session = Depends(ge
 
 @router.get("/")
 def get_templates(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    templates = db.query(DocumentTemplate).filter(DocumentTemplate.is_active == 1).order_by(DocumentTemplate.id.desc()).all()
+    if current_user.tenant_id:
+        ensure_default_templates(db, current_user.tenant_id)
+    query = db.query(DocumentTemplate).filter(DocumentTemplate.is_active == 1)
+    if current_user.tenant_id:
+        query = query.filter((DocumentTemplate.tenant_id == current_user.tenant_id) | (DocumentTemplate.tenant_id == None))
+    templates = query.order_by(DocumentTemplate.id.desc()).all()
     return templates
 
 @router.delete("/{template_id}")
 def delete_template(template_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    template = db.query(DocumentTemplate).filter(DocumentTemplate.id == template_id).first()
+    query = db.query(DocumentTemplate).filter(DocumentTemplate.id == template_id)
+    if current_user.tenant_id:
+        query = query.filter(DocumentTemplate.tenant_id == current_user.tenant_id)
+    template = query.first()
     if not template:
         raise HTTPException(status_code=404, detail="Шаблон не найден")
         
