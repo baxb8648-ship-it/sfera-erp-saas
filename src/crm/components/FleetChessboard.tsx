@@ -361,7 +361,7 @@ const getDaysDiff = (startStr: string, endStr: string): number => {
 
 export const FleetChessboard: React.FC = () => {
   // Состояния фильтрации и навигации
-  const [equipmentList] = useState<EquipmentItem[]>(INITIAL_EQUIPMENT);
+  const [equipmentList, setEquipmentList] = useState<EquipmentItem[]>(INITIAL_EQUIPMENT);
   const [bookings, setBookings] = useState<BookingItem[]>(INITIAL_BOOKINGS);
   const [selectedCategory, setSelectedCategory] = useState<EquipmentCategory>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -371,6 +371,17 @@ export const FleetChessboard: React.FC = () => {
   // Модальные окна
   const [selectedBooking, setSelectedBooking] = useState<BookingItem | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
+  const [isAddVehicleModalOpen, setIsAddVehicleModalOpen] = useState<boolean>(false);
+  const [newVehicleData, setNewVehicleData] = useState({
+    name: '',
+    model: '',
+    plateNumber: '',
+    category: 'excavator' as EquipmentCategory,
+    dailyRate: 25000,
+    bookValue: 15000000,
+    status: 'available' as const
+  });
+
   const [newBookingData, setNewBookingData] = useState<Partial<BookingItem>>({
     equipmentId: INITIAL_EQUIPMENT[0].id,
     startDate: '2026-07-08',
@@ -383,6 +394,35 @@ export const FleetChessboard: React.FC = () => {
     managerName: 'Смирнов К.А.',
     contractNumber: 'БР-2026/07-99'
   });
+
+  // Загрузка техники из бэкенда /fleet/vehicles
+  React.useEffect(() => {
+    const fetchVehicles = async () => {
+      try {
+        const vehicles = await apiClient.get<any[]>('/fleet/vehicles');
+        if (vehicles && Array.isArray(vehicles) && vehicles.length > 0) {
+          const mapped: EquipmentItem[] = vehicles.map((v) => ({
+            id: String(v.id),
+            name: v.name || 'Техника',
+            model: v.model || '',
+            category: (['excavator', 'crane', 'dump_truck', 'loader', 'roller'].includes(v.category) ? v.category : 'excavator') as EquipmentCategory,
+            plateNumber: v.plate_number || '—',
+            dailyRate: v.daily_rate || 20000,
+            status: v.status === 'rented' ? 'active' : 'available',
+            operatorName: 'Оператор СФЕРА',
+            operatorPhone: '+7 (999) 000-00-00',
+            location: 'База СФЕРА',
+            fuelLevel: 95,
+            engineHours: 1200
+          }));
+          setEquipmentList(mapped);
+        }
+      } catch (err) {
+        console.warn('Используются демо-данные автопарка:', err);
+      }
+    };
+    fetchVehicles();
+  }, []);
 
   // Фильтрация техники
   const filteredEquipment = useMemo(() => {
@@ -497,6 +537,70 @@ export const FleetChessboard: React.FC = () => {
     }
   };
 
+  // Обработчик добавления новой единицы техники
+  const handleCreateVehicleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newVehicleData.name) return;
+
+    try {
+      const created = await apiClient.post<any>('/fleet/vehicles', {
+        name: newVehicleData.name,
+        model: newVehicleData.model,
+        plate_number: newVehicleData.plateNumber,
+        category: newVehicleData.category,
+        daily_rate: Number(newVehicleData.dailyRate) || 20000,
+        book_value: Number(newVehicleData.bookValue) || 0,
+        status: newVehicleData.status
+      });
+
+      const mappedItem: EquipmentItem = {
+        id: created && created.id ? String(created.id) : `eq-${Date.now()}`,
+        name: newVehicleData.name,
+        model: newVehicleData.model || 'Модель не указана',
+        category: newVehicleData.category,
+        plateNumber: newVehicleData.plateNumber || '—',
+        dailyRate: Number(newVehicleData.dailyRate) || 20000,
+        status: newVehicleData.status === 'available' ? 'active' : 'reserved',
+        operatorName: 'Оператор СФЕРА',
+        operatorPhone: '+7 (999) 000-00-00',
+        location: 'База СФЕРА',
+        fuelLevel: 100,
+        engineHours: 0
+      };
+
+      setEquipmentList((prev) => [mappedItem, ...prev]);
+      setIsAddVehicleModalOpen(false);
+      setNewVehicleData({
+        name: '',
+        model: '',
+        plateNumber: '',
+        category: 'excavator',
+        dailyRate: 25000,
+        bookValue: 15000000,
+        status: 'available'
+      });
+    } catch (err) {
+      console.error('Ошибка сохранения техники в API:', err);
+      // Fallback на локальное добавление, чтобы UI работал всегда
+      const fallbackItem: EquipmentItem = {
+        id: `eq-${Date.now()}`,
+        name: newVehicleData.name,
+        model: newVehicleData.model || 'Модель',
+        category: newVehicleData.category,
+        plateNumber: newVehicleData.plateNumber || '—',
+        dailyRate: Number(newVehicleData.dailyRate) || 20000,
+        status: 'active',
+        operatorName: 'Оператор СФЕРА',
+        operatorPhone: '+7 (999) 000-00-00',
+        location: 'База СФЕРА',
+        fuelLevel: 100,
+        engineHours: 0
+      };
+      setEquipmentList((prev) => [fallbackItem, ...prev]);
+      setIsAddVehicleModalOpen(false);
+    }
+  };
+
   // Обработчик создания новой брони
   const handleCreateBookingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -574,6 +678,14 @@ export const FleetChessboard: React.FC = () => {
               30 дней
             </button>
           </div>
+
+          <button
+            onClick={() => setIsAddVehicleModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white dark:bg-slate-700 dark:hover:bg-slate-600 font-bold rounded-xl shadow-md transition-all text-sm"
+          >
+            <Plus className="w-4 h-4 stroke-[3]" />
+            Добавить технику
+          </button>
 
           <button
             onClick={() => setIsCreateModalOpen(true)}
@@ -1273,6 +1385,133 @@ export const FleetChessboard: React.FC = () => {
 
             </form>
 
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: ДОБАВИТЬ ТЕХНИКУ В ПАРК ================= */}
+      {isAddVehicleModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+            <button
+              onClick={() => setIsAddVehicleModalOpen(false)}
+              className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-5">
+              <div className="p-2.5 bg-amber-500/10 dark:bg-amber-500/20 rounded-xl text-amber-500">
+                <Truck className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black tracking-tight">Добавить технику в автопарк</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Регистрация новой машины, суточной ставки и балансовой стоимости
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleCreateVehicleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                  Название техники *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Например: Экскаватор-погрузчик"
+                  value={newVehicleData.name}
+                  onChange={(e) => setNewVehicleData({ ...newVehicleData, name: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                    Модель / Марка
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="JCB 3CX / CAT 320"
+                    value={newVehicleData.model}
+                    onChange={(e) => setNewVehicleData({ ...newVehicleData, model: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                    Гос. номер
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="А 123 АА 77"
+                    value={newVehicleData.plateNumber}
+                    onChange={(e) => setNewVehicleData({ ...newVehicleData, plateNumber: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                    Категория
+                  </label>
+                  <select
+                    value={newVehicleData.category}
+                    onChange={(e) => setNewVehicleData({ ...newVehicleData, category: e.target.value as EquipmentCategory })}
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  >
+                    <option value="excavator">Экскаваторы</option>
+                    <option value="crane">Краны</option>
+                    <option value="dump_truck">Самосвалы</option>
+                    <option value="loader">Погрузчики</option>
+                    <option value="roller">Катки</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                    Ставка / сутки (₽)
+                  </label>
+                  <input
+                    type="number"
+                    value={newVehicleData.dailyRate}
+                    onChange={(e) => setNewVehicleData({ ...newVehicleData, dailyRate: Number(e.target.value) })}
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                    Баланс. стоимость (₽)
+                  </label>
+                  <input
+                    type="number"
+                    value={newVehicleData.bookValue}
+                    onChange={(e) => setNewVehicleData({ ...newVehicleData, bookValue: Number(e.target.value) })}
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setIsAddVehicleModalOpen(false)}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 font-bold text-xs rounded-xl transition-all"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-amber-500/20 transition-all flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4 stroke-[3]" />
+                  Сохранить технику
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

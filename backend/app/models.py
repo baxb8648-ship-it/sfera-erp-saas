@@ -1128,10 +1128,16 @@ class AgroLivestock(Base):
     __tablename__ = "agro_livestock"
     id = Column(Integer, primary_key=True, index=True)
     tenant_id = Column(Integer, nullable=False, index=True)
-    animal_type = Column(String) # КРС, МРС, Птица
+    animal_type = Column(String) # КРС, МРС, Лошади, Свиньи, Птица
     tracking_type = Column(String, default="individual") # individual, herd
     tag_number = Column(String, nullable=True) # Бирка
-    herd_name = Column(String, nullable=True) # Название стада
+    rfid_chip = Column(String, nullable=True) # RFID / Чип
+    breed = Column(String, nullable=True) # Порода
+    gender = Column(String, nullable=True) # male, female
+    mother_id = Column(Integer, nullable=True) # ID матери
+    father_id = Column(Integer, nullable=True) # ID отца
+    origin = Column(String, default="farm_born") # farm_born | purchased
+    herd_name = Column(String, nullable=True) # Название стада/группы
     quantity = Column(Integer, default=1)
     birth_date = Column(DateTime, nullable=True)
     current_weight = Column(Float, default=0.0)
@@ -1162,6 +1168,48 @@ class AgroLivestockFeed(Base):
     livestock = relationship("AgroLivestock")
     inventory = relationship("InventoryItem")
     operator = relationship("User")
+
+class AgroOffspring(Base):
+    __tablename__ = "agro_offspring"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, nullable=False, index=True)
+    mother_id = Column(Integer, ForeignKey("agro_livestock.id"))
+    father_id = Column(Integer, ForeignKey("agro_livestock.id"), nullable=True)
+    birth_date = Column(DateTime)
+    sex = Column(String) # male | female
+    birth_weight = Column(Float, default=0.0)
+    status = Column(String, default="alive") # alive | stillborn
+    new_animal_id = Column(Integer, ForeignKey("agro_livestock.id"), nullable=True)
+
+class AgroMortality(Base):
+    __tablename__ = "agro_mortality"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, nullable=False, index=True)
+    animal_id = Column(Integer, ForeignKey("agro_livestock.id"))
+    date = Column(DateTime)
+    cause = Column(String) # disease | trauma | forced_slaughter | sold
+    diagnosis = Column(String, nullable=True)
+    vet_name = Column(String, nullable=True)
+    note = Column(Text, nullable=True)
+
+class AgroFeedRation(Base):
+    __tablename__ = "agro_feed_rations"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, nullable=False, index=True)
+    livestock_group = Column(String) # КРС, МРС, Лошади
+    feed_name = Column(String)
+    daily_norm_kg = Column(Float, default=0.0)
+    inventory_item_id = Column(Integer, ForeignKey("inventory.id"), nullable=True)
+
+class AgroFeedLog(Base):
+    __tablename__ = "agro_feed_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, nullable=False, index=True)
+    date = Column(DateTime)
+    herd_id = Column(Integer, ForeignKey("agro_livestock.id"), nullable=True)
+    feed_item_id = Column(Integer, ForeignKey("inventory.id"), nullable=True)
+    quantity_kg = Column(Float, default=0.0)
+    head_count = Column(Integer, default=1)
 
 # ==========================================
 # ФАЗА 2.1: Серийное мебельное производство (BOM / MRP)
@@ -1308,3 +1356,49 @@ class KnowledgeBaseDocument(Base):
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
     tenant = relationship("Tenant")
+
+
+class FleetVehicle(Base):
+    """
+    Таблица единиц спецтехники автопарка (модуль Аренда спецтехники).
+    """
+    __tablename__ = "fleet_vehicles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    name = Column(String, nullable=False, index=True)           # Название единицы техники
+    model = Column(String, nullable=True)                       # Модель (CAT 320, JCB 3CX и др.)
+    plate_number = Column(String, nullable=True, index=True)    # Гос. номер
+    category = Column(String, default="Экскаваторы")            # Категория
+    daily_rate = Column(Float, default=0.0)                     # Суточная ставка аренды, руб.
+    book_value = Column(Float, default=0.0)                     # Балансовая стоимость техники, руб.
+    year_built = Column(Integer, nullable=True)                 # Год выпуска
+    osago_until = Column(String, nullable=True)                 # Срок действия ОСАГО (YYYY-MM-DD)
+    status = Column(String, default="available")                # available | rented | reserved | maintenance
+    notes = Column(Text, nullable=True)                         # Примечания
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    tenant = relationship("Tenant")
+    bookings = relationship("FleetBooking", back_populates="vehicle", cascade="all, delete-orphan")
+
+
+class FleetBooking(Base):
+    """
+    Таблица бронирований и аренды единиц спецтехники (диаграмма Ганта).
+    """
+    __tablename__ = "fleet_bookings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    vehicle_id = Column(Integer, ForeignKey("fleet_vehicles.id"), nullable=False, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=True)
+    client_name = Column(String, nullable=True)                 # Название арендатора / объекта
+    start_date = Column(String, nullable=False)                 # Дата начала (YYYY-MM-DD)
+    end_date = Column(String, nullable=False)                   # Дата окончания (YYYY-MM-DD)
+    status = Column(String, default="rented")                   # rented | reserved | maintenance
+    total_price = Column(Float, default=0.0)                    # Общая стоимость бронирования
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    tenant = relationship("Tenant")
+    vehicle = relationship("FleetVehicle", back_populates="bookings")

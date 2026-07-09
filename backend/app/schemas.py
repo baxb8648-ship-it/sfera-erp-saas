@@ -645,3 +645,53 @@ class AppointmentResponse(AppointmentBase):
 
     class Config:
         from_attributes = True
+
+
+# ═══════════════════════════════════════════════════════
+# ФАЗА 1 — СХЕМЫ АРЕНДЫ СПЕЦТЕХНИКИ (FLEET)
+# ═══════════════════════════════════════════════════════
+
+class FleetVehicleBase(BaseModel):
+    name: str
+    model: Optional[str] = None
+    plate_number: Optional[str] = None
+    category: str = "Экскаваторы"
+    daily_rate: float = 0.0
+    book_value: float = 0.0
+    year_built: Optional[int] = None
+    osago_until: Optional[str] = None
+    status: str = "available"
+    notes: Optional[str] = None
+
+class FleetVehicleCreate(FleetVehicleBase):
+    pass
+
+class FleetVehicleResponse(FleetVehicleBase):
+    id: int
+    tenant_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class FleetBookingBase(BaseModel):
+    vehicle_id: int
+    client_id: Optional[int] = None
+    client_name: Optional[str] = None
+    start_date: str
+    end_date: str
+    status: str = "rented"
+    total_price: float = 0.0
+    notes: Optional[str] = None
+
+class FleetBookingCreate(FleetBookingBase):
+    pass
+
+class FleetBookingResponse(FleetBookingBase):
+    id: int
+    tenant_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

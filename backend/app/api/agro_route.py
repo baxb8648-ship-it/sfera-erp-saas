@@ -176,6 +176,12 @@ class AgroLivestockBase(BaseModel):
     animal_type: str
     tracking_type: str = "individual"
     tag_number: Optional[str] = None
+    rfid_chip: Optional[str] = None
+    breed: Optional[str] = None
+    gender: Optional[str] = None
+    mother_id: Optional[int] = None
+    father_id: Optional[int] = None
+    origin: str = "farm_born"
     herd_name: Optional[str] = None
     quantity: int = 1
     birth_date: Optional[datetime] = None
@@ -187,6 +193,27 @@ class AgroLivestockResponse(AgroLivestockBase):
     tenant_id: int
     class Config:
         orm_mode = True
+
+class AgroOffspringCreate(BaseModel):
+    mother_id: int
+    father_id: Optional[int] = None
+    sex: str = "female"
+    birth_weight: float = 35.0
+    status: str = "alive"
+    create_child_card: bool = True
+
+class AgroMortalityCreate(BaseModel):
+    animal_id: int
+    cause: str = "disease"
+    diagnosis: Optional[str] = None
+    vet_name: Optional[str] = None
+    note: Optional[str] = None
+
+class AgroFeedLogCreate(BaseModel):
+    herd_id: Optional[int] = None
+    feed_item_id: Optional[int] = None
+    quantity_kg: float = 0.0
+    head_count: int = 1
 
 # ============================
 # Livestock Endpoints
@@ -207,6 +234,114 @@ def create_livestock(livestock: AgroLivestockBase, tenant_id: Optional[int] = No
     db.commit()
     db.refresh(db_livestock)
     return db_livestock
+
+@router.post("/livestock/offspring")
+def create_offspring(data: AgroOffspringCreate, tenant_id: Optional[int] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    tid = _get_tenant_id(current_user, tenant_id)
+    from ..models import AgroLivestock, AgroOffspring
+    mother = db.query(AgroLivestock).filter(AgroLivestock.id == data.mother_id, AgroLivestock.tenant_id == tid).first()
+    if not mother:
+        raise HTTPException(status_code=404, detail="Материнская особь не найдена")
+
+    new_child_id = None
+    if data.create_child_card and data.status == "alive":
+        child = AgroLivestock(
+            tenant_id=tid,
+            animal_type=mother.animal_type,
+            tracking_type="individual",
+            tag_number=f"MOL-{datetime.utcnow().strftime('%m%d%H%M')}",
+            breed=mother.breed,
+            gender=data.sex,
+            mother_id=mother.id,
+            father_id=data.father_id,
+            origin="farm_born",
+            herd_name=mother.herd_name,
+            quantity=1,
+            birth_date=datetime.utcnow(),
+            current_weight=data.birth_weight,
+            status="active"
+        )
+        db.add(child)
+        db.flush()
+        new_child_id = child.id
+
+    rec = AgroOffspring(
+        tenant_id=tid,
+        mother_id=data.mother_id,
+        father_id=data.father_id,
+        birth_date=datetime.utcnow(),
+        sex=data.sex,
+        birth_weight=data.birth_weight,
+        status=data.status,
+        new_animal_id=new_child_id
+    )
+    db.add(rec)
+    db.commit()
+    return {"message": "Приплод успешно зарегистрирован", "new_animal_id": new_child_id}
+
+@router.get("/livestock/offspring")
+def get_offspring_list(tenant_id: Optional[int] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    tid = _get_tenant_id(current_user, tenant_id)
+    from ..models import AgroOffspring
+    return db.query(AgroOffspring).filter(AgroOffspring.tenant_id == tid).all()
+
+@router.post("/livestock/mortality")
+def create_mortality(data: AgroMortalityCreate, tenant_id: Optional[int] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    tid = _get_tenant_id(current_user, tenant_id)
+    from ..models import AgroLivestock, AgroMortality
+    animal = db.query(AgroLivestock).filter(AgroLivestock.id == data.animal_id, AgroLivestock.tenant_id == tid).first()
+    if not animal:
+        raise HTTPException(status_code=404, detail="Животное не найдено")
+
+    animal.status = "dead" if data.cause in ("disease", "trauma", "forced_slaughter") else "sold"
+
+    rec = AgroMortality(
+        tenant_id=tid,
+        animal_id=data.animal_id,
+        date=datetime.utcnow(),
+        cause=data.cause,
+        diagnosis=data.diagnosis,
+        vet_name=data.vet_name,
+        note=data.note
+    )
+    db.add(rec)
+    db.commit()
+    return {"message": "Акт выбытия/падежа зарегистрирован"}
+
+@router.get("/livestock/mortality")
+def get_mortality_list(tenant_id: Optional[int] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    tid = _get_tenant_id(current_user, tenant_id)
+    from ..models import AgroMortality
+    return db.query(AgroMortality).filter(AgroMortality.tenant_id == tid).all()
+
+@router.post("/livestock/feed-log")
+def create_feed_log(data: AgroFeedLogCreate, tenant_id: Optional[int] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    tid = _get_tenant_id(current_user, tenant_id)
+    from ..models import AgroFeedLog, InventoryItem
+    if data.feed_item_id and data.quantity_kg > 0:
+        inv = db.query(InventoryItem).filter(InventoryItem.id == data.feed_item_id, InventoryItem.tenant_id == tid).first()
+        if inv:
+            if inv.quantity < data.quantity_kg:
+                raise HTTPException(status_code=400, detail=f"Недостаточно корма на складе: требуется {data.quantity_kg} кг, в наличии {inv.quantity}")
+            inv.quantity -= data.quantity_kg
+
+    log = AgroFeedLog(
+        tenant_id=tid,
+        date=datetime.utcnow(),
+        herd_id=data.herd_id,
+        feed_item_id=data.feed_item_id,
+        quantity_kg=data.quantity_kg,
+        head_count=data.head_count
+    )
+    db.add(log)
+    db.commit()
+    return {"message": "Расход корма зарегистрирован и списан со склада"}
+
+@router.get("/livestock/feed-log")
+def get_feed_logs(tenant_id: Optional[int] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    tid = _get_tenant_id(current_user, tenant_id)
+    from ..models import AgroFeedLog
+    return db.query(AgroFeedLog).filter(AgroFeedLog.tenant_id == tid).all()
 
 @router.post("/livestock/{id}/feed")
 def feed_livestock(id: int, inventory_item_id: int, quantity: float, tenant_id: Optional[int] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

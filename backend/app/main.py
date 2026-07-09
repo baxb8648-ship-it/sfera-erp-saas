@@ -227,6 +227,7 @@ from .api import (clients, auth, objects, finance, documents, inventory, equipme
     booking_route,
     agro_route,
     furniture_route,
+    fleet_route,
     agents_route   # Монетизация ИИ-Агентов (3 бесплатных + платные)
 )
 
@@ -360,6 +361,7 @@ app.include_router(service_route.router) # Фаза 9.4 — ТОиР
 app.include_router(booking_route.router) # Фаза 9.1 — Онлайн Запись и Услуги
 app.include_router(furniture_route.router) # Фаза 2 — Мебельное производство
 app.include_router(agro_route.router) # Фаза 10 - Агро
+app.include_router(fleet_route.router) # Фаза 1 — Аренда спецтехники
 app.include_router(agents_route.router)  # Монетизация: Каталог ИИ-агентов + Usage Limits
 
 
