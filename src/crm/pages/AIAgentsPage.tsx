@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Lock, Activity, FileText, Sparkles
+  Lock, Activity, Sparkles
 } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 import { AIFineTuneSettings } from '../components/AIFineTuneSettings';
+import KnowledgeBase from './KnowledgeBase';
 
 // ─── Готовые ИИ-Сотрудники для любого бизнеса (Fallback & Default Catalog) ───
 interface DigitalEmployee {
@@ -149,7 +150,7 @@ export const AIAgentsPage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
   
-  const [activeTab, setActiveTab] = useState<'employees' | 'scenarios' | 'finetune'>('employees');
+  const [activeTab, setActiveTab] = useState<'employees' | 'scenarios' | 'finetune' | 'knowledge'>('employees');
   const [employees, setEmployees] = useState<DigitalEmployee[]>(PRESET_EMPLOYEES);
   const [scenarios, setScenarios] = useState<AutomationScenario[]>(PRESET_SCENARIOS);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -229,16 +230,17 @@ export const AIAgentsPage: React.FC = () => {
 
       {/* ── Навигационные табы центра ────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-2 bg-zinc-100/90 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 p-1.5 rounded-2xl w-fit shadow-sm">
+        <div className="flex flex-wrap items-center gap-2 bg-zinc-100/90 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 p-1.5 rounded-2xl w-full sm:w-auto shadow-sm">
           {[
             { key: 'employees', label: '🤖 Штат ИИ-Сотрудников', badge: employees.length },
             { key: 'scenarios', label: '⚡ Готовые сценарии и Боты', badge: scenarios.length },
-            { key: 'finetune', label: '🧠 Обучение моделей (Fine-Tune)', badge: 'QLoRA' }
+            { key: 'finetune', label: '🧠 Обучение моделей (Fine-Tune)', badge: 'QLoRA' },
+            { key: 'knowledge', label: '📚 База Знаний ИИ (RAG)', badge: 'RAG' }
           ].map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key as any)}
-              className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer flex items-center gap-2 ${
+              className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer flex items-center gap-2 ${
                 activeTab === tab.key
                   ? 'bg-gradient-to-r from-[#F95700] to-orange-500 text-white shadow-lg shadow-[#F95700]/25 scale-[1.02]'
                   : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-zinc-800/60'
@@ -253,14 +255,6 @@ export const AIAgentsPage: React.FC = () => {
             </button>
           ))}
         </div>
-
-        <button
-          onClick={() => navigate('/crm/knowledge-base')}
-          className="px-4 py-2.5 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 dark:bg-orange-500/15 dark:hover:bg-orange-500/25 border border-orange-500/30 text-[#F95700] text-xs font-black transition-all cursor-pointer flex items-center gap-2"
-        >
-          <FileText className="w-4 h-4" />
-          <span>Перейти в Базу Знаний ИИ (Регламенты и Прайсы) →</span>
-        </button>
       </div>
 
       {/* ══════════════ Вкладка 1: ШТАТ ИИ-СОТРУДНИКОВ ══════════════ */}
@@ -432,6 +426,13 @@ export const AIAgentsPage: React.FC = () => {
       {activeTab === 'finetune' && (
         <div className="space-y-6">
           <AIFineTuneSettings />
+        </div>
+      )}
+
+      {/* ══════════════ Вкладка 4: БАЗА ЗНАНИЙ ИИ (RAG) ══════════════ */}
+      {activeTab === 'knowledge' && (
+        <div className="space-y-6">
+          <KnowledgeBase isTab={true} />
         </div>
       )}
     </div>

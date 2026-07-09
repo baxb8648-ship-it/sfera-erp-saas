@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Lock, LayoutDashboard, Users, Building2, Wallet, Package, LogOut, FileText, Sun, Moon, ShieldCheck, Gavel, TrendingUp, Menu, X, Mail, CheckSquare, Bell, Crown, LifeBuoy, HelpCircle, HardHat, Globe, Truck, Wrench, Scissors, CalendarDays, Tractor, Hammer, Wheat, Sparkles, Bot, Database } from 'lucide-react';
+import { Lock, LayoutDashboard, Users, Building2, Wallet, Package, LogOut, FileText, Sun, Moon, ShieldCheck, Gavel, TrendingUp, Menu, X, Mail, CheckSquare, Bell, Crown, LifeBuoy, HelpCircle, HardHat, Globe, Truck, Wrench, Scissors, CalendarDays, Tractor, Hammer, Wheat, Sparkles, Bot } from 'lucide-react';
 import { CommandMenu } from './components/CommandMenu';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useToast } from '../components/ui/Toast';
@@ -280,8 +280,7 @@ export const CRMLayout: React.FC = () => {
     { name: 'ТОиР (Механики)', path: '/crm/service', icon: Wrench, module: 'service' },
     { name: 'Услуги', path: '/crm/booking/services', icon: Scissors, module: 'beauty' },
     { name: 'Расписание', path: '/crm/booking/appointments', icon: CalendarDays, module: 'beauty' },
-    { name: 'ИИ-Агенты', path: '/crm/ai-agents', icon: Bot, module: null },
-    { name: 'База Знаний ИИ', path: '/crm/knowledge-base', icon: Database, module: null },
+    { name: 'ИИ-Центр (Агенты & База)', path: '/crm/ai-agents', icon: Bot, module: null },
     { name: 'Шаблоны и Контент', path: '/crm/templates', icon: FileText, module: 'templates' },
     { name: 'Администрирование', path: '/crm/admin', icon: ShieldCheck, module: 'audit' }, // Settings/Audit
     { name: 'Супер-Админ (SaaS)', path: '/crm/superadmin', icon: Crown, isSuperadminOnly: true },

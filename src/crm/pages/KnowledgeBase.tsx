@@ -49,7 +49,7 @@ const DEFAULT_DOCUMENTS: KBDocument[] = [
   }
 ];
 
-export default function KnowledgeBase() {
+export default function KnowledgeBase({ isTab = false }: { isTab?: boolean } = {}) {
   const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -106,34 +106,36 @@ export default function KnowledgeBase() {
   return (
     <div className="space-y-8 p-1 sm:p-2 w-full max-w-7xl mx-auto shrink-0 animate-fadeIn">
       {/* ── Главная шапка Базы Знаний ──────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-white via-orange-50/30 to-amber-50/40 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-950 border border-orange-500/25 dark:border-orange-500/30 p-6 sm:p-8 shadow-xl dark:shadow-2xl transition-colors">
-        <div className="absolute top-0 right-0 -mt-16 -mr-16 w-80 h-80 bg-gradient-to-br from-amber-500/15 to-[#F95700]/20 rounded-full blur-3xl pointer-events-none" />
+      {!isTab && (
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-white via-orange-50/30 to-amber-50/40 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-950 border border-orange-500/25 dark:border-orange-500/30 p-6 sm:p-8 shadow-xl dark:shadow-2xl transition-colors">
+          <div className="absolute top-0 right-0 -mt-16 -mr-16 w-80 h-80 bg-gradient-to-br from-amber-500/15 to-[#F95700]/20 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-3 max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 dark:bg-orange-500/15 border border-orange-500/30 text-[#F95700] text-xs font-black uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-              <span>Корпоративный RAG-Ассистент СФЕРА</span>
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-3 max-w-3xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 dark:bg-orange-500/15 border border-orange-500/30 text-[#F95700] text-xs font-black uppercase tracking-wider">
+                <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                <span>Корпоративный RAG-Ассистент СФЕРА</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black font-['Montserrat'] text-zinc-900 dark:text-white flex items-center gap-3">
+                <Database className="w-8 h-8 text-[#F95700]" />
+                <span>База Знаний ИИ</span>
+              </h1>
+              <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-300 leading-relaxed font-medium">
+                Обучайте ваших ИИ-сотрудников на внутренних документах, регламентах, прайс-листах и договорах компании. Загруженные файлы автоматически индексируются и используются при ответах клиентам.
+              </p>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black font-['Montserrat'] text-zinc-900 dark:text-white flex items-center gap-3">
-              <Database className="w-8 h-8 text-[#F95700]" />
-              <span>База Знаний ИИ</span>
-            </h1>
-            <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-300 leading-relaxed font-medium">
-              Обучайте ваших ИИ-сотрудников на внутренних документах, регламентах, прайс-листах и договорах компании. Загруженные файлы автоматически индексируются и используются при ответах клиентам.
-            </p>
-          </div>
 
-          <div className="flex items-center gap-3 bg-white/90 dark:bg-zinc-800/80 backdrop-blur-md px-5 py-3 rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 shadow-sm shrink-0">
-            <div className="text-xs">
-              <div className="text-zinc-500 dark:text-zinc-400 font-bold uppercase">В памяти ИИ</div>
-              <div className="text-xl font-black text-zinc-900 dark:text-white mt-0.5">
-                {documents.length} <span className="text-xs font-normal text-zinc-400">документов</span>
+            <div className="flex items-center gap-3 bg-white/90 dark:bg-zinc-800/80 backdrop-blur-md px-5 py-3 rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 shadow-sm shrink-0">
+              <div className="text-xs">
+                <div className="text-zinc-500 dark:text-zinc-400 font-bold uppercase">В памяти ИИ</div>
+                <div className="text-xl font-black text-zinc-900 dark:text-white mt-0.5">
+                  {documents.length} <span className="text-xs font-normal text-zinc-400">документов</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ── Сетка загрузки и документов ────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
