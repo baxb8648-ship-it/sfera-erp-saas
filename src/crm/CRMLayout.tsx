@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Lock, LayoutDashboard, Users, Building2, Wallet, Package, LogOut, FileText, Sun, Moon, ShieldCheck, Gavel, TrendingUp, Menu, X, Mail, CheckSquare, Bell, Crown, LifeBuoy, HelpCircle, HardHat, Globe, Truck, Wrench, Scissors, CalendarDays, Tractor, Hammer, Wheat, Sparkles, Bot } from 'lucide-react';
+import { Lock, LayoutDashboard, Users, Building2, Wallet, Package, LogOut, FileText, Sun, Moon, ShieldCheck, Gavel, TrendingUp, Menu, X, Mail, CheckSquare, Bell, Crown, LifeBuoy, HelpCircle, HardHat, Globe, Truck, Wrench, Scissors, CalendarDays, Tractor, Hammer, Wheat, Sparkles, Bot, Star, Eye, EyeOff, Settings, ArrowUp, ArrowDown } from 'lucide-react';
 import { CommandMenu } from './components/CommandMenu';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useToast } from '../components/ui/Toast';
@@ -537,6 +537,120 @@ export const CRMLayout: React.FC = () => {
     return true;
   });
 
+  // ─── God-Tier Sidebar Customization State (localStorage per user) ───
+  const storageKey = `sfera_sidebar_customization_${user?.id || 'default'}`;
+  const DEFAULT_PINNED = ['/crm', '/crm/ai-agents', '/crm/tasks', '/crm/clients'];
+
+  const [isCustomizingMenu, setIsCustomizingMenu] = React.useState(false);
+  const [pinnedPaths, setPinnedPaths] = React.useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed.pinnedPaths) ? parsed.pinnedPaths : DEFAULT_PINNED;
+      }
+    } catch (e) {}
+    return DEFAULT_PINNED;
+  });
+
+  const [hiddenPaths, setHiddenPaths] = React.useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed.hiddenPaths) ? parsed.hiddenPaths : [];
+      }
+    } catch (e) {}
+    return [];
+  });
+
+  const [customOrder, setCustomOrder] = React.useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed.customOrder) ? parsed.customOrder : [];
+      }
+    } catch (e) {}
+    return [];
+  });
+
+  const saveSidebarSettings = (newPinned: string[], newHidden: string[], newOrder: string[]) => {
+    setPinnedPaths(newPinned);
+    setHiddenPaths(newHidden);
+    setCustomOrder(newOrder);
+    localStorage.setItem(storageKey, JSON.stringify({
+      pinnedPaths: newPinned,
+      hiddenPaths: newHidden,
+      customOrder: newOrder
+    }));
+  };
+
+  const togglePin = (path: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const isPinned = pinnedPaths.includes(path);
+    const nextPinned = isPinned ? pinnedPaths.filter(p => p !== path) : [...pinnedPaths, path];
+    saveSidebarSettings(nextPinned, hiddenPaths, customOrder);
+    showToast(isPinned ? '📌 Раздел откреплён из избранного' : '★ Раздел закреплён в Избранное', 'info');
+  };
+
+  const toggleHide = (path: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (path === '/crm') {
+      showToast('⚠️ Главный дашборд нельзя скрыть', 'warning');
+      return;
+    }
+    const isHidden = hiddenPaths.includes(path);
+    const nextHidden = isHidden ? hiddenPaths.filter(p => p !== path) : [...hiddenPaths, path];
+    saveSidebarSettings(pinnedPaths, nextHidden, customOrder);
+  };
+
+  const moveItemOrder = (path: string, direction: 'up' | 'down') => {
+    const list = customOrder.length > 0 ? [...customOrder] : menuItems.map(i => i.path);
+    const idx = list.indexOf(path);
+    if (idx === -1) return;
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= list.length) return;
+    const temp = list[idx];
+    list[idx] = list[targetIdx];
+    list[targetIdx] = temp;
+    saveSidebarSettings(pinnedPaths, hiddenPaths, list);
+  };
+
+  const resetSidebarCustomization = () => {
+    saveSidebarSettings(DEFAULT_PINNED, [], []);
+    showToast('🔄 Настройки меню сброшены по умолчанию', 'info');
+  };
+
+  const orderedMenuItems = React.useMemo(() => {
+    if (!customOrder || customOrder.length === 0) return menuItems;
+    const itemMap = new Map(menuItems.map(i => [i.path, i]));
+    const result: typeof menuItems = [];
+    customOrder.forEach(path => {
+      const item = itemMap.get(path);
+      if (item) {
+        result.push(item);
+        itemMap.delete(path);
+      }
+    });
+    itemMap.forEach(item => result.push(item));
+    return result;
+  }, [menuItems, customOrder]);
+
+  const pinnedMenuItems = React.useMemo(() => {
+    return orderedMenuItems.filter(item => pinnedPaths.includes(item.path) && !hiddenPaths.includes(item.path));
+  }, [orderedMenuItems, pinnedPaths, hiddenPaths]);
+
+  const regularMenuItems = React.useMemo(() => {
+    return orderedMenuItems.filter(item => !pinnedPaths.includes(item.path) && !hiddenPaths.includes(item.path));
+  }, [orderedMenuItems, pinnedPaths, hiddenPaths]);
+
   return (
     <>
       <Helmet>
@@ -582,34 +696,216 @@ export const CRMLayout: React.FC = () => {
             <X className="w-5 h-5" />
           </button>
         </div>
-        <nav className="flex-1 overflow-y-auto py-4">
-          <ul className="space-y-1 px-3">
-            {menuItems.map((item) => {
-              const isActive = location.pathname === item.path || (item.path !== '/crm' && location.pathname.startsWith(item.path));
-              const Icon = item.icon;
-              return (
-                <li key={item.path}>
-                  <Link
-                    to={item.path}
-                    className={`flex items-center px-3 py-2.5 rounded-md transition-colors ${
-                      isActive 
-                        ? 'bg-[#F95700]/10 dark:bg-[#F95700]/20 text-[#F95700] font-medium' 
-                        : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800/60 hover:text-[#1a1a1a] dark:hover:text-white'
-                    }`}
-                    style={isActive ? { color: (settings as any).brand_color || '#F95700', backgroundColor: `${(settings as any).brand_color || '#F95700'}20` } : {}}
+        <nav className="flex-1 overflow-y-auto py-3 space-y-4">
+          {/* ── Режим настройки меню (Редактор) ── */}
+          {isCustomizingMenu ? (
+            <div className="px-3 space-y-2">
+              <div className="p-3 rounded-2xl bg-orange-500/10 dark:bg-orange-500/15 border border-orange-500/30 text-xs">
+                <div className="font-extrabold text-[#F95700] flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Settings className="w-3.5 h-3.5 animate-spin" />
+                    Редактор меню
+                  </span>
+                  <button
+                    onClick={resetSidebarCustomization}
+                    className="text-[10px] underline text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
                   >
-                    <Icon className={`w-5 h-5 mr-3 ${isActive ? 'text-[#F95700]' : 'text-gray-400 dark:text-zinc-500'}`} style={isActive ? { color: (settings as any).brand_color || '#F95700' } : {}} />
-                    <span className="flex-1">{item.name}</span>
-                    {item.path === '/crm/tasks' && unreadTasksCount > 0 && (
-                      <span className="bg-[#F95700] text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center ml-2 animate-pulse" style={{ backgroundColor: (settings as any).brand_color || '#F95700' }}>
-                        {unreadTasksCount}
-                      </span>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+                    Сбросить
+                  </button>
+                </div>
+                <p className="text-zinc-600 dark:text-zinc-400 text-[10px] mt-1 leading-snug">
+                  ★ — Избранное, 👁️ — Скрыть/показать, ↑↓ — Порядок
+                </p>
+              </div>
+
+              <ul className="space-y-1">
+                {orderedMenuItems.map((item, index) => {
+                  const Icon = item.icon;
+                  const isPinned = pinnedPaths.includes(item.path);
+                  const isHidden = hiddenPaths.includes(item.path);
+
+                  return (
+                    <li
+                      key={item.path}
+                      className={`flex items-center justify-between px-2.5 py-2 rounded-xl border text-xs transition-all ${
+                        isHidden
+                          ? 'bg-zinc-100/50 dark:bg-zinc-900/30 border-dashed border-zinc-200 dark:border-zinc-800 opacity-60'
+                          : 'bg-white dark:bg-zinc-900 border-zinc-200/80 dark:border-zinc-800 shadow-sm'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="flex flex-col gap-0.5 shrink-0">
+                          <button
+                            onClick={() => moveItemOrder(item.path, 'up')}
+                            disabled={index === 0}
+                            className="text-zinc-400 hover:text-zinc-700 dark:hover:text-white disabled:opacity-20 transition-colors"
+                            title="Вверх"
+                          >
+                            <ArrowUp className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => moveItemOrder(item.path, 'down')}
+                            disabled={index === orderedMenuItems.length - 1}
+                            className="text-zinc-400 hover:text-zinc-700 dark:hover:text-white disabled:opacity-20 transition-colors"
+                            title="Вниз"
+                          >
+                            <ArrowDown className="w-3 h-3" />
+                          </button>
+                        </div>
+                        <Icon className={`w-4 h-4 shrink-0 ${isHidden ? 'text-zinc-400' : 'text-[#F95700]'}`} />
+                        <span className={`truncate font-semibold ${isHidden ? 'line-through text-zinc-400' : 'text-zinc-800 dark:text-zinc-200'}`}>
+                          {item.name}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0 ml-2">
+                        <button
+                          onClick={(e) => togglePin(item.path, e)}
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            isPinned
+                              ? 'text-amber-500 bg-amber-500/10 hover:bg-amber-500/20'
+                              : 'text-zinc-400 hover:text-amber-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                          }`}
+                          title={isPinned ? 'Открепить из избранного' : 'Закрепить в избранное'}
+                        >
+                          <Star className="w-3.5 h-3.5 fill-current" />
+                        </button>
+                        <button
+                          onClick={(e) => toggleHide(item.path, e)}
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            isHidden
+                              ? 'text-zinc-400 hover:text-emerald-500 bg-zinc-200/50 dark:bg-zinc-800'
+                              : 'text-zinc-500 hover:text-red-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                          }`}
+                          title={isHidden ? 'Показать в меню' : 'Скрыть из меню'}
+                        >
+                          {isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <button
+                onClick={() => setIsCustomizingMenu(false)}
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#F95700] to-orange-500 text-white text-xs font-black shadow-md hover:opacity-90 transition-all cursor-pointer mt-2"
+              >
+                ✓ Сохранить и выйти
+              </button>
+            </div>
+          ) : (
+            /* ── Стандартный режим (с блоком Избранного) ── */
+            <div className="space-y-4 px-3">
+              {/* 1. Блок ИЗБРАННОЕ */}
+              {pinnedMenuItems.length > 0 && (
+                <div className="space-y-1">
+                  <div className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-zinc-400 dark:text-zinc-500 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                      Избранное
+                    </span>
+                    <span className="text-[9px] text-zinc-400">{pinnedMenuItems.length}</span>
+                  </div>
+                  <ul className="space-y-0.5">
+                    {pinnedMenuItems.map((item) => {
+                      const isActive = location.pathname === item.path || (item.path !== '/crm' && location.pathname.startsWith(item.path));
+                      const Icon = item.icon;
+                      return (
+                        <li key={`pin-${item.path}`} className="group relative">
+                          <Link
+                            to={item.path}
+                            className={`flex items-center px-3 py-2 rounded-xl transition-all ${
+                              isActive
+                                ? 'bg-[#F95700]/10 dark:bg-[#F95700]/20 text-[#F95700] font-extrabold shadow-sm'
+                                : 'text-gray-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800/60 hover:text-black dark:hover:text-white font-medium'
+                            }`}
+                            style={isActive ? { color: (settings as any).brand_color || '#F95700', backgroundColor: `${(settings as any).brand_color || '#F95700'}18` } : {}}
+                          >
+                            <Icon className={`w-4 h-4 mr-3 shrink-0 ${isActive ? 'text-[#F95700]' : 'text-gray-400 dark:text-zinc-400'}`} style={isActive ? { color: (settings as any).brand_color || '#F95700' } : {}} />
+                            <span className="flex-1 truncate text-xs sm:text-sm">{item.name}</span>
+                            {item.path === '/crm/tasks' && unreadTasksCount > 0 && (
+                              <span className="bg-[#F95700] text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center ml-2 animate-pulse" style={{ backgroundColor: (settings as any).brand_color || '#F95700' }}>
+                                {unreadTasksCount}
+                              </span>
+                            )}
+                          </Link>
+                          <button
+                            onClick={(e) => togglePin(item.path, e)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 text-amber-500 hover:text-amber-600 transition-opacity bg-white dark:bg-zinc-900 rounded-md shadow-xs"
+                            title="Открепить из избранного"
+                          >
+                            <Star className="w-3.5 h-3.5 fill-amber-500" />
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+
+              {/* Разделитель если есть Избранное */}
+              {pinnedMenuItems.length > 0 && regularMenuItems.length > 0 && (
+                <div className="border-t border-gray-200 dark:border-zinc-800/80 my-2" />
+              )}
+
+              {/* 2. Блок ВСЕ РАЗДЕЛЫ */}
+              {regularMenuItems.length > 0 && (
+                <div className="space-y-1">
+                  {pinnedMenuItems.length > 0 && (
+                    <div className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                      Все разделы
+                    </div>
+                  )}
+                  <ul className="space-y-0.5">
+                    {regularMenuItems.map((item) => {
+                      const isActive = location.pathname === item.path || (item.path !== '/crm' && location.pathname.startsWith(item.path));
+                      const Icon = item.icon;
+                      return (
+                        <li key={item.path} className="group relative">
+                          <Link
+                            to={item.path}
+                            className={`flex items-center px-3 py-2 rounded-xl transition-all ${
+                              isActive
+                                ? 'bg-[#F95700]/10 dark:bg-[#F95700]/20 text-[#F95700] font-extrabold shadow-sm'
+                                : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800/60 hover:text-[#1a1a1a] dark:hover:text-white font-medium'
+                            }`}
+                            style={isActive ? { color: (settings as any).brand_color || '#F95700', backgroundColor: `${(settings as any).brand_color || '#F95700'}18` } : {}}
+                          >
+                            <Icon className={`w-4 h-4 mr-3 shrink-0 ${isActive ? 'text-[#F95700]' : 'text-gray-400 dark:text-zinc-500'}`} style={isActive ? { color: (settings as any).brand_color || '#F95700' } : {}} />
+                            <span className="flex-1 truncate text-xs sm:text-sm">{item.name}</span>
+                            {item.path === '/crm/tasks' && unreadTasksCount > 0 && (
+                              <span className="bg-[#F95700] text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center ml-2 animate-pulse" style={{ backgroundColor: (settings as any).brand_color || '#F95700' }}>
+                                {unreadTasksCount}
+                              </span>
+                            )}
+                          </Link>
+                          <button
+                            onClick={(e) => togglePin(item.path, e)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 text-zinc-400 hover:text-amber-500 transition-opacity bg-white dark:bg-zinc-900 rounded-md shadow-xs"
+                            title="Закрепить в Избранное"
+                          >
+                            <Star className="w-3.5 h-3.5" />
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+
+              {/* Кнопка входа в настройки меню */}
+              <div className="pt-2">
+                <button
+                  onClick={() => setIsCustomizingMenu(true)}
+                  className="w-full px-3 py-2 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-800 hover:border-orange-500/50 text-zinc-500 dark:text-zinc-400 hover:text-[#F95700] text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer bg-zinc-50/50 dark:bg-zinc-900/30"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  <span>Настроить меню</span>
+                </button>
+              </div>
+            </div>
+          )}
         </nav>
         <div className="p-4 pb-10 sm:pb-12 border-t border-gray-200 dark:border-zinc-800 flex flex-col gap-2 bg-gray-50/50 dark:bg-zinc-900/30 shrink-0">
           <div className="flex items-center gap-3 relative">
