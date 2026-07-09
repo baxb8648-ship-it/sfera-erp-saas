@@ -68,11 +68,11 @@ export const Header: React.FC = () => {
           <button onClick={() => handleNavClick('solutions')} className="hover:text-[#E64D00] transition cursor-pointer">
             Решения
           </button>
-          <button onClick={() => handleNavClick('integrations')} className="hover:text-[#E64D00] transition cursor-pointer">
-            Интеграции
+          <button onClick={() => handleNavClick('marketplace-preview')} className="hover:text-[#E64D00] transition cursor-pointer">
+            Маркетплейс
           </button>
-          <button onClick={() => handleNavClick('security')} className="hover:text-[#E64D00] transition cursor-pointer">
-            Безопасность
+          <button onClick={() => handleNavClick('pricing')} className="hover:text-[#E64D00] transition cursor-pointer">
+            Тарифы
           </button>
         </div>
 
@@ -140,11 +140,11 @@ export const Header: React.FC = () => {
               <button onClick={() => handleNavClick('solutions')} className="text-left hover:text-[#E64D00] transition">
                 Решения
               </button>
-              <button onClick={() => handleNavClick('integrations')} className="text-left hover:text-[#E64D00] transition">
-                Интеграции
+              <button onClick={() => handleNavClick('marketplace-preview')} className="text-left hover:text-[#E64D00] transition">
+                Маркетплейс
               </button>
-              <button onClick={() => handleNavClick('security')} className="text-left hover:text-[#E64D00] transition">
-                Безопасность
+              <button onClick={() => handleNavClick('pricing')} className="text-left hover:text-[#E64D00] transition">
+                Тарифы
               </button>
               <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 flex flex-col space-y-3">
                 <button

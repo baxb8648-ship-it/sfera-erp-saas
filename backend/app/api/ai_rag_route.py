@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import User
+from ..models import User, KnowledgeBaseDocument, TenantAgentSubscription, AgentCatalog
 from .auth import get_current_user
 from ..services.pinecone_rag import (
     search_similar_by_text,
@@ -75,6 +75,44 @@ class IndexResponse(BaseModel):
     message: Optional[str] = None
 
 
+from datetime import datetime
+
+class KnowledgeBaseDocumentOut(BaseModel):
+    id: int
+    doc_id_pinecone: str
+    title: str
+    filename: Optional[str] = None
+    category: Optional[str] = None
+    chunks_count: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+def check_rag_limits(tenant_id: int, db: Session):
+    count = db.query(KnowledgeBaseDocument).filter(KnowledgeBaseDocument.tenant_id == tenant_id).count()
+    sub = db.query(TenantAgentSubscription).join(AgentCatalog).filter(
+        TenantAgentSubscription.tenant_id == tenant_id,
+        AgentCatalog.agent_key == "rag_assistant",
+        TenantAgentSubscription.status == "active"
+    ).first()
+    
+    limit = 50 if sub else 5
+    if count >= limit:
+        raise HTTPException(
+            status_code=403, 
+            detail=f"Достигнут лимит базы знаний ({limit} документов). Пожалуйста, приобретите ИИ-Агента 'RAG-Ассистент' для увеличения лимита."
+        )
+
+def _get_rag_tenant_id(current_user: User) -> int:
+    if not current_user.tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Пользователь не привязан к компании (тенанту)"
+        )
+    return current_user.tenant_id
+
 # --- Endpoints ---
 
 @router.post("/ask", response_model=AskResponse)
@@ -89,7 +127,7 @@ async def ask_ai(
     3. Отправляет вопрос и релевантные чанки в локальную LLM (Qwen через Ollama).
     4. Возвращает ответ вместе со ссылками на источники (citations).
     """
-    tenant_id = current_user.tenant_id or 1
+    tenant_id = _get_rag_tenant_id(current_user)
     
     if not request.query or not request.query.strip():
         raise HTTPException(
@@ -143,12 +181,14 @@ async def ask_ai(
 @router.post("/index-text", response_model=IndexResponse)
 async def index_text(
     request: IndexTextRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
     Индексация текстовой заметки / инструкции в базу знаний тенанта.
     """
-    tenant_id = current_user.tenant_id or 1
+    tenant_id = _get_rag_tenant_id(current_user)
+    check_rag_limits(tenant_id, db)
     doc_id = request.doc_id or f"doc_{uuid.uuid4().hex[:8]}"
     
     metadata = {
@@ -172,6 +212,16 @@ async def index_text(
             detail=res.get("message", "Ошибка при индексации текста")
         )
         
+    kb_doc = KnowledgeBaseDocument(
+        tenant_id=tenant_id,
+        doc_id_pinecone=doc_id,
+        title=request.title,
+        category=request.category,
+        chunks_count=res.get("chunks_created", 0)
+    )
+    db.add(kb_doc)
+    db.commit()
+    
     return IndexResponse(**res)
 
 
@@ -181,12 +231,14 @@ async def index_file(
     title: Optional[str] = Form(None),
     category: Optional[str] = Form("general"),
     doc_id: Optional[str] = Form(None),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
     Загрузка файла (PDF, DOCX, TXT, MD, HTML) и автоматическая нарезка и загрузка в Pinecone.
     """
-    tenant_id = current_user.tenant_id or 1
+    tenant_id = _get_rag_tenant_id(current_user)
+    check_rag_limits(tenant_id, db)
     target_doc_id = doc_id or f"file_{uuid.uuid4().hex[:8]}"
     file_title = title or file.filename or "Загруженный документ"
     
@@ -222,6 +274,17 @@ async def index_file(
                 detail=res.get("message", "Ошибка загрузки векторов в Pinecone")
             )
             
+        kb_doc = KnowledgeBaseDocument(
+            tenant_id=tenant_id,
+            doc_id_pinecone=target_doc_id,
+            title=file_title,
+            filename=file.filename,
+            category=category,
+            chunks_count=res.get("chunks_created", 0)
+        )
+        db.add(kb_doc)
+        db.commit()
+        
         return IndexResponse(**res)
         
     except HTTPException as he:
@@ -237,12 +300,13 @@ async def index_file(
 @router.delete("/document/{doc_id}")
 async def delete_document(
     doc_id: str,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
     Удаление всех чанков и векторов конкретного документа из базы знаний тенанта.
     """
-    tenant_id = current_user.tenant_id or 1
+    tenant_id = _get_rag_tenant_id(current_user)
     success = delete_document_vectors(tenant_id=tenant_id, doc_id=doc_id)
     
     if not success:
@@ -251,7 +315,26 @@ async def delete_document(
             detail=f"Не удалось удалить документ {doc_id} из Pinecone"
         )
         
+    db.query(KnowledgeBaseDocument).filter(
+        KnowledgeBaseDocument.tenant_id == tenant_id,
+        KnowledgeBaseDocument.doc_id_pinecone == doc_id
+    ).delete()
+    db.commit()
+        
     return {"status": "success", "message": f"Документ {doc_id} успешно удален из базы знаний", "tenant_id": tenant_id}
+
+
+@router.get("/documents", response_model=List[KnowledgeBaseDocumentOut])
+async def get_documents(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Получить список всех загруженных документов в RAG базу тенанта.
+    """
+    tenant_id = _get_rag_tenant_id(current_user)
+    docs = db.query(KnowledgeBaseDocument).filter(KnowledgeBaseDocument.tenant_id == tenant_id).order_by(KnowledgeBaseDocument.created_at.desc()).all()
+    return docs
 
 
 @router.get("/stats")
@@ -261,7 +344,8 @@ async def get_rag_stats(current_user: User = Depends(get_current_user)):
     """
     try:
         stats = get_index_stats()
-        tenant_namespace = f"tenant_{current_user.tenant_id or 1}"
+        tenant_id = _get_rag_tenant_id(current_user)
+        tenant_namespace = f"tenant_{tenant_id}"
         ns_stats = stats.get("namespaces", {}).get(tenant_namespace, {})
         
         return {

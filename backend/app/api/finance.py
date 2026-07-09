@@ -11,7 +11,9 @@ router = APIRouter(prefix="/finance", tags=["Finance"])
 
 @router.post("/", response_model=FinanceResponse)
 def create_transaction(transaction: FinanceCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_trans = FinanceTransaction(**transaction.model_dump())
+    trans_data = transaction.model_dump()
+    trans_data["tenant_id"] = current_user.tenant_id
+    db_trans = FinanceTransaction(**trans_data)
     db.add(db_trans)
     db.commit()
     db.refresh(db_trans)
@@ -39,14 +41,17 @@ def create_transaction(transaction: FinanceCreate, background_tasks: BackgroundT
 
 @router.get("/", response_model=List[FinanceResponse])
 def get_transactions(cash_register: str = None, skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    query = db.query(FinanceTransaction)
+    query = db.query(FinanceTransaction).filter(FinanceTransaction.tenant_id == current_user.tenant_id)
     if cash_register:
         query = query.filter(FinanceTransaction.cash_register == cash_register)
     return query.order_by(FinanceTransaction.date.desc()).offset(skip).limit(limit).all()
 
 @router.delete("/{trans_id}")
 def delete_transaction(trans_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_trans = db.query(FinanceTransaction).filter(FinanceTransaction.id == trans_id).first()
+    db_trans = db.query(FinanceTransaction).filter(
+        FinanceTransaction.id == trans_id,
+        FinanceTransaction.tenant_id == current_user.tenant_id
+    ).first()
     if not db_trans:
         raise HTTPException(status_code=404, detail="Transaction not found")
     amount = db_trans.amount

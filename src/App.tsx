@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './crm/components/ProtectedRoute';
 import { CRMLayout } from './crm/CRMLayout';
@@ -40,6 +40,7 @@ const SectorPage = React.lazy(() => import('./pages/SectorPage').then(m => ({ de
 const MaterialPage = React.lazy(() => import('./pages/MaterialPage').then(m => ({ default: m.MaterialPage })));
 const StandardPage = React.lazy(() => import('./pages/StandardPage').then(m => ({ default: m.StandardPage })));
 const ContactLanding = React.lazy(() => import('./pages/ContactLanding').then(m => ({ default: m.ContactLanding })));
+const PublicMarketplace = React.lazy(() => import('./pages/PublicMarketplace').then(m => ({ default: m.PublicMarketplace })));
 
 // Lazy load CRM pages
 const Login = React.lazy(() => import('./crm/pages/Login').then(m => ({ default: m.Login })));
@@ -67,6 +68,14 @@ const SupplyPipeline = React.lazy(() => import('./crm/pages/SupplyPipeline'));
 const ServiceTickets = React.lazy(() => import('./crm/pages/ServiceTickets'));
 const ServicesTechCards = React.lazy(() => import('./crm/pages/ServicesTechCards'));
 const AppointmentsChessboard = React.lazy(() => import('./crm/pages/AppointmentsChessboard'));
+const FleetDashboard = React.lazy(() => import('./crm/pages/FleetDashboard'));
+const BeautyDashboard = React.lazy(() => import('./crm/pages/BeautyDashboard'));
+const FurnitureDashboard = React.lazy(() => import('./crm/pages/FurnitureDashboard'));
+const AgroDashboard = React.lazy(() => import('./crm/pages/AgroDashboard'));
+const AIAgentsPage = React.lazy(() => import('./crm/pages/AIAgentsPage').then(m => ({ default: m.AIAgentsPage })));
+const KnowledgeBase = React.lazy(() => import('./crm/pages/KnowledgeBase'));
+const SetupWizard = React.lazy(() => import('./crm/pages/SetupWizard').then(m => ({ default: m.SetupWizard })));
+const LeadsPage = React.lazy(() => import('./crm/pages/LeadsPage').then(m => ({ default: m.LeadsPage })));
 
 // Premium Skeleton Loader Fallback
 const PageSkeleton: React.FC = () => {
@@ -114,13 +123,16 @@ const App: React.FC = () => {
         <Router>
           <Suspense fallback={<PageSkeleton />}>
             <Routes>
+              {/* Standalone Landing Page */}
+              <Route path="/" element={<SaaSLanding />} />
+
               {/* Main Website Layout */}
-              <Route path="/" element={<Layout />}>
-                <Route index element={<SaaSLanding />} />
-                <Route path="industrial" element={<HomePage />} />
-                <Route path="sectors/:id" element={<SectorPage />} />
-                <Route path="materials/:id" element={<MaterialPage />} />
-                <Route path="standards/:id" element={<StandardPage />} />
+              <Route element={<Layout />}>
+                <Route path="/industrial" element={<HomePage />} />
+                <Route path="/sectors/:id" element={<SectorPage />} />
+                <Route path="/materials/:id" element={<MaterialPage />} />
+                <Route path="/standards/:id" element={<StandardPage />} />
+                <Route path="/marketplace-preview" element={<PublicMarketplace />} />
               </Route>
 
               {/* Standalone Public Mobile vCard Route */}
@@ -136,6 +148,7 @@ const App: React.FC = () => {
 
               {/* Protected Admin CRM Layout */}
               <Route path="/crm" element={<ProtectedRoute />}>
+                <Route path="onboarding" element={<SetupWizard />} />
                 <Route element={<CRMLayout />}>
                   <Route index element={<Dashboard />} />
                   <Route path="tasks" element={<Tasks />} />
@@ -146,19 +159,28 @@ const App: React.FC = () => {
                   <Route path="finance" element={<Finance />} />
                   <Route path="inventory" element={<Inventory />} />
                   <Route path="equipment" element={<Equipment />} />
+                  <Route path="furniture" element={<FurnitureDashboard />} />
+                  <Route path="agro" element={<AgroDashboard />} />
+                  <Route path="fleet" element={<FleetDashboard />} />
+                  <Route path="beauty" element={<BeautyDashboard />} />
                   <Route path="doc-templates" element={<Templates />} />
                   <Route path="templates" element={<TemplatesAndContent />} />
                   <Route path="admin" element={<AdminSettings />} />
-                   <Route path="tenders" element={<Tenders />} />
+                  <Route path="tenders" element={<Tenders />} />
+                  <Route path="leads" element={<LeadsPage />} />
                   <Route path="analytics" element={<Analytics />} />
                   <Route path="audit" element={<AuditLogs />} />
                   <Route path="special-tasks" element={<SpecialTasks />} />
                   <Route path="superadmin" element={<SuperAdmin />} />
                   <Route path="support" element={<SupportDesk />} />
                   <Route path="marketplace" element={<Marketplace />} />
+                  <Route path="ai-agents" element={<AIAgentsPage />} />
+                  <Route path="knowledge-base" element={<KnowledgeBase />} />
                   <Route path="supply" element={<SupplyPipeline />} />
                   <Route path="service" element={<ServiceTickets />} />
                   <Route path="booking">
+                    {/* BUG-003 FIX: редирект с /crm/booking на /crm/booking/appointments (был белый экран) */}
+                    <Route index element={<Navigate to="appointments" replace />} />
                     <Route path="services" element={<ServicesTechCards />} />
                     <Route path="appointments" element={<AppointmentsChessboard />} />
                   </Route>

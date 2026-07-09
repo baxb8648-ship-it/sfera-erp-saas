@@ -304,7 +304,7 @@ export const Analytics: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 flex flex-col h-full min-h-0">
+    <div className="space-y-8 flex flex-col h-full min-h-0 pb-12 sm:pb-16">
       <Helmet>
         <title>Аналитика | СФЕРА</title>
       </Helmet>
@@ -383,7 +383,7 @@ export const Analytics: React.FC = () => {
               >
                 <option value="all">Сводный баланс (Все)</option>
                 <option value="works">Касса Работ (Работы)</option>
-                <option value="materials">Касса ЛКМ и материалов</option>
+                <option value="materials">Касса: Товары и материалы</option>
               </select>
             </div>
           </div>

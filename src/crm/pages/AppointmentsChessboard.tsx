@@ -124,7 +124,7 @@ export default function AppointmentsChessboard() {
         if (!window.confirm("Завершить услугу? Это автоматически спишет материалы со склада по техкарте.")) return;
         
         try {
-            await apiClient.put(`/booking/appointments/${appId}/complete`);
+            await apiClient.post(`/booking/appointments/${appId}/complete`);
             success('Услуга завершена, ТМЦ успешно списаны со склада');
             fetchData();
         } catch (err: any) {

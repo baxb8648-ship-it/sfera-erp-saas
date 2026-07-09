@@ -129,6 +129,67 @@ async def scheduled_tender_notifications_loop():
         # Проверяем каждые 12 часов (43200 секунд)
         await asyncio.sleep(43200)
 
+def run_retention_emails_check():
+    from .database import SessionLocal
+    from .models import Tenant, User, Organization
+    from .utils.email_retention import send_day7_checkin_email, send_trial_ending_alert_email
+    from datetime import datetime, timedelta
+    
+    db = SessionLocal()
+    try:
+        now = datetime.utcnow()
+        
+        # 1. Day 7 checkin (Созданы 7-8 дней назад)
+        day7_start = now - timedelta(days=8)
+        day7_end = now - timedelta(days=7)
+        
+        tenants_for_day7 = db.query(Tenant).filter(
+            Tenant.created_at >= day7_start,
+            Tenant.created_at <= day7_end,
+            Tenant.day7_email_sent == False
+        ).all()
+        
+        for t in tenants_for_day7:
+            org = db.query(Organization).filter(Organization.tenant_id == t.id).first()
+            if org and org.email and t.is_onboarded:
+                send_day7_checkin_email(db, org.email, t.name)
+            t.day7_email_sent = True
+        
+        # 2. Trial ending alert (Осталось от 2 до 3 дней)
+        trial_end_start = now + timedelta(days=2)
+        trial_end_end = now + timedelta(days=3)
+        
+        tenants_for_trial = db.query(Tenant).filter(
+            Tenant.subscription_ends_at >= trial_end_start,
+            Tenant.subscription_ends_at <= trial_end_end,
+            Tenant.trial_ending_email_sent == False,
+            Tenant.is_active == True
+        ).all()
+        
+        for t in tenants_for_trial:
+            org = db.query(Organization).filter(Organization.tenant_id == t.id).first()
+            if org and org.email:
+                days_left = max(1, (t.subscription_ends_at - now).days)
+                send_trial_ending_alert_email(db, org.email, t.name, days_left)
+            t.trial_ending_email_sent = True
+                
+        db.commit()
+    except Exception as e:
+        logger.error(f"Ошибка при проверке retention email: {e}")
+    finally:
+        db.close()
+
+async def scheduled_retention_emails_loop():
+    await asyncio.sleep(45) # Ждем старта приложения
+    while True:
+        try:
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, run_retention_emails_check)
+        except Exception as e:
+            logger.error(f"Ошибка планировщика retention email: {e}")
+        # Проверяем каждые 12 часов
+        await asyncio.sleep(43200)
+
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
     # Запуск фоновых задач при старте
@@ -138,15 +199,17 @@ async def lifespan(app: FastAPI):
     
     backup_task = asyncio.create_task(scheduled_backup_loop())
     tender_task = asyncio.create_task(scheduled_tender_notifications_loop())
-    polling_task = asyncio.create_task(run_telegram_polling_loop())
+    retention_task = asyncio.create_task(scheduled_retention_emails_loop())
+    telegram_task = asyncio.create_task(run_telegram_polling_loop())
     yield
     # Остановка задач при завершении работы приложения
     stop_scheduler()
     backup_task.cancel()
     tender_task.cancel()
-    polling_task.cancel()
+    retention_task.cancel()
+    telegram_task.cancel()
     try:
-        await asyncio.gather(backup_task, tender_task, polling_task, return_exceptions=True)
+        await asyncio.gather(backup_task, tender_task, retention_task, telegram_task, return_exceptions=True)
     except:
         pass
 
@@ -161,7 +224,10 @@ from .api import (clients, auth, objects, finance, documents, inventory, equipme
     telegram_bots_route,
     supply_route,
     service_route,
-    booking_route
+    booking_route,
+    agro_route,
+    furniture_route,
+    agents_route   # Монетизация ИИ-Агентов (3 бесплатных + платные)
 )
 
 
@@ -292,6 +358,9 @@ app.include_router(telegram_bots_route.router) # Фаза 8 — Мульти-Б�
 app.include_router(supply_route.router) # Фаза 9.3 — Логистика и Снабжение
 app.include_router(service_route.router) # Фаза 9.4 — ТОиР
 app.include_router(booking_route.router) # Фаза 9.1 — Онлайн Запись и Услуги
+app.include_router(furniture_route.router) # Фаза 2 — Мебельное производство
+app.include_router(agro_route.router) # Фаза 10 - Агро
+app.include_router(agents_route.router)  # Монетизация: Каталог ИИ-агентов + Usage Limits
 
 
 

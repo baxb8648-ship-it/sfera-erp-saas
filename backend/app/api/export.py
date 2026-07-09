@@ -22,7 +22,7 @@ def export_clients(
     current_user: User = Depends(get_current_user)
 ):
     try:
-        clients = db.query(Client).all()
+        clients = db.query(Client).filter(Client.tenant_id == current_user.tenant_id).all()
         excel_data = generate_clients_excel(clients)
         
         filename = f"clients_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
@@ -42,7 +42,7 @@ def export_finance(
     current_user: User = Depends(get_current_user)
 ):
     try:
-        query = db.query(FinanceTransaction)
+        query = db.query(FinanceTransaction).filter(FinanceTransaction.tenant_id == current_user.tenant_id)
         if cash_register:
             query = query.filter(FinanceTransaction.cash_register == cash_register)
         
@@ -66,7 +66,7 @@ def export_tenders(
     current_user: User = Depends(get_current_user)
 ):
     try:
-        query = db.query(Tender)
+        query = db.query(Tender).filter(Tender.tenant_id == current_user.tenant_id)
         if status:
             query = query.filter(Tender.status == status)
         

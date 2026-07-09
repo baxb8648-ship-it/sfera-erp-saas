@@ -145,34 +145,34 @@ export const AIFineTuneSettings: React.FC = () => {
   return (
     <div className="space-y-8 animate-fadeIn">
       {/* Top Banner / Hero Section */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-900 via-indigo-900 to-zinc-900 text-white p-8 shadow-xl border border-purple-500/20">
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-0 right-1/3 w-64 h-64 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-orange-950/50 text-white p-8 shadow-xl border border-orange-500/30">
+        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute bottom-0 right-1/3 w-64 h-64 bg-amber-500/10 rounded-full blur-2xl pointer-events-none"></div>
         
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-3 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-400/30 text-purple-300 text-xs font-semibold uppercase tracking-wider">
-              <BrainCircuit className="w-4 h-4 text-purple-400 animate-pulse" />
-              SaaS AI Customization (Фаза 7)
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-orange-500/15 border border-orange-500/30 text-[#F95700] text-xs font-black uppercase tracking-wider">
+              <BrainCircuit className="w-4 h-4 text-[#F95700] animate-pulse" />
+              <span>SaaS AI Customization Engine</span>
             </div>
-            <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-              Локальное дообучение ИИ (Fine-Tuning / QLoRA)
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight leading-snug break-words">
+              Обучение нейросетей на данных компании (QLoRA Fine-Tuning)
             </h2>
-            <p className="text-purple-200/80 text-sm md:text-base leading-relaxed">
-              Адаптируйте нейросеть СФЕРА ERP под уникальную специфику вашей компании. ИИ изучит ваши сметы, историю договоров, акты КС-2 и деловую переписку, чтобы PM Copilot и LangGraph агенты генерировали безупречные отраслевые решения.
+            <p className="text-zinc-300 text-sm md:text-base leading-relaxed">
+              Адаптируйте нейросеть СФЕРА ERP под уникальный язык и регламенты вашего бизнеса. ИИ изучит ваши сметы, историю договоров, акты КС-2 и переписку с подрядчиками без передачи данных наружу.
             </p>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto shrink-0">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 text-center min-w-[140px]">
-              <div className="text-xs text-purple-300 uppercase font-semibold">Размер датасета</div>
+            <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10 text-center min-w-[140px]">
+              <div className="text-xs text-zinc-400 uppercase font-semibold">Размер датасета</div>
               <div className="text-xl font-black text-white mt-1 flex items-center justify-center gap-1">
-                <Database className="w-4 h-4 text-purple-400" />
-                2,140 <span className="text-xs font-normal text-purple-200">док.</span>
+                <Database className="w-4 h-4 text-[#F95700]" />
+                2,140 <span className="text-xs font-normal text-zinc-400">док.</span>
               </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 text-center min-w-[140px]">
-              <div className="text-xs text-purple-300 uppercase font-semibold">Адаптер</div>
+            <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10 text-center min-w-[140px]">
+              <div className="text-xs text-zinc-400 uppercase font-semibold">Адаптер</div>
               <div className="text-xl font-black text-emerald-400 mt-1 flex items-center justify-center gap-1">
                 <Zap className="w-4 h-4" />
                 QLoRA r=16

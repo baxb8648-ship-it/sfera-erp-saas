@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, CheckSquare, User, Clock, Send, MessageSquare, Trash2, Edit2, CheckCircle2, ChevronRight, MessageCircle, CornerUpLeft, ChevronDown, Target } from 'lucide-react';
+import { Plus, CheckSquare, User, Clock, Send, MessageSquare, Trash2, Edit2, CheckCircle2, ChevronRight, MessageCircle, CornerUpLeft, ChevronDown, Target, Search } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -105,6 +105,7 @@ export const Tasks: React.FC = () => {
   // States
   const [selectedAssignee, setSelectedAssignee] = useState<string>('all');
   const [selectedStatus] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
@@ -494,11 +495,22 @@ export const Tasks: React.FC = () => {
     return { label: `Срок: ${new Date(dateStr).toLocaleDateString('ru-RU')}`, color: 'text-gray-500 dark:text-zinc-400' };
   };
 
+  // Filter tasks by search query
+  const filteredTasks = tasks.filter((t) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      (t.title && t.title.toLowerCase().includes(q)) ||
+      (t.description && t.description.toLowerCase().includes(q)) ||
+      (t.assignee_name && t.assignee_name.toLowerCase().includes(q))
+    );
+  });
+
   // Group tasks by status for Kanban Board
   const tasksByStatus = {
-    'Новая': tasks.filter((t) => t.status === 'Новая'),
-    'В процессе': tasks.filter((t) => t.status === 'В процессе'),
-    'Выполнена': tasks.filter((t) => t.status === 'Выполнена')
+    'Новая': filteredTasks.filter((t) => t.status === 'Новая'),
+    'В процессе': filteredTasks.filter((t) => t.status === 'В процессе'),
+    'Выполнена': filteredTasks.filter((t) => t.status === 'Выполнена')
   };
 
   return (
@@ -553,6 +565,17 @@ export const Tasks: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Поиск по задачам..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 pr-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-[#F95700]/50 w-44 sm:w-56"
+              />
+              <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            </div>
+
             <select
               value={selectedAssignee}
               onChange={(e) => setSelectedAssignee(e.target.value)}
@@ -1001,7 +1024,6 @@ export const Tasks: React.FC = () => {
                     value={status}
                     onChange={(e) => setStatus(e.target.value)}
                     className="w-full px-3 py-2 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#F95700]/50 cursor-pointer"
-                    disabled={modalMode === 'create'}
                   >
                     <option value="Новая">Новая</option>
                     <option value="В процессе">В процессе</option>

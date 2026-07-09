@@ -88,6 +88,7 @@ async def create_task(
     current_user: User = Depends(get_current_user)
 ):
     new_task = Task(
+        tenant_id=current_user.tenant_id,
         title=payload.title,
         description=payload.description,
         status=payload.status or "Новая",
@@ -370,6 +371,7 @@ async def send_chat_message(
     current_user: User = Depends(get_current_user)
 ):
     new_msg = TaskMessage(
+        tenant_id=current_user.tenant_id,
         task_id=payload.task_id,
         user_id=current_user.id,
         message=payload.message

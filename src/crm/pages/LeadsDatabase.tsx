@@ -38,6 +38,7 @@ interface LeadsDatabaseProps {
   taskName: string;
   offerContext: string;
   onClose: () => void;
+  asPage?: boolean;
 }
 
 const AI_SCORE_COLOR = (score: number) => {
@@ -46,7 +47,7 @@ const AI_SCORE_COLOR = (score: number) => {
   return 'text-zinc-400 bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800';
 };
 
-export const LeadsDatabase: React.FC<LeadsDatabaseProps> = ({ taskId, taskName, offerContext, onClose }) => {
+export const LeadsDatabase: React.FC<LeadsDatabaseProps> = ({ taskId, taskName, offerContext, onClose, asPage = false }) => {
   const toast = useToast();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -82,7 +83,8 @@ export const LeadsDatabase: React.FC<LeadsDatabaseProps> = ({ taskId, taskName, 
   useEffect(() => { fetchLeads(); }, [fetchLeads]);
 
   const handleExportCSV = () => {
-    const url = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/leads/export/csv?task_id=${taskId}`;
+    // BUG-001 FIX: использовать порт 8001 (СФЕРА ERP), а не 8000
+    const url = `${import.meta.env.VITE_API_URL || 'http://localhost:8001'}/leads/export/csv?task_id=${taskId}`;
     window.open(url, '_blank');
     toast.success('CSV-файл загружается...');
   };
@@ -137,47 +139,49 @@ export const LeadsDatabase: React.FC<LeadsDatabaseProps> = ({ taskId, taskName, 
   const crmCount = leads.filter(l => l.added_to_crm).length;
   const avgScore = leads.length ? Math.round(leads.reduce((s, l) => s + (l.ai_score || 0), 0) / leads.length) : 0;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-stretch bg-black/50 backdrop-blur-[8px]">
-      {/* Drawer панель */}
-      <div className="ml-auto w-full max-w-5xl bg-white dark:bg-zinc-950 flex flex-col h-full shadow-2xl border-l border-gray-200 dark:border-zinc-800">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-zinc-800 bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-transparent shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg shadow-indigo-500/20">
-              <Building2 className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h3 className="text-base font-black font-['Montserrat'] text-gray-900 dark:text-white">
-                База лидов: {taskName}
-              </h3>
-              <p className="text-xs text-zinc-400 font-medium">
-                {total} компаний · {sentCount} КП отправлено · {crmCount} в CRM
-              </p>
-            </div>
+  const content = (
+    <div className={asPage ? "w-full flex flex-col bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-sm overflow-hidden h-[calc(100vh-140px)] min-h-[640px]" : "ml-auto w-full max-w-5xl bg-white dark:bg-zinc-950 flex flex-col h-full shadow-2xl border-l border-gray-200 dark:border-zinc-800"}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-zinc-800 bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-transparent shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg shadow-indigo-500/20">
+            <Building2 className="w-5 h-5 text-white" />
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleExportCSV}
-              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 active:scale-95 transition-all cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5" />
-              Экспорт CSV
-            </button>
-            <button
-              onClick={fetchLeads}
-              className="p-2 rounded-xl border border-gray-200 dark:border-zinc-800 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all cursor-pointer"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
+          <div>
+            <h3 className="text-base sm:text-lg font-black font-['Montserrat'] text-gray-900 dark:text-white">
+              База лидов: {taskName}
+            </h3>
+            <p className="text-xs text-zinc-400 font-medium">
+              {total} компаний · {sentCount} КП отправлено · {crmCount} в CRM
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 active:scale-95 transition-all cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Экспорт CSV
+          </button>
+          <button
+            onClick={fetchLeads}
+            className="p-2 rounded-xl border border-gray-200 dark:border-zinc-800 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all cursor-pointer"
+            title="Обновить список"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+          {!asPage && (
             <button
               onClick={onClose}
               className="p-2 rounded-xl border border-gray-200 dark:border-zinc-800 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all cursor-pointer"
+              title="Закрыть"
             >
               <X className="w-4 h-4" />
             </button>
-          </div>
+          )}
         </div>
+      </div>
 
         {/* Статистика */}
         <div className="grid grid-cols-4 gap-3 px-6 py-3 border-b border-gray-100 dark:border-zinc-800/60 shrink-0">
@@ -405,7 +409,16 @@ export const LeadsDatabase: React.FC<LeadsDatabaseProps> = ({ taskId, taskName, 
             ))
           )}
         </div>
-      </div>
+    </div>
+  );
+
+  if (asPage) {
+    return content;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-stretch bg-black/50 backdrop-blur-[8px]">
+      {content}
     </div>
   );
 };

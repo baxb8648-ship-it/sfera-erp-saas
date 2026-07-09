@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Package, Truck, ShieldCheck, CheckCircle2, FileText, Plus, Filter, AlertTriangle, Car, ClipboardCheck } from 'lucide-react';
+import { Package, Truck, ShieldCheck, CheckCircle2, FileText, Plus, Filter, AlertTriangle, Car, ClipboardCheck, LayoutGrid, Table as TableIcon } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 import { apiClient } from '../../api/client';
 
@@ -32,6 +32,7 @@ export default function SupplyPipeline() {
     const [orders, setOrders] = useState<SupplyOrder[]>([]);
     const [loading, setLoading] = useState(true);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
     
     const [newItemName, setNewItemName] = useState('');
     const [newQuantity, setNewQuantity] = useState('');
@@ -113,7 +114,7 @@ export default function SupplyPipeline() {
     }
 
     return (
-        <div className="h-full flex flex-col space-y-6">
+        <div className="h-full flex flex-col space-y-6 pb-16">
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm shrink-0">
                 <div>
                     <h2 className="text-2xl font-bold font-['Montserrat'] text-[#1a1a1a] dark:text-white flex items-center gap-2">
@@ -124,14 +125,40 @@ export default function SupplyPipeline() {
                         Управление цепочками поставок и закупками ТМЦ
                     </p>
                 </div>
-                <div className="flex gap-3">
-                    <button className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors active:scale-95">
+                <div className="flex flex-wrap items-center gap-3">
+                    {/* Канбан / Таблица переключатель */}
+                    <div className="bg-gray-100 dark:bg-zinc-800 p-1 rounded-xl flex items-center gap-1">
+                        <button
+                            onClick={() => setViewMode('kanban')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                viewMode === 'kanban'
+                                    ? 'bg-white dark:bg-zinc-900 text-[#F95700] shadow-sm'
+                                    : 'text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white'
+                            }`}
+                        >
+                            <LayoutGrid className="w-3.5 h-3.5" />
+                            <span>Канбан</span>
+                        </button>
+                        <button
+                            onClick={() => setViewMode('table')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                viewMode === 'table'
+                                    ? 'bg-white dark:bg-zinc-900 text-[#F95700] shadow-sm'
+                                    : 'text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white'
+                            }`}
+                        >
+                            <TableIcon className="w-3.5 h-3.5" />
+                            <span>Реестр (Таблица)</span>
+                        </button>
+                    </div>
+
+                    <button className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors active:scale-95 cursor-pointer">
                         <Filter className="w-4 h-4" />
                         Фильтры
                     </button>
                     <button 
                         onClick={() => setIsCreateModalOpen(true)}
-                        className="flex items-center gap-2 bg-[#F95700] hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors active:scale-95 shadow-sm"
+                        className="flex items-center gap-2 bg-[#F95700] hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors active:scale-95 shadow-sm cursor-pointer"
                     >
                         <Plus className="w-4 h-4" />
                         Создать заявку
@@ -139,60 +166,117 @@ export default function SupplyPipeline() {
                 </div>
             </div>
 
-            <div className="flex-1 flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-zinc-700">
-                {COLUMNS.map(col => {
-                    const columnOrders = orders.filter(o => o.status === col.id);
-                    return (
-                        <div 
-                            key={col.id} 
-                            className="min-w-[320px] w-[320px] bg-gray-50 dark:bg-zinc-900/50 rounded-2xl border border-gray-200 dark:border-zinc-800 flex flex-col max-h-full shrink-0"
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={(e) => handleDrop(e, col.id)}
-                        >
-                            <div className="p-4 border-b border-gray-200 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-zinc-900 rounded-t-2xl shrink-0">
-                                <div className="flex items-center gap-2">
-                                    {col.icon}
-                                    <h3 className="font-bold text-gray-900 dark:text-white">{col.title}</h3>
+            {viewMode === 'kanban' ? (
+                <div className="flex-1 flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-zinc-700">
+                    {COLUMNS.map(col => {
+                        const columnOrders = orders.filter(o => o.status === col.id);
+                        return (
+                            <div 
+                                key={col.id} 
+                                className="min-w-[320px] w-[320px] bg-gray-50 dark:bg-zinc-900/50 rounded-2xl border border-gray-200 dark:border-zinc-800 flex flex-col max-h-full shrink-0"
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={(e) => handleDrop(e, col.id)}
+                            >
+                                <div className="p-4 border-b border-gray-200 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-zinc-900 rounded-t-2xl shrink-0">
+                                    <div className="flex items-center gap-2">
+                                        {col.icon}
+                                        <h3 className="font-bold text-gray-900 dark:text-white">{col.title}</h3>
+                                    </div>
+                                    <span className="bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-400 text-xs font-black px-2 py-1 rounded-full">
+                                        {columnOrders.length}
+                                    </span>
                                 </div>
-                                <span className="bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-400 text-xs font-black px-2 py-1 rounded-full">
-                                    {columnOrders.length}
-                                </span>
-                            </div>
-                            <div className="flex-1 p-3 overflow-y-auto space-y-3 min-h-[150px]">
-                                {columnOrders.map(order => (
-                                    <div 
-                                        key={order.id}
-                                        draggable
-                                        onDragStart={() => setDraggedOrderId(order.id)}
-                                        className={`bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-700 border-l-4 ${getPriorityColor(order.priority)} cursor-grab active:cursor-grabbing hover:-translate-y-0.5 hover:shadow-md transition-all select-none`}
-                                    >
-                                        <div className="flex justify-between items-start mb-2">
-                                            <h4 className="font-semibold text-gray-900 dark:text-white text-sm">{order.item_name}</h4>
-                                            <span className="text-xs font-mono text-gray-400 dark:text-zinc-500">#{order.id}</span>
-                                        </div>
-                                        <div className="flex justify-between items-end mt-4">
-                                            <div className="text-xs font-semibold text-gray-500 dark:text-zinc-400">
-                                                Кол-во: <span className="text-gray-900 dark:text-white">{order.quantity}</span>
+                                <div className="flex-1 p-3 overflow-y-auto space-y-3 min-h-[160px] flex flex-col">
+                                    {columnOrders.map(order => (
+                                        <div 
+                                            key={order.id}
+                                            draggable
+                                            onDragStart={() => setDraggedOrderId(order.id)}
+                                            className={`bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-700 border-l-4 ${getPriorityColor(order.priority)} cursor-grab active:cursor-grabbing hover:-translate-y-0.5 hover:shadow-md transition-all select-none`}
+                                        >
+                                            <div className="flex justify-between items-start mb-2">
+                                                <h4 className="font-semibold text-gray-900 dark:text-white text-sm">{order.item_name}</h4>
+                                                <span className="text-xs font-mono text-gray-400 dark:text-zinc-500">#{order.id}</span>
                                             </div>
-                                            {order.service_ticket_id && (
-                                                <div className="flex items-center gap-1 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold px-2 py-1 rounded-md border border-rose-200 dark:border-rose-500/20">
-                                                    <AlertTriangle className="w-3 h-3" />
-                                                    Для ТОиР
+                                            <div className="flex justify-between items-end mt-4">
+                                                <div className="text-xs font-semibold text-gray-500 dark:text-zinc-400">
+                                                    Кол-во: <span className="text-gray-900 dark:text-white">{order.quantity}</span>
                                                 </div>
-                                            )}
+                                                {order.service_ticket_id && (
+                                                    <div className="flex items-center gap-1 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold px-2 py-1 rounded-md border border-rose-200 dark:border-rose-500/20">
+                                                        <AlertTriangle className="w-3 h-3" />
+                                                        Для ТОиР
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
-                                {columnOrders.length === 0 && (
-                                    <div className="h-full flex items-center justify-center border-2 border-dashed border-gray-200 dark:border-zinc-700 rounded-xl text-gray-400 text-xs font-semibold uppercase tracking-wider p-6 text-center">
-                                        Перетащите сюда
-                                    </div>
-                                )}
+                                    ))}
+                                    {columnOrders.length === 0 && (
+                                        <button 
+                                            onClick={() => setIsCreateModalOpen(true)}
+                                            className="w-full flex-1 min-h-[120px] flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-zinc-700 hover:border-[#F95700] rounded-xl text-gray-400 hover:text-[#F95700] text-xs font-semibold uppercase tracking-wider p-6 text-center transition-all cursor-pointer gap-2 group"
+                                        >
+                                            <Plus className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                            <span>Создать заявку</span>
+                                        </button>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    );
-                })}
-            </div>
+                        );
+                    })}
+                </div>
+            ) : (
+                <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-200 dark:border-zinc-800 overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                            <thead className="bg-gray-50 dark:bg-zinc-800/60 text-gray-700 dark:text-zinc-300 font-extrabold uppercase tracking-wider border-b border-gray-200 dark:border-zinc-800">
+                                <tr>
+                                    <th className="px-6 py-4">ID</th>
+                                    <th className="px-6 py-4">Наименование</th>
+                                    <th className="px-6 py-4">Кол-во</th>
+                                    <th className="px-6 py-4">Приоритет</th>
+                                    <th className="px-6 py-4">Этап (Статус)</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
+                                {orders.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} className="px-6 py-12 text-center text-zinc-400 font-semibold">
+                                            Заявок в реестре пока нет
+                                        </td>
+                                    </tr>
+                                ) : orders.map(order => {
+                                    const col = COLUMNS.find(c => c.id === order.status);
+                                    return (
+                                        <tr key={order.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/30">
+                                            <td className="px-6 py-4 font-mono text-zinc-400">#{order.id}</td>
+                                            <td className="px-6 py-4 font-bold text-gray-900 dark:text-white">{order.item_name}</td>
+                                            <td className="px-6 py-4 font-semibold">{order.quantity}</td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold ${
+                                                    order.priority === 'Critical' || order.priority === 'High'
+                                                        ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                                                        : order.priority === 'Low'
+                                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                                }`}>
+                                                    {order.priority}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="inline-flex items-center gap-1.5 font-bold text-gray-700 dark:text-zinc-300">
+                                                    {col?.icon}
+                                                    <span>{col?.title || order.status}</span>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
             {isCreateModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">

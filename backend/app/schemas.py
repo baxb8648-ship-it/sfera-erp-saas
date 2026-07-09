@@ -285,6 +285,9 @@ class UserResponseSchema(BaseModel):
     smtp_user: Optional[str] = None
     smtp_password: Optional[str] = None
     smtp_use_ssl: Optional[int] = 1
+    is_onboarded: Optional[bool] = None
+    tenant_id: Optional[int] = None
+    subscription_ends_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

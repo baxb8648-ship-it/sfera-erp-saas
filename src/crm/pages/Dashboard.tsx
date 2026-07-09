@@ -3,6 +3,7 @@ import { BarChart3, TrendingUp, Users, Building2, Mail, ArrowRight, CheckCircle2
 import { apiClient } from '../../api/client';
 import { Helmet } from 'react-helmet-async';
 import { useQuery } from '@tanstack/react-query';
+import { UpsellBanner } from '../components/UpsellBanner';
 import type { Tender } from '../../types';
 
 interface ChartDataItem {
@@ -31,6 +32,51 @@ interface StatsData {
   segment_data: SegmentDataItem[];
   status_data: StatusDataItem[];
 }
+
+const QuickStartWidget: React.FC = () => {
+  const [closed, setClosed] = useState(false);
+  
+  if (closed) return null;
+  
+  return (
+    <div className="bg-gradient-to-r from-orange-500/10 via-[#F95700]/5 to-transparent border border-[#F95700]/20 rounded-2xl p-5 mb-5 relative overflow-hidden group">
+      <div className="absolute top-0 right-0 p-4">
+        <button onClick={() => setClosed(true)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+          ✕
+        </button>
+      </div>
+      <div className="flex items-start gap-4">
+        <div className="p-3 bg-white dark:bg-zinc-900 border border-orange-200 dark:border-orange-900/50 rounded-xl shadow-lg shadow-orange-500/10 shrink-0">
+          <Building2 className="w-6 h-6 text-[#F95700]" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-lg font-black font-['Montserrat'] text-zinc-900 dark:text-white mb-1">Добро пожаловать в СФЕРА ERP!</h3>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">Для полноценного запуска системы выполните несколько базовых шагов:</p>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[
+              { id: 1, title: 'Заполнить профиль компании', path: '/crm/settings', icon: <Building2 className="w-4 h-4" /> },
+              { id: 2, title: 'Добавить сотрудников', path: '/crm/users', icon: <Users className="w-4 h-4" /> },
+              { id: 3, title: 'Настроить ИИ-агентов', path: '/crm/ai-agents', icon: <BarChart3 className="w-4 h-4" /> }
+            ].map(step => (
+              <a 
+                href={`#${step.path}`}
+                key={step.id} 
+                className="flex items-center gap-3 p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-[#F95700]/50 hover:shadow-md transition-all group/step"
+              >
+                <div className="w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-500 group-hover/step:bg-orange-100 group-hover/step:text-[#F95700]">
+                  {step.id}
+                </div>
+                <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 group-hover/step:text-zinc-900 dark:group-hover/step:text-white">{step.title}</span>
+                <ArrowRight className="w-3.5 h-3.5 text-zinc-400 ml-auto group-hover/step:text-[#F95700] transition-colors" />
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export const Dashboard: React.FC = () => {
   const [cashRegister, setCashRegister] = useState<string>('');
@@ -168,24 +214,31 @@ export const Dashboard: React.FC = () => {
   const yTicks = [0, maxVal * 0.25, maxVal * 0.5, maxVal * 0.75, maxVal];
 
   return (
-    <div className="space-y-5 flex flex-col h-full min-h-0 pb-4">
+    <div className="space-y-6 flex flex-col h-full min-h-0 pb-12 sm:pb-16">
       <Helmet>
         <title>Дашборд | СФЕРА</title>
       </Helmet>
 
-      {/* Top Dashboard Actions (Glassmorphism & Fluid Typo) */}
-      <div className="glass-panel flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-5 rounded-2xl shadow-[0_8px_30px_rgba(249,0,0,0.015)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)]">
-        <div className="flex justify-between items-start w-full sm:w-auto">
+      {/* Top Executive Dashboard Header */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-5 pt-2 shrink-0 w-full">
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>LIVE · СФЕРА ERP SaaS v1.5.0 · Мультитенантная аналитика</span>
+          </div>
           <div>
-            <h1 className="text-[clamp(1.25rem,2.5vw,1.75rem)] font-extrabold tracking-tight font-['Montserrat'] text-zinc-900 dark:text-zinc-100">
-              Дашборд аналитики
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight font-['Montserrat'] text-zinc-900 dark:text-white flex items-center gap-3">
+              <span>Дашборд аналитики</span>
             </h1>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Живая статистика и показатели эффективности предприятия</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1.5 font-medium max-w-2xl">
+              Живая статистика, ключевые показатели эффективности предприятия и контроль финансовых потоков
+            </p>
           </div>
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          {/* Свитчер касс */}
-          <div className="flex space-x-1 bg-zinc-100/80 dark:bg-zinc-800/80 p-1 rounded-xl border border-zinc-200/50 dark:border-zinc-700/50 backdrop-blur-sm w-full sm:w-auto overflow-x-auto">
+
+        {/* Свитчер касс (Премиальный сегментированный контроллер) */}
+        <div className="w-full lg:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="flex items-center space-x-1.5 bg-white dark:bg-zinc-900/90 p-1.5 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm w-full sm:w-auto overflow-x-auto">
             {[
               { id: '', label: 'Сводный баланс' },
               { id: 'works', label: 'Работы' },
@@ -194,7 +247,11 @@ export const Dashboard: React.FC = () => {
               <button
                 key={r.id}
                 onClick={() => setCashRegister(r.id)}
-                className={`flex-1 sm:flex-initial px-3 py-2 rounded-lg text-[10px] sm:text-xs font-bold transition-all duration-300 select-none cursor-pointer whitespace-nowrap ${cashRegister === r.id ? 'bg-[#F95700] text-white shadow-lg shadow-[#F95700]/25' : 'text-zinc-650 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/50 dark:hover:bg-zinc-750/50'}`}
+                className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-300 select-none cursor-pointer whitespace-nowrap ${
+                  cashRegister === r.id
+                    ? 'bg-gradient-to-r from-[#F95700] to-orange-500 text-white shadow-lg shadow-[#F95700]/25 scale-[1.02]'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/60'
+                }`}
               >
                 {r.label}
               </button>
@@ -202,6 +259,11 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <UpsellBanner />
+
+      {/* Quick Start Widget */}
+      {stats.new_leads === 0 && stats.active_projects === 0 && <QuickStartWidget />}
 
       {/* Bento-box Grid (3 Rows Layout) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 auto-rows-auto">

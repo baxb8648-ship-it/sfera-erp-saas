@@ -821,7 +821,7 @@ export const Tenders: React.FC = () => {
                     </div>
                     <div className="space-y-1">
                       <p className="text-xs font-bold text-gray-700 dark:text-zinc-300">Экспресс-анализ не выполнен</p>
-                      <p className="text-[11px] text-gray-400 max-w-sm">ИИ оценит суть проекта, технические объемы, спецификацию ЛКМ и риски закупки.</p>
+                      <p className="text-[11px] text-gray-400 max-w-sm">ИИ оценит суть проекта, технические объемы, спецификацию материалов и риски закупки.</p>
                     </div>
                     <button
                       onClick={() => handleRunAIAnalysis(selectedTender.id)}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, AlertCircle, Calendar, Archive } from 'lucide-react';
 import { GodTierModal } from './GodTierModal';
+import { apiClient } from '../../api/client';
 
 interface KanbanTask {
   id: number;
@@ -43,13 +44,8 @@ export const KanbanBoard: React.FC = () => {
 
   const fetchConsumptions = async (objId: number) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || 'http://localhost:8000') + ''}/objects/${objId}/consumptions`, {
-        headers: {}
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setConsumptions(data);
-      }
+      const data = await apiClient.get(`/objects/${objId}/consumptions`);
+      setConsumptions(data || []);
     } catch (e) {
       console.error("Failed to fetch consumptions", e);
     }
@@ -57,15 +53,10 @@ export const KanbanBoard: React.FC = () => {
 
   const fetchInventory = async () => {
     try {
-      const res = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/inventory/', {
-        headers: {}
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setInventory(data);
-        if (data.length > 0) {
-          setSelectedInventoryId(data[0].id.toString());
-        }
+      const data = await apiClient.get('/inventory/');
+      setInventory(data || []);
+      if (data && data.length > 0) {
+        setSelectedInventoryId(data[0].id.toString());
       }
     } catch (e) {
       console.error("Failed to fetch inventory", e);
@@ -100,28 +91,17 @@ export const KanbanBoard: React.FC = () => {
     setIsConsuming(true);
     setConsumeError('');
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || 'http://localhost:8000') + ''}/objects/${selectedTask.id}/consume`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          inventory_id: parseInt(selectedInventoryId),
-          quantity: qty
-        })
+      await apiClient.post(`/objects/${selectedTask.id}/consume`, {
+        inventory_id: parseInt(selectedInventoryId),
+        quantity: qty
       });
-      if (response.ok) {
-        setConsumeQuantity('');
-        await Promise.all([
-          fetchConsumptions(selectedTask.id),
-          fetchInventory()
-        ]);
-      } else {
-        const err = await response.json();
-        setConsumeError(err.detail || "Ошибка списания материала");
-      }
-    } catch (error) {
-      setConsumeError("Ошибка подключения к серверу");
+      setConsumeQuantity('');
+      await Promise.all([
+        fetchConsumptions(selectedTask.id),
+        fetchInventory()
+      ]);
+    } catch (error: any) {
+      setConsumeError(error?.message || "Ошибка списания материала");
     } finally {
       setIsConsuming(false);
     }
@@ -132,21 +112,14 @@ export const KanbanBoard: React.FC = () => {
 
     setIsDeletingConsumptionId(consumptionId);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || 'http://localhost:8000') + ''}/objects/consumptions/${consumptionId}`, {
-        method: 'DELETE',
-        headers: {}
-      });
-      if (response.ok) {
-        await Promise.all([
-          fetchConsumptions(selectedTask.id),
-          fetchInventory()
-        ]);
-      } else {
-        alert("Не удалось отменить списание");
-      }
+      await apiClient.delete(`/objects/consumptions/${consumptionId}`);
+      await Promise.all([
+        fetchConsumptions(selectedTask.id),
+        fetchInventory()
+      ]);
     } catch (e) {
       console.error(e);
-      alert("Сетевая ошибка");
+      alert("Не удалось отменить списание");
     } finally {
       setIsDeletingConsumptionId(null);
     }
@@ -154,19 +127,12 @@ export const KanbanBoard: React.FC = () => {
 
   const handleDeleteObject = async (taskId: number) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/objects/${taskId}`, {
-        method: 'DELETE',
-        headers: {}
-      });
-      if (response.ok) {
-        setIsDetailModalOpen(false);
-        fetchObjects();
-      } else {
-        alert("Не удалось удалить объект");
-      }
+      await apiClient.delete(`/objects/${taskId}`);
+      setIsDetailModalOpen(false);
+      fetchObjects();
     } catch (e) {
       console.error(e);
-      alert("Сетевая ошибка при удалении объекта");
+      alert("Не удалось удалить объект");
     }
   };
 
@@ -180,23 +146,17 @@ export const KanbanBoard: React.FC = () => {
   const fetchObjects = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/objects/', {
-        headers: {}
-      });
-      if (response.ok) {
-        const data = await response.json();
-        // Подгоняем данные под интерфейс доски
-        const formatted = data.map((d: any) => ({
-          id: d.id,
-          name: d.name,
-          client: d.client_name || `Клиент #${d.client_id || 'N/A'}`,
-          status: d.status,
-          area: d.area_sqm ? `${d.area_sqm} м²` : '',
-          surfaceType: d.surface_type,
-          custom_fields: d.custom_fields || {}
-        }));
-        setTasks(formatted);
-      }
+      const data = await apiClient.get('/objects/');
+      const formatted = (data || []).map((d: any) => ({
+        id: d.id,
+        name: d.name,
+        client: d.client_name || `Клиент #${d.client_id || 'N/A'}`,
+        status: d.status,
+        area: d.area_sqm ? `${d.area_sqm} м²` : '',
+        surfaceType: d.surface_type,
+        custom_fields: d.custom_fields || {}
+      }));
+      setTasks(formatted);
     } catch (error) {
       console.error("Failed to fetch objects", error);
     } finally {
@@ -205,18 +165,11 @@ export const KanbanBoard: React.FC = () => {
   };
 
   const updateTaskStatus = async (taskId: number, newStatus: string) => {
-    // Optimistic UI update
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
-    
-    // API request
     try {
-      await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || 'http://localhost:8000') + ''}/objects/${taskId}/status?status=${encodeURIComponent(newStatus)}`, {
-        method: 'PATCH',
-        headers: {}
-      });
+      await apiClient.patch(`/objects/${taskId}/status?status=${encodeURIComponent(newStatus)}`);
     } catch (e) {
       console.error("Failed to update status", e);
-      // Revert in real app if fails
     }
   };
 

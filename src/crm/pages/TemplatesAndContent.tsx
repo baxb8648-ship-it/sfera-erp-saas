@@ -186,6 +186,44 @@ export const TemplatesAndContent: React.FC = () => {
 
   const [organizations, setOrganizations] = useState<any[]>([]);
   const [selectedOrgId, setSelectedOrgId] = useState<number | null>(null);
+  const [isLookingUpINN, setIsLookingUpINN] = useState(false);
+
+  const handleLookupCompanyINN = async () => {
+    const inn = settings.company_inn.trim();
+    if (!inn || !/^\d{10}$|^\d{12}$/.test(inn)) {
+      alert("Введите корректный ИНН (10 или 12 цифр)");
+      return;
+    }
+    setIsLookingUpINN(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/clients/lookup-inn/${inn}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSettings(prev => ({
+          ...prev,
+          company_name: data.name ? data.name.replace(/^ООО\s+|^АО\s+|^ПАО\s+/i, '').replace(/["']/g, '') : prev.company_name,
+          company_legal_name: data.name || prev.company_legal_name,
+          company_kpp: data.kpp || prev.company_kpp,
+          company_address: data.legal_address || prev.company_address,
+          company_director: data.contact_person || prev.company_director,
+          company_bank_name: data.bank_name || prev.company_bank_name,
+          company_bik: data.bik || prev.company_bik,
+          company_rs: data.rs || prev.company_rs,
+          company_ks: data.ks || prev.company_ks,
+        }));
+        setMessage("Реквизиты успешно заполнены по данным ФНС / DaData!");
+        setTimeout(() => setMessage(''), 4000);
+      } else {
+        const err = await response.json();
+        alert(err.detail || "Не удалось найти реквизиты по ИНН");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Сетевая ошибка при поиске по ИНН");
+    } finally {
+      setIsLookingUpINN(false);
+    }
+  };
 
   // Business Card States
   const [isFlipped, setIsFlipped] = useState(false);
@@ -1141,13 +1179,23 @@ export const TemplatesAndContent: React.FC = () => {
 
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-gray-600 dark:text-zinc-400 uppercase">ИНН компании</label>
-                <input
-                  type="text"
-                  value={settings.company_inn}
-                  onChange={(e) => setSettings({ ...settings, company_inn: e.target.value })}
-                  placeholder="5610234567"
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F95700]/50"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={settings.company_inn}
+                    onChange={(e) => setSettings({ ...settings, company_inn: e.target.value })}
+                    placeholder="5610234567"
+                    className="flex-1 px-3 py-2 border border-gray-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F95700]/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleLookupCompanyINN}
+                    disabled={isLookingUpINN}
+                    className="px-3 py-2 bg-[#F95700]/10 hover:bg-[#F95700]/20 text-[#F95700] text-xs font-bold rounded-lg transition-colors whitespace-nowrap flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {isLookingUpINN ? 'Поиск...' : 'ФНС / DaData'}
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-1">
@@ -1294,12 +1342,12 @@ export const TemplatesAndContent: React.FC = () => {
 
               {/* Банковские реквизиты (Материалы / ЛКМ) */}
               <div className="md:col-span-2 pt-4 border-t border-gray-150 dark:border-zinc-800 mt-2">
-                <h3 className="text-sm font-bold text-gray-800 dark:text-zinc-200 uppercase tracking-wider text-green-700">Банковские реквизиты (Касса: ЛКМ / Расходники)</h3>
-                <p className="text-xs text-gray-400 mt-0.5">Используется для выставления счетов за поставку ЛКМ и материалов</p>
+                <h3 className="text-sm font-bold text-gray-800 dark:text-zinc-200 uppercase tracking-wider text-green-700">Банковские реквизиты (Касса: Товары / Расходники)</h3>
+                <p className="text-xs text-gray-400 mt-0.5">Используется для выставления счетов за поставку товаров и материалов</p>
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-gray-600 dark:text-zinc-400 uppercase">Название Банка (ЛКМ)</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-zinc-400 uppercase">Название Банка (Товары)</label>
                 <input
                   type="text"
                   value={settings.company_bank_name_materials}
@@ -1310,7 +1358,7 @@ export const TemplatesAndContent: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-gray-600 dark:text-zinc-400 uppercase">БИК банка (ЛКМ)</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-zinc-400 uppercase">БИК банка (Товары)</label>
                 <input
                   type="text"
                   value={settings.company_bik_materials}
@@ -1321,7 +1369,7 @@ export const TemplatesAndContent: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-gray-600 dark:text-zinc-400 uppercase">Расчетный счет (Р/с) (ЛКМ)</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-zinc-400 uppercase">Расчетный счет (Р/с) (Товары)</label>
                 <input
                   type="text"
                   value={settings.company_rs_materials}
@@ -1332,7 +1380,7 @@ export const TemplatesAndContent: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-gray-600 dark:text-zinc-400 uppercase">Корреспондентский счет (К/с) (ЛКМ)</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-zinc-400 uppercase">Корреспондентский счет (К/с) (Товары)</label>
                 <input
                   type="text"
                   value={settings.company_ks_materials}

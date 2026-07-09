@@ -2,18 +2,24 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { FileText, Download, TrendingUp, TrendingDown, Plus, Trash2, X, Wallet, ArrowUpRight, ArrowDownRight, Search, Filter, Loader2, Calendar } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
-import { apiClient } from '../../api/client';
+import { apiClient, API_BASE_URL } from '../../api/client';
 import type { Transaction, Client, ObjectItem } from '../../types';
 
 const downloadDocumentFile = async (docId: number, docName: string) => {
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-  const url = `${baseUrl}/documents/download/${docId}`;
+  const url = `${API_BASE_URL}/documents/download/${docId}`;
   try {
     const headers: Record<string, string> = {
       'ngrok-skip-browser-warning': '69420'
     };
+    const impersonated = localStorage.getItem('impersonated_tenant');
+    if (impersonated) {
+      try {
+        const parsed = JSON.parse(impersonated);
+        if (parsed?.id) headers['X-Impersonate-Tenant-Id'] = parsed.id.toString();
+      } catch (e) {}
+    }
     
-    const response = await fetch(url, { headers });
+    const response = await fetch(url, { headers, credentials: 'include' });
     if (response.ok) {
       const blob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
@@ -259,14 +265,20 @@ export const Finance: React.FC = () => {
   };
 
   const handleExportExcel = async () => {
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-    const url = `${baseUrl}/export/finance?cash_register=${activeCashRegister}`;
+    const url = `${API_BASE_URL}/export/finance?cash_register=${activeCashRegister}`;
     try {
       const headers: Record<string, string> = {
         'ngrok-skip-browser-warning': '69420'
       };
+      const impersonated = localStorage.getItem('impersonated_tenant');
+      if (impersonated) {
+        try {
+          const parsed = JSON.parse(impersonated);
+          if (parsed?.id) headers['X-Impersonate-Tenant-Id'] = parsed.id.toString();
+        } catch (e) {}
+      }
       
-      const response = await fetch(url, { headers });
+      const response = await fetch(url, { headers, credentials: 'include' });
       if (response.ok) {
         const blob = await response.blob();
         const downloadUrl = window.URL.createObjectURL(blob);
@@ -303,7 +315,7 @@ export const Finance: React.FC = () => {
     setFormData({
       transaction_type: 'income',
       amount: '',
-      category: activeCashRegister === 'materials' ? 'Продажа ЛКМ / на сторону' : 'Оплата от клиента',
+      category: activeCashRegister === 'materials' ? 'Продажа товаров' : 'Оплата от клиента',
       payment_method: 'Безнал с НДС',
       client_id: activeCashRegister === 'materials' ? '' : (clients.length > 0 ? clients[0].id.toString() : ''),
       object_id: '',
@@ -317,7 +329,7 @@ export const Finance: React.FC = () => {
   useEffect(() => {
     if (formData.transaction_type === 'income') {
       const defaultCat = formData.cash_register === 'materials' 
-        ? 'Продажа ЛКМ / на сторону' 
+        ? 'Продажа товаров' 
         : 'Оплата от клиента';
       setFormData(prev => ({ ...prev, category: defaultCat }));
     } else {
@@ -524,7 +536,7 @@ export const Finance: React.FC = () => {
               onClick={() => setActiveCashRegister('materials')}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition-all duration-300 select-none cursor-pointer ${activeCashRegister === 'materials' ? 'bg-[#F95700] text-white shadow-md shadow-[#F95700]/25' : 'text-zinc-650 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/50 dark:hover:bg-zinc-750/50'}`}
             >
-              Касса: ЛКМ и расходники
+              Касса: Товары и материалы
             </button>
           </div>
         )}
@@ -536,7 +548,7 @@ export const Finance: React.FC = () => {
           <div className="flex flex-col">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
               <h2 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-150 uppercase tracking-widest font-['Montserrat']">
-                История транзакций ({activeCashRegister === 'works' ? 'Касса: Работы' : 'Касса: ЛКМ и расходники'})
+                История транзакций ({activeCashRegister === 'works' ? 'Касса: Работы' : 'Касса: Товары и материалы'})
               </h2>
               <div className="flex flex-wrap gap-3">
                 {selectedIds.length > 0 && (
@@ -965,7 +977,7 @@ export const Finance: React.FC = () => {
                   className="w-full px-3.5 py-2.5 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#F95700]/40 transition-all text-xs cursor-pointer font-medium"
                 >
                   <option value="works">Касса: Работы</option>
-                  <option value="materials">Касса: ЛКМ и расходники</option>
+                  <option value="materials">Касса: Товары и материалы</option>
                 </select>
               </div>
 
@@ -1031,7 +1043,7 @@ export const Finance: React.FC = () => {
                       className="w-full px-3.5 py-2.5 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#F95700]/40 transition-all text-xs cursor-pointer font-medium"
                     >
                       <option value="Оплата от клиента">Оплата от клиента</option>
-                      <option value="Продажа ЛКМ / на сторону">Продажа ЛКМ / на сторону</option>
+                      <option value="Продажа товаров">Продажа товаров</option>
                       <option value="Аванс">Аванс</option>
                       <option value="Инвестиции">Инвестиции</option>
                       <option value="Другое">Другое</option>

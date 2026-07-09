@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Building2, Wallet, Package, PenTool, LogOut, FileText, Sun, Moon, ShieldCheck, Gavel, TrendingUp, Menu, X, Mail, CheckSquare, Bell, Crown, LifeBuoy, HelpCircle, HardHat, Globe, Truck, Wrench, Scissors, CalendarDays } from 'lucide-react';
+import { Lock, LayoutDashboard, Users, Building2, Wallet, Package, LogOut, FileText, Sun, Moon, ShieldCheck, Gavel, TrendingUp, Menu, X, Mail, CheckSquare, Bell, Crown, LifeBuoy, HelpCircle, HardHat, Globe, Truck, Wrench, Scissors, CalendarDays, Tractor, Hammer, Wheat, Sparkles, Bot, Database } from 'lucide-react';
 import { CommandMenu } from './components/CommandMenu';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useToast } from '../components/ui/Toast';
@@ -8,6 +8,7 @@ import { Helmet } from 'react-helmet-async';
 import { useAuth, hasPermission } from './context/AuthContext';
 import { apiClient } from '../api/client';
 import packageJson from '../../package.json';
+import { SetupWizard } from './components/SetupWizard';
 
 export const CRMLayout: React.FC = () => {
   const location = useLocation();
@@ -183,7 +184,8 @@ export const CRMLayout: React.FC = () => {
     setEmailError('');
     setEmailSuccess(null);
     try {
-      const response = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/documents/send-email', {
+      // BUG-001 FIX: использовать порт 8001 (СФЕРА ERP), а не 8000 (устаревший порт ЛЕОНИКА CRM)
+      const response = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8001') + '/documents/send-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -234,7 +236,27 @@ export const CRMLayout: React.FC = () => {
 
   // Get user details and permissions from AuthContext
   const { user, permissions, logout } = useAuth();
+  
+  const { data: billingStatus } = useQuery({
+    queryKey: ['billingStatus'],
+    queryFn: () => apiClient.get('/billing/status'),
+    enabled: !!user && !permissions?.is_superadmin // don't check for superadmin
+  });
+  
+  const isPaywallActive = billingStatus && !billingStatus.is_active && location.pathname !== '/crm/admin';
   const userRole = user?.role || 'manager';
+  
+  // Вычисляем дни до конца подписки для Soft Paywall
+  const daysLeft = useMemo(() => {
+    if (!user?.subscription_ends_at) return null;
+    const endsAt = new Date(user.subscription_ends_at);
+    const now = new Date();
+    const diffTime = endsAt.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  }, [user?.subscription_ends_at]);
+
+  const showSoftPaywall = daysLeft !== null && daysLeft <= 3 && daysLeft > 0 && userRole === 'admin';
   const usernameVal = user?.username ? user.username.charAt(0).toUpperCase() : 'А';
 
   const allMenuItems = [
@@ -244,16 +266,22 @@ export const CRMLayout: React.FC = () => {
     { name: 'Техподдержка', path: '/crm/support', icon: LifeBuoy, module: 'support' },
     { name: 'Аналитика', path: '/crm/analytics', icon: TrendingUp, module: 'analytics' },
     { name: 'Клиенты', path: '/crm/clients', icon: Users, module: 'clients' },
+    { name: 'База лидов', path: '/crm/leads', icon: TrendingUp, module: 'clients' },
     { name: 'Объекты', path: '/crm/objects', icon: Building2, module: 'objects' },
     { name: 'Строительство', path: '/crm/construction', icon: HardHat, module: 'construction' },
     { name: 'Тендеры', path: '/crm/tenders', icon: Gavel, module: 'tenders' },
     { name: 'Финансы', path: '/crm/finance', icon: Wallet, module: 'finance' },
-    { name: 'Снабжение', path: '/crm/supply', icon: Truck, module: null },
+    { name: 'Снабжение', path: '/crm/supply', icon: Truck, module: 'inventory' },
     { name: 'Склад', path: '/crm/inventory', icon: Package, module: 'inventory' },
-    { name: 'Оборудование', path: '/crm/equipment', icon: PenTool, module: 'equipment' },
-    { name: 'ТОиР (Механики)', path: '/crm/service', icon: Wrench, module: null },
-    { name: 'Услуги', path: '/crm/booking/services', icon: Scissors, module: null },
-    { name: 'Расписание', path: '/crm/booking/appointments', icon: CalendarDays, module: null },
+    { name: 'Мебельное производство', path: '/crm/furniture', icon: Hammer, module: 'furniture' },
+    { name: 'Агропромышленность', path: '/crm/agro', icon: Wheat, module: 'agro' },
+    { name: 'Аренда спецтехники', path: '/crm/fleet', icon: Tractor, module: 'fleet' },
+    { name: 'Салон Красоты', path: '/crm/beauty', icon: Sparkles, module: 'beauty' },
+    { name: 'ТОиР (Механики)', path: '/crm/service', icon: Wrench, module: 'service' },
+    { name: 'Услуги', path: '/crm/booking/services', icon: Scissors, module: 'beauty' },
+    { name: 'Расписание', path: '/crm/booking/appointments', icon: CalendarDays, module: 'beauty' },
+    { name: 'ИИ-Агенты', path: '/crm/ai-agents', icon: Bot, module: null },
+    { name: 'База Знаний ИИ', path: '/crm/knowledge-base', icon: Database, module: null },
     { name: 'Шаблоны и Контент', path: '/crm/templates', icon: FileText, module: 'templates' },
     { name: 'Администрирование', path: '/crm/admin', icon: ShieldCheck, module: 'audit' }, // Settings/Audit
     { name: 'Супер-Админ (SaaS)', path: '/crm/superadmin', icon: Crown, isSuperadminOnly: true },
@@ -361,7 +389,7 @@ export const CRMLayout: React.FC = () => {
     const connectWebSocket = () => {
       if (!isMounted) return;
 
-      const apiVal = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const apiVal = import.meta.env.VITE_API_URL || 'http://localhost:8001';
       const wsProtocol = apiVal.startsWith('https') ? 'wss:' : 'ws:';
       const host = apiVal.replace(/^https?:\/\//, '');
       const wsUrl = `${wsProtocol}//${host}/ws/notifications`;
@@ -511,7 +539,14 @@ export const CRMLayout: React.FC = () => {
   });
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-zinc-950 text-[#1a1a1a] dark:text-zinc-100 font-['Inter'] relative overflow-hidden">
+    <>
+      <Helmet>
+        <title>{document.title || settings?.company_name || 'СФЕРА'}</title>
+      </Helmet>
+
+      {user && user.is_onboarded === false && <SetupWizard />}
+
+      <div className="flex h-screen bg-gray-50 dark:bg-zinc-950 text-[#1a1a1a] dark:text-zinc-100 font-['Inter'] relative overflow-hidden">
       <Helmet>
         <link rel="icon" type="image/svg+xml" href="favicon-crm.svg?v=2" />
       </Helmet>
@@ -577,7 +612,7 @@ export const CRMLayout: React.FC = () => {
             })}
           </ul>
         </nav>
-        <div className="p-4 border-t border-gray-200 dark:border-zinc-800 flex flex-col gap-2 bg-gray-50/50 dark:bg-zinc-900/30">
+        <div className="p-4 pb-10 sm:pb-12 border-t border-gray-200 dark:border-zinc-800 flex flex-col gap-2 bg-gray-50/50 dark:bg-zinc-900/30 shrink-0">
           <div className="flex items-center gap-3 relative">
             <div className="relative">
               <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-orange-500 to-[#F95700] text-white flex items-center justify-center font-extrabold text-sm shadow-md shadow-orange-500/10" style={{ backgroundColor: (settings as any).brand_color || '#F95700', backgroundImage: 'none' }}>
@@ -607,7 +642,57 @@ export const CRMLayout: React.FC = () => {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden relative">
+        {/* PAYWALL OVERLAY */}
+        {isPaywallActive && (
+          <div className="absolute inset-0 z-[100] bg-zinc-50/90 dark:bg-zinc-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4">
+            <div className="bg-white dark:bg-zinc-900 border border-red-500/30 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl shadow-red-500/10 animate-in fade-in zoom-in duration-500">
+              <div className="w-16 h-16 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Lock className="w-8 h-8" />
+              </div>
+              <h2 className="text-2xl font-black font-['Montserrat'] text-zinc-900 dark:text-white mb-2">
+                Подписка истекла
+              </h2>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8 leading-relaxed">
+                Пробный период или оплаченный тариф завершился. Для восстановления полного доступа к системе, пожалуйста, оплатите подписку.
+              </p>
+              <div className="space-y-3">
+                {/* BUG-002 FIX: кнопка теперь ведёт в раздел администрирования (вкладка Биллинг) */}
+                <button
+                  onClick={() => navigate('/crm/admin')}
+                  className="w-full py-4 bg-[#F95700] hover:bg-[#CC4400] text-white rounded-xl font-bold font-mono text-xs uppercase tracking-widest transition-colors shadow-lg shadow-[#F95700]/20 cursor-pointer"
+                >
+                  Перейти к оплате →
+                </button>
+                <button onClick={logout} className="w-full py-4 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-xl font-bold font-mono text-xs uppercase tracking-widest transition-colors">
+                  Выйти из аккаунта
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        <div className={`flex-1 flex flex-col overflow-y-auto ${isPaywallActive ? 'opacity-20 pointer-events-none filter blur-sm' : ''}`}>
+        
+        {showSoftPaywall && (
+          <div className="bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 px-4 md:px-8 py-3 border-b border-amber-200 dark:border-amber-800/50 flex items-center justify-between gap-4 text-sm font-medium shrink-0 z-40">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-200 dark:bg-amber-800 shrink-0">
+                <Lock className="w-3.5 h-3.5 text-amber-700 dark:text-amber-300" />
+              </span>
+              <span>
+                Ваш пробный период заканчивается через <strong>{daysLeft} {daysLeft === 1 ? 'день' : 'дня'}</strong>. 
+                Чтобы продолжить использовать все функции системы, пожалуйста, оплатите тариф.
+              </span>
+            </div>
+            <button
+              onClick={() => navigate('/crm/admin')}
+              className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs shadow-sm transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              Перейти к оплате
+            </button>
+          </div>
+        )}
+
         {impersonatedTenant && (
           <div className="bg-gradient-to-r from-amber-600 via-orange-600 to-rose-600 text-white px-4 md:px-8 py-2.5 shadow-md flex items-center justify-between gap-4 text-xs font-mono font-semibold animate-fadeIn shrink-0 z-50">
             <div className="flex items-center gap-2.5 truncate">
@@ -751,6 +836,7 @@ export const CRMLayout: React.FC = () => {
         <div className="flex-1 overflow-auto px-4 md:px-8 pt-4 md:pt-8 pb-16 bg-[#f8f9fa] dark:bg-zinc-950">
           <Outlet />
         </div>
+        </div>
       </main>
 
       {isEmailModalOpen && (
@@ -881,5 +967,6 @@ export const CRMLayout: React.FC = () => {
         </div>
       )}
     </div>
+    </>
   );
 };

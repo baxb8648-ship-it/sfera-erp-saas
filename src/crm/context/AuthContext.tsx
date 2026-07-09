@@ -6,6 +6,9 @@ export interface User {
   role: string;
   telegram_chat_id?: string;
   is_active: number;
+  is_onboarded?: boolean;
+  tenant_id?: number;
+  subscription_ends_at?: string | null;
 }
 
 // ─── RBAC: Матрица прав (загружается из /permissions/my при логине) ─────────
@@ -33,6 +36,15 @@ export function hasPermission(
 ): boolean {
   if (!perms) return false;
   if (perms.is_superadmin) return true;
+  
+  // Base modules always available, specific plugins require plan check
+  const pluginModules = ['furniture', 'construction', 'agro', 'fleet', 'tenders', 'ecommerce', 'beauty'];
+  if (pluginModules.includes(module)) {
+    if (!perms.plan_modules || !perms.plan_modules.includes(module)) {
+      return false; // Not purchased
+    }
+  }
+
   const p = perms.permissions[module];
   if (!p) return false;
   if (action === 'read') return p.can_read;
@@ -52,7 +64,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);

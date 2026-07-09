@@ -10,7 +10,9 @@ router = APIRouter(prefix="/inventory", tags=["Inventory"])
 
 @router.post("/", response_model=InventoryResponse)
 def create_inventory_item(item: InventoryCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_item = InventoryItem(**item.model_dump())
+    data = item.model_dump()
+    data["tenant_id"] = current_user.tenant_id
+    db_item = InventoryItem(**data)
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
@@ -18,18 +20,27 @@ def create_inventory_item(item: InventoryCreate, db: Session = Depends(get_db), 
 
 @router.get("/", response_model=List[InventoryResponse])
 def get_inventory(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return db.query(InventoryItem).offset(skip).limit(limit).all()
+    q = db.query(InventoryItem)
+    if current_user.role != "superadmin":
+        q = q.filter(InventoryItem.tenant_id == current_user.tenant_id)
+    return q.offset(skip).limit(limit).all()
 
 @router.get("/barcode/{barcode}", response_model=InventoryResponse)
 def get_inventory_item_by_barcode(barcode: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_item = db.query(InventoryItem).filter(InventoryItem.barcode == barcode).first()
+    q = db.query(InventoryItem).filter(InventoryItem.barcode == barcode)
+    if current_user.role != "superadmin":
+        q = q.filter(InventoryItem.tenant_id == current_user.tenant_id)
+    db_item = q.first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Товар с таким штрихкодом не найден")
     return db_item
 
 @router.patch("/{item_id}", response_model=InventoryResponse)
 def update_inventory_item(item_id: int, item: InventoryCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+    q = db.query(InventoryItem).filter(InventoryItem.id == item_id)
+    if current_user.role != "superadmin":
+        q = q.filter(InventoryItem.tenant_id == current_user.tenant_id)
+    db_item = q.first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Inventory item not found")
     
@@ -44,7 +55,10 @@ def update_inventory_item(item_id: int, item: InventoryCreate, db: Session = Dep
 
 @router.delete("/{item_id}")
 def delete_inventory_item(item_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+    q = db.query(InventoryItem).filter(InventoryItem.id == item_id)
+    if current_user.role != "superadmin":
+        q = q.filter(InventoryItem.tenant_id == current_user.tenant_id)
+    db_item = q.first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Inventory item not found")
     db.delete(db_item)

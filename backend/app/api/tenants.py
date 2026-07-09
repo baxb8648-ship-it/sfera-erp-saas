@@ -5,7 +5,7 @@ import json
 import logging
 from typing import Optional, List
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 
@@ -13,6 +13,7 @@ from ..database import get_db, current_tenant_id
 from ..models import Tenant, User, Organization
 from .auth import get_password_hash, get_current_user
 from ..utils.rbac import seed_default_permissions
+from ..utils.email_retention import send_welcome_email
 
 logger = logging.getLogger("uvicorn.error")
 router = APIRouter(prefix="/tenants", tags=["SaaS Tenants Management"])
@@ -22,9 +23,11 @@ API_FNS_KEY = os.getenv("API_FNS_KEY")
 class TenantRegister(BaseModel):
     inn: str
     sphere: str  # construction, service, agri, booking
+    region: Optional[str] = None
     admin_username: str
     admin_password: str
     email: Optional[str] = None
+    selected_plugins: List[str] = []
 
 
 class TenantOut(BaseModel):
@@ -132,7 +135,7 @@ def suggest_company_by_inn(inn: str):
 
 
 @router.post("/register", response_model=TenantOut, status_code=201)
-def register_tenant(body: TenantRegister, db: Session = Depends(get_db)):
+def register_tenant(body: TenantRegister, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Регистрирует новую компанию в SaaS и создает её первого администратора"""
     # 1. Проверяем ИНН
     if len(body.inn) not in [10, 12] or not body.inn.isdigit():
@@ -154,6 +157,27 @@ def register_tenant(body: TenantRegister, db: Session = Depends(get_db)):
     details = parse_company_details(raw_fns, body.inn)
     
     try:
+        # Базовые модули Ядра (Core)
+        core_modules = ["clients", "tasks", "objects", "rbac", "analytics", "admin", "templates", "support"]
+        sphere_modules_map = {
+            "construction": ["objects", "construction", "finance", "inventory", "tenders", "equipment"],
+            "beauty_salon": ["beauty", "finance"],
+            "beauty": ["beauty", "finance"],
+            "agro": ["agro", "finance", "equipment", "inventory"],
+            "fleet_rent": ["fleet", "finance", "equipment", "service"],
+            "fleet": ["fleet", "finance", "equipment", "service"],
+            "furniture_production": ["furniture", "inventory", "finance", "objects"],
+            "furniture": ["furniture", "inventory", "finance", "objects"],
+        }
+        sphere_mods = sphere_modules_map.get(body.sphere, [])
+        # Объединяем Ядро с модулями сферы и выбранными плагинами
+        final_modules = list(set(core_modules + sphere_mods + body.selected_plugins))
+        
+        # Если выбраны платные плагины (не пустой список), выдаем Trial на 14 дней
+        trial_ends_at = None
+        if body.selected_plugins:
+            trial_ends_at = datetime.utcnow() + timedelta(days=14)
+
         # 3. Создаем компанию (Tenant)
         new_tenant = Tenant(
             name=details["name"],
@@ -164,7 +188,9 @@ def register_tenant(body: TenantRegister, db: Session = Depends(get_db)):
             address=details["address"],
             director=details["director"],
             sphere=body.sphere,
-            is_active=True
+            is_active=True,
+            plan_modules=final_modules,
+            subscription_ends_at=trial_ends_at
         )
         db.add(new_tenant)
         db.flush() # Получаем ID новой компании
@@ -189,6 +215,7 @@ def register_tenant(body: TenantRegister, db: Session = Depends(get_db)):
             address=details["address"],
             director=details["director"],
             email=body.email,
+            regions=body.region,
             is_active=1
         )
         db.add(new_org)
@@ -200,12 +227,63 @@ def register_tenant(body: TenantRegister, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(new_tenant)
         logger.info(f"[SaaS Tenant] Registered new tenant: {new_tenant.name} (ID: {new_tenant.id}, Sphere: {new_tenant.sphere})")
+        
+        # Отправляем приветственное письмо в фоне
+        if body.email:
+            background_tasks.add_task(
+                send_welcome_email, 
+                db=db, 
+                to_email=body.email, 
+                company_name=details["name"] or body.inn, 
+                admin_username=body.admin_username
+            )
+            # Отмечаем, что письмо отправлено (или будет отправлено)
+            new_tenant.welcome_email_sent = True
+            db.commit()
+
         return new_tenant
         
     except Exception as e:
         db.rollback()
         logger.error(f"[SaaS Tenant] Registration failed: {e}")
         raise HTTPException(status_code=500, detail=f"Ошибка регистрации компании: {e}")
+
+class OnboardingBody(BaseModel):
+    inn: str
+    name: str
+    sphere: str
+
+@router.put("/onboarding")
+def onboard_tenant(body: OnboardingBody, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    tenant = db.query(Tenant).filter(Tenant.id == current_user.tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Компания не найдена")
+    
+    tenant.inn = body.inn
+    tenant.name = body.name
+    tenant.sphere = body.sphere
+
+    # Назначаем модули в зависимости от сферы
+    base_modules = ["clients", "tasks", "rbac", "analytics", "admin", "templates"]
+    
+    if body.sphere in ("construction",):
+        tenant.plan_modules = base_modules + ["objects", "construction", "finance", "inventory", "tenders", "equipment"]
+    elif body.sphere in ("beauty", "beauty_salon"):
+        tenant.plan_modules = base_modules + ["beauty", "finance"]
+    elif body.sphere in ("agro",):
+        tenant.plan_modules = base_modules + ["agro", "finance", "equipment", "inventory"]
+    elif body.sphere in ("fleet", "fleet_rent"):
+        tenant.plan_modules = base_modules + ["fleet", "finance", "equipment", "service"]
+    elif body.sphere in ("furniture", "furniture_production"):
+        tenant.plan_modules = base_modules + ["furniture", "inventory", "finance", "objects"]
+    else:
+        tenant.plan_modules = None # Все модули (если универсальная или неизвестно)
+
+    tenant.is_onboarded = True
+    db.commit()
+    db.refresh(tenant)
+
+    return {"message": "Онбординг успешно завершен", "is_onboarded": True, "plan_modules": tenant.plan_modules}
 
 
 class TenantAdminOut(BaseModel):

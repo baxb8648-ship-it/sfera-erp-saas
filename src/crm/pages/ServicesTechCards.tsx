@@ -9,6 +9,7 @@ interface InventoryItem {
     name: string;
     unit: string;
     quantity: number;
+    inventory_type?: string;
 }
 
 interface TechCardItem {
@@ -242,7 +243,7 @@ export default function ServicesTechCards() {
                                         }}
                                     >
                                         <option value={0} disabled>Выберите ТМЦ со склада...</option>
-                                        {inventory.map(inv => (
+                                        {inventory.filter(inv => !inv.inventory_type || inv.inventory_type === 'b2c_service' || inv.inventory_type === 'general').map(inv => (
                                             <option key={inv.id} value={inv.id}>{inv.name} (остаток: {inv.quantity} {inv.unit})</option>
                                         ))}
                                     </select>

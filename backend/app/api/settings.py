@@ -80,20 +80,21 @@ DEFAULT_SETTINGS = {
 Представитель: {{client_contact}} /_________________/"""
 }
 
-def ensure_active_organization(db: Session) -> Organization:
-    # Check if we have active organization
-    org = db.query(Organization).filter(Organization.is_active == 1).first()
+def ensure_active_organization(db: Session, tenant_id: int = None) -> Organization:
+    query = db.query(Organization)
+    if tenant_id:
+        query = query.filter(Organization.tenant_id == tenant_id)
+    org = query.filter(Organization.is_active == 1).first()
     if org:
         return org
         
-    org = db.query(Organization).first()
+    org = query.first()
     if org:
         org.is_active = 1
         db.commit()
         db.refresh(org)
         return org
         
-    # None exist, migrate from CompanySetting or default
     org_data = {}
     for key in [
         "company_name", "company_subtitle", "company_legal_name", "company_inn",
@@ -102,10 +103,14 @@ def ensure_active_organization(db: Session) -> Organization:
         "company_bank_name", "company_bik", "company_rs", "company_ks",
         "company_bank_name_materials", "company_bik_materials", "company_rs_materials", "company_ks_materials"
     ]:
-        db_val = db.query(CompanySetting).filter(CompanySetting.key == key).first()
+        cs_query = db.query(CompanySetting).filter(CompanySetting.key == key)
+        if tenant_id:
+            cs_query = cs_query.filter(CompanySetting.tenant_id == tenant_id)
+        db_val = cs_query.first()
         org_data[key] = db_val.value if db_val else DEFAULT_SETTINGS.get(key)
         
     new_org = Organization(
+        tenant_id=tenant_id,
         name=org_data.get("company_name", "СФЕРА"),
         subtitle=org_data.get("company_subtitle"),
         legal_name=org_data.get("company_legal_name"),
@@ -137,8 +142,8 @@ def ensure_active_organization(db: Session) -> Organization:
     return new_org
 
 @router.get("/")
-def get_settings(db: Session = Depends(get_db)):
-    active_org = ensure_active_organization(db)
+def get_settings(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    active_org = ensure_active_organization(db, tenant_id=current_user.tenant_id)
     
     settings_dict = {
         "company_name": active_org.name or "",
@@ -168,9 +173,12 @@ def get_settings(db: Session = Depends(get_db)):
         "contract_template", "smtp_host", "smtp_port", "smtp_user", "smtp_password", "smtp_use_ssl",
         "email_template_contract", "email_template_act", "email_template_kp", "email_template_invoice", "email_template_other",
         "invoice_disclaimer", "factura_disclaimer", "upd_disclaimer", "dadata_api_key", "telegram_bot_token", "telegram_channel_id",
-        "tender_sync_mode"
+        "tender_sync_mode", "brand_name", "brand_color", "brand_logo_url"
     ]:
-        db_setting = db.query(CompanySetting).filter(CompanySetting.key == key).first()
+        cs_query = db.query(CompanySetting).filter(CompanySetting.key == key)
+        if current_user.tenant_id:
+            cs_query = cs_query.filter(CompanySetting.tenant_id == current_user.tenant_id)
+        db_setting = cs_query.first()
         settings_dict[key] = db_setting.value if db_setting else DEFAULT_SETTINGS.get(key)
         
     return settings_dict
@@ -179,7 +187,7 @@ def get_settings(db: Session = Depends(get_db)):
 def save_settings(payload: Dict[str, str], db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Только администратор может изменять настройки")
-    active_org = ensure_active_organization(db)
+    active_org = ensure_active_organization(db, tenant_id=current_user.tenant_id)
     
     # Update active organization fields
     if "company_name" in payload: active_org.name = payload["company_name"]
@@ -208,11 +216,14 @@ def save_settings(payload: Dict[str, str], db: Session = Depends(get_db), curren
     # Update general settings in CompanySetting
     for key, value in payload.items():
         if not key.startswith("company_"):
-            db_setting = db.query(CompanySetting).filter(CompanySetting.key == key).first()
+            cs_query = db.query(CompanySetting).filter(CompanySetting.key == key)
+            if current_user.tenant_id:
+                cs_query = cs_query.filter(CompanySetting.tenant_id == current_user.tenant_id)
+            db_setting = cs_query.first()
             if db_setting:
                 db_setting.value = value
             else:
-                db_setting = CompanySetting(key=key, value=value)
+                db_setting = CompanySetting(key=key, value=value, tenant_id=current_user.tenant_id)
                 db.add(db_setting)
                 
     db.commit()

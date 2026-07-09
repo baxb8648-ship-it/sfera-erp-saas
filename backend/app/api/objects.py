@@ -125,9 +125,12 @@ def consume_material(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    db_obj = db.query(Object).filter(Object.id == obj_id).first()
+    q_obj = db.query(Object).filter(Object.id == obj_id)
+    if current_user.role != "superadmin":
+        q_obj = q_obj.filter(Object.tenant_id == current_user.tenant_id)
+    db_obj = q_obj.first()
     if not db_obj:
-        raise HTTPException(status_code=404, detail="Объект не найден")
+        raise HTTPException(status_code=404, detail="Объект не найден или недоступен")
         
     inv_item = db.query(InventoryItem).filter(InventoryItem.id == consumption.inventory_id).first()
     if not inv_item:
@@ -163,9 +166,12 @@ def get_object_consumptions(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    db_obj = db.query(Object).filter(Object.id == obj_id).first()
+    q_obj = db.query(Object).filter(Object.id == obj_id)
+    if current_user.role != "superadmin":
+        q_obj = q_obj.filter(Object.tenant_id == current_user.tenant_id)
+    db_obj = q_obj.first()
     if not db_obj:
-        raise HTTPException(status_code=404, detail="Объект не найден")
+        raise HTTPException(status_code=404, detail="Объект не найден или недоступен")
     return db_obj.material_consumptions
 
 
@@ -178,6 +184,10 @@ def delete_material_consumption(
     db_consumption = db.query(MaterialConsumption).filter(MaterialConsumption.id == consumption_id).first()
     if not db_consumption:
         raise HTTPException(status_code=404, detail="Запись о списании не найдена")
+        
+    db_obj = db.query(Object).filter(Object.id == db_consumption.object_id).first()
+    if current_user.role != "superadmin" and db_obj and db_obj.tenant_id != current_user.tenant_id:
+        raise HTTPException(status_code=403, detail="Нет прав для отмены списания по данному объекту")
         
     inv_item = db.query(InventoryItem).filter(InventoryItem.id == db_consumption.inventory_id).first()
     if inv_item:

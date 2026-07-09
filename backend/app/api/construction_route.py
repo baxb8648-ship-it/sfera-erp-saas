@@ -128,6 +128,13 @@ def add_estimate_item(object_id: int, payload: EstimateItemSchema, db: Session =
 
 @router.get("/objects/{object_id}/daily-reports", response_model=List[DailyReportResponseSchema])
 def get_daily_reports(object_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    q = db.query(Object).filter(Object.id == object_id)
+    if current_user.role != "superadmin":
+        q = q.filter(Object.tenant_id == current_user.tenant_id)
+    obj = q.first()
+    if not obj:
+        raise HTTPException(status_code=404, detail="Object not found")
+
     reports = db.query(DailyReport).filter(DailyReport.object_id == object_id).order_by(DailyReport.date.desc()).all()
     res = []
     for r in reports:

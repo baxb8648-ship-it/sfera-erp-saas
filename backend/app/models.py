@@ -23,6 +23,10 @@ class Tenant(Base):
     sphere = Column(String, default="construction")             # Сфера деятельности: construction, service, agri, booking
     is_active = Column(Boolean, default=True)                   # Активность (блокировка за неуплату)
     subscription_ends_at = Column(DateTime, nullable=True)      # Срок действия подписки
+    is_onboarded = Column(Boolean, default=False)               # Пройден ли Setup Wizard
+    welcome_email_sent = Column(Boolean, default=False)
+    day7_email_sent = Column(Boolean, default=False)
+    trial_ending_email_sent = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     # Список модулей, доступных по тарифу (динамический сайдбар)
     # Пример: ["clients", "tasks", "objects", "finance", "tenders", "analytics", "inventory", "equipment", "templates"]
@@ -221,6 +225,12 @@ class User(Base):
     smtp_password = Column(String, nullable=True)
     smtp_use_ssl = Column(Integer, default=1)
 
+    tenant = relationship("Tenant")
+
+    @property
+    def is_onboarded(self):
+        return self.tenant.is_onboarded if self.tenant else True
+
 class AuthLog(Base):
     __tablename__ = "auth_logs"
     
@@ -307,6 +317,7 @@ class InventoryItem(Base):
     quantity = Column(Float, default=0.0)
     unit = Column(String, default="шт")
     category = Column(String, nullable=True)
+    inventory_type = Column(String, default="general") # general, b2c_service, b2b_machinery, construction
     barcode = Column(String, unique=True, index=True, nullable=True)
 
 class EquipmentItem(Base):
@@ -1013,6 +1024,14 @@ class TechCardItem(Base):
     service = relationship("BookingService", back_populates="tech_cards")
     inventory_item = relationship("InventoryItem")
 
+    @property
+    def inventory_name(self):
+        return self.inventory_item.name if self.inventory_item else None
+
+    @property
+    def inventory_unit(self):
+        return self.inventory_item.unit if self.inventory_item else None
+
 class Appointment(Base):
     """Запись клиента на услугу (Бронирование)"""
     __tablename__ = "appointments"
@@ -1035,3 +1054,257 @@ class Appointment(Base):
 
     service = relationship("BookingService")
     master = relationship("User")
+
+# ==========================================
+# ФАЗА 10: Агропромышленный SaaS-модуль
+# ==========================================
+
+class AgroCrop(Base):
+    __tablename__ = "agro_crops"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, nullable=False, index=True)
+    name = Column(String, nullable=False)
+    variety = Column(String)
+    expected_yield = Column(Float, default=0.0)
+
+class AgroField(Base):
+    __tablename__ = "agro_fields"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, nullable=False, index=True)
+    name = Column(String, nullable=False)
+    area_hectares = Column(Float, default=0.0)
+    soil_type = Column(String)
+    geo_json = Column(Text)
+    is_active = Column(Integer, default=1)
+
+class AgroSeason(Base):
+    __tablename__ = "agro_seasons"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, nullable=False, index=True)
+    name = Column(String, nullable=False)
+    start_date = Column(DateTime)
+    end_date = Column(DateTime)
+    is_active = Column(Integer, default=1)
+
+class AgroSeeding(Base):
+    __tablename__ = "agro_seedings"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, nullable=False, index=True)
+    field_id = Column(Integer, ForeignKey("agro_fields.id"))
+    crop_id = Column(Integer, ForeignKey("agro_crops.id"))
+    season_id = Column(Integer, ForeignKey("agro_seasons.id"))
+    planted_area = Column(Float, default=0.0)
+
+    field = relationship("AgroField")
+    crop = relationship("AgroCrop")
+    season = relationship("AgroSeason")
+
+class AgroOperation(Base):
+    __tablename__ = "agro_operations"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, nullable=False, index=True)
+    seeding_id = Column(Integer, ForeignKey("agro_seedings.id"), nullable=True)
+    field_id = Column(Integer, ForeignKey("agro_fields.id"))
+    operation_type = Column(String) # Посев, Удобрение, СЗР, Уборка, Вспашка
+    date = Column(DateTime)
+    equipment_id = Column(Integer, ForeignKey("equipment.id"), nullable=True)
+    operator_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    fuel_consumed = Column(Float, default=0.0)
+    inventory_item_id = Column(Integer, ForeignKey("inventory.id"), nullable=True)
+    inventory_quantity = Column(Float, default=0.0)
+    status = Column(String, default="planned") # planned, in_progress, completed
+
+    seeding = relationship("AgroSeeding")
+    field = relationship("AgroField")
+    equipment = relationship("EquipmentItem")
+    operator = relationship("User")
+    inventory = relationship("InventoryItem")
+
+# ==========================================
+# ФАЗА 10.1: Животноводство (КРС / МРС)
+# ==========================================
+
+class AgroLivestock(Base):
+    __tablename__ = "agro_livestock"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, nullable=False, index=True)
+    animal_type = Column(String) # КРС, МРС, Птица
+    tracking_type = Column(String, default="individual") # individual, herd
+    tag_number = Column(String, nullable=True) # Бирка
+    herd_name = Column(String, nullable=True) # Название стада
+    quantity = Column(Integer, default=1)
+    birth_date = Column(DateTime, nullable=True)
+    current_weight = Column(Float, default=0.0)
+    status = Column(String, default="active") # active, sick, sold, dead
+
+class AgroLivestockHealth(Base):
+    __tablename__ = "agro_livestock_health"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, nullable=False, index=True)
+    livestock_id = Column(Integer, ForeignKey("agro_livestock.id"))
+    record_type = Column(String) # vaccine, inspection, certificate
+    date = Column(DateTime)
+    description = Column(Text)
+    veterinarian = Column(String, nullable=True)
+
+    livestock = relationship("AgroLivestock")
+
+class AgroLivestockFeed(Base):
+    __tablename__ = "agro_livestock_feed"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, nullable=False, index=True)
+    livestock_id = Column(Integer, ForeignKey("agro_livestock.id"))
+    date = Column(DateTime)
+    inventory_item_id = Column(Integer, ForeignKey("inventory.id"))
+    quantity = Column(Float)
+    operator_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    livestock = relationship("AgroLivestock")
+    inventory = relationship("InventoryItem")
+    operator = relationship("User")
+
+# ==========================================
+# ФАЗА 2.1: Серийное мебельное производство (BOM / MRP)
+# ==========================================
+
+class FurnitureProduct(Base):
+    __tablename__ = "furniture_products"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, nullable=False, index=True)
+    name = Column(String, index=True)
+    description = Column(Text, nullable=True)
+    weight = Column(Float, default=0.0) # Вес в кг
+    image_url = Column(String, nullable=True)
+    pdf_url = Column(String, nullable=True) # Чертежи
+    base_price = Column(Float, default=0.0) # Продажная цена
+
+class FurnitureBOM(Base):
+    __tablename__ = "furniture_bom"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, nullable=False, index=True)
+    product_id = Column(Integer, ForeignKey("furniture_products.id"))
+    inventory_item_id = Column(Integer, ForeignKey("inventory.id"))
+    quantity = Column(Float, nullable=False) # Кол-во для 1 изделия
+    operation_stage = Column(String, nullable=True) # На каком этапе списывать (раскрой, кромка, сборка)
+
+    product = relationship("FurnitureProduct")
+    inventory = relationship("InventoryItem")
+
+class FurnitureOrder(Base):
+    __tablename__ = "furniture_orders"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, nullable=False, index=True)
+    product_id = Column(Integer, ForeignKey("furniture_products.id"))
+    quantity = Column(Integer, default=1)
+    status = Column(String, default="planned") # planned, in_progress, qc, completed
+    created_at = Column(DateTime)
+    completed_at = Column(DateTime, nullable=True)
+
+    product = relationship("FurnitureProduct")
+
+class FurnitureOrderOperation(Base):
+    __tablename__ = "furniture_order_operations"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, nullable=False, index=True)
+    order_id = Column(Integer, ForeignKey("furniture_orders.id"))
+    operation_name = Column(String) # Раскрой, Кромка, Присадка, Сварка, Покраска, Сборка, Упаковка, ОТК
+    status = Column(String, default="pending") # pending, in_progress, completed
+    completed_at = Column(DateTime, nullable=True)
+    operator_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    order = relationship("FurnitureOrder")
+    operator = relationship("User")
+
+
+# ═══════════════════════════════════════════════════════
+# МОНЕТИЗАЦИЯ: ИИ-АГЕНТЫ (3 бесплатных + платные)
+# ═══════════════════════════════════════════════════════
+
+class AgentCatalog(Base):
+    """
+    Каталог всех доступных ИИ-агентов платформы.
+    Статические данные — заполняются при инициализации системы.
+    tier: free | paid
+    """
+    __tablename__ = "agent_catalog"
+
+    id            = Column(Integer, primary_key=True, index=True)
+    slug          = Column(String, unique=True, nullable=False, index=True)  # crm_assistant, tender_scout, gap_detector ...
+    name          = Column(String, nullable=False)       # Отображаемое имя
+    description   = Column(Text, nullable=True)          # Описание функционала
+    icon          = Column(String, nullable=True)         # emoji или url иконки
+    category      = Column(String, nullable=False)        # crm, sales, finance, logistics, construction, agro
+    tier          = Column(String, default="paid")        # free | paid
+    price_monthly = Column(Float, nullable=True)          # Цена/месяц (None для бесплатных)
+    monthly_limit = Column(Integer, nullable=True)        # Лимит запросов/мес для free (None = безлимит)
+    is_active     = Column(Boolean, default=True)
+    sort_order    = Column(Integer, default=0)
+    created_at    = Column(DateTime, default=datetime.utcnow)
+
+
+class TenantAgentSubscription(Base):
+    """
+    Подписка конкретного тенанта на ИИ-агента.
+    Для free-агентов создаётся автоматически при регистрации тенанта.
+    Для платных — создаётся при оплате.
+    """
+    __tablename__ = "tenant_agent_subscriptions"
+
+    id            = Column(Integer, primary_key=True, index=True)
+    tenant_id     = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    agent_id      = Column(Integer, ForeignKey("agent_catalog.id"), nullable=False)
+    status        = Column(String, default="active")    # active | suspended | cancelled
+    # Для free: None (бессрочно), для paid: дата окончания оплаченного периода
+    expires_at    = Column(DateTime, nullable=True)
+    created_at    = Column(DateTime, default=datetime.utcnow)
+
+    tenant = relationship("Tenant")
+    agent  = relationship("AgentCatalog")
+
+
+class AgentUsageLog(Base):
+    """
+    Лог каждого вызова ИИ-агента по тенанту.
+    Используется для:
+    - Контроля месячных лимитов (free-агенты)
+    - Аналитики платформы (SuperAdmin)
+    - Биллинга по usage (будущее)
+    """
+    __tablename__ = "agent_usage_log"
+
+    id            = Column(Integer, primary_key=True, index=True)
+    tenant_id     = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    user_id       = Column(Integer, ForeignKey("users.id"), nullable=True)
+    agent_id      = Column(Integer, ForeignKey("agent_catalog.id"), nullable=False, index=True)
+    agent_slug    = Column(String, nullable=False, index=True)  # Дублируем для быстрых агрегаций
+    # Контекст вызова
+    input_tokens  = Column(Integer, nullable=True)
+    output_tokens = Column(Integer, nullable=True)
+    latency_ms    = Column(Integer, nullable=True)
+    status        = Column(String, default="success")    # success | error | limit_exceeded
+    error_detail  = Column(Text, nullable=True)
+    # Временная метка
+    called_at     = Column(DateTime, default=datetime.utcnow, index=True)
+
+    tenant = relationship("Tenant")
+    user   = relationship("User")
+    agent  = relationship("AgentCatalog")
+
+
+class KnowledgeBaseDocument(Base):
+    """
+    Хранит информацию о загруженных в Pinecone документах (RAG-база).
+    Используется для вывода списка загруженных файлов и подсчета лимитов.
+    """
+    __tablename__ = "knowledge_base_documents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    doc_id_pinecone = Column(String, unique=True, index=True, nullable=False) # ID в Pinecone
+    title = Column(String, nullable=False)
+    filename = Column(String, nullable=True)
+    category = Column(String, default="general")
+    chunks_count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    tenant = relationship("Tenant")

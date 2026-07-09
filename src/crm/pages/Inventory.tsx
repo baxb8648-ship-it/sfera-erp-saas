@@ -3,6 +3,7 @@ import { Plus, Search, Edit2, Trash2, X, AlertTriangle, Package, Check, RefreshC
 import { Html5Qrcode } from 'html5-qrcode';
 import { Helmet } from 'react-helmet-async';
 import QRCode from 'qrcode';
+import { apiClient } from '../../api/client';
 
 interface InventoryItem {
   id: number;
@@ -275,11 +276,8 @@ export const Inventory: React.FC = () => {
         }
       } else {
         try {
-          const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || 'http://localhost:8000') + ''}/inventory/barcode/${encodeURIComponent(decodedText)}`, {
-            headers: {}
-          });
-          if (response.ok) {
-            const matchedItem = await response.json();
+          const matchedItem = await apiClient.get(`/inventory/barcode/${encodeURIComponent(decodedText)}`);
+          if (matchedItem) {
             playBeep();
             await stopScannerInternal();
             setIsScannerOpen(false);
@@ -292,7 +290,8 @@ export const Inventory: React.FC = () => {
             setScannerError('');
           }
         } catch (e) {
-          setScannerError("Ошибка поиска штрихкода на сервере");
+          setUnregisteredBarcode(decodedText);
+          setScannerError('');
         }
       }
     }
@@ -357,11 +356,8 @@ export const Inventory: React.FC = () => {
         setIsScanAdjustOpen(true);
       } else {
         try {
-          const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || 'http://localhost:8000') + ''}/inventory/barcode/${encodeURIComponent(barcode)}`, {
-            headers: {}
-          });
-          if (response.ok) {
-            const matchedItem = await response.json();
+          const matchedItem = await apiClient.get(`/inventory/barcode/${encodeURIComponent(barcode)}`);
+          if (matchedItem) {
             setScannedItem(matchedItem);
             setAdjustmentQty('1');
             setAdjustmentError('');
@@ -450,28 +446,16 @@ export const Inventory: React.FC = () => {
       return;
     }
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || 'http://localhost:8000') + ''}/inventory/${scannedItem.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: scannedItem.name,
-          quantity: targetQty,
-          unit: scannedItem.unit,
-          category: scannedItem.category
-        })
+      await apiClient.patch(`/inventory/${scannedItem.id}`, {
+        name: scannedItem.name,
+        quantity: targetQty,
+        unit: scannedItem.unit,
+        category: scannedItem.category
       });
-
-      if (response.ok) {
-        setIsScanAdjustOpen(false);
-        fetchInventory();
-      } else {
-        const err = await response.json();
-        setAdjustmentError(err.detail || 'Не удалось обновить остаток');
-      }
-    } catch (err) {
-      setAdjustmentError('Сетевая ошибка при обновлении остатка');
+      setIsScanAdjustOpen(false);
+      fetchInventory();
+    } catch (err: any) {
+      setAdjustmentError(err?.message || 'Не удалось обновить остаток');
     }
   };
 
@@ -494,42 +478,24 @@ export const Inventory: React.FC = () => {
       return;
     }
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || 'http://localhost:8000') + ''}/inventory/${scannedItem.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: scannedItem.name,
-          quantity: targetQty,
-          unit: scannedItem.unit,
-          category: scannedItem.category
-        })
+      await apiClient.patch(`/inventory/${scannedItem.id}`, {
+        name: scannedItem.name,
+        quantity: targetQty,
+        unit: scannedItem.unit,
+        category: scannedItem.category
       });
-
-      if (response.ok) {
-        setIsScanAdjustOpen(false);
-        fetchInventory();
-      } else {
-        const err = await response.json();
-        setAdjustmentError(err.detail || 'Не удалось обновить остаток');
-      }
-    } catch (err) {
-      setAdjustmentError('Сетевая ошибка при обновлении остатка');
+      setIsScanAdjustOpen(false);
+      fetchInventory();
+    } catch (err: any) {
+      setAdjustmentError(err?.message || 'Не удалось обновить остаток');
     }
   };
 
   const fetchInventory = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/inventory/', {
-        headers: {
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setItems(data);
-      }
+      const data = await apiClient.get('/inventory/');
+      setItems(data || []);
     } catch (e) {
       console.error('Failed to fetch inventory', e);
     } finally {
@@ -578,36 +544,25 @@ export const Inventory: React.FC = () => {
       setFormError('Количество должно быть неотрицательным числом');
       return;
     }
-    const url = modalType === 'create' 
-      ? (import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/inventory/' 
-      : `${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || 'http://localhost:8000') + ''}/inventory/${currentItemId}`;
-    
-    const method = modalType === 'create' ? 'POST' : 'PATCH';
+
+    const payload = {
+      name: formData.name,
+      quantity: qty,
+      unit: formData.unit,
+      category: formData.category,
+      barcode: formData.barcode.trim() || null
+    };
 
     try {
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          quantity: qty,
-          unit: formData.unit,
-          category: formData.category,
-          barcode: formData.barcode.trim() || null
-        })
-      });
-
-      if (response.ok) {
-        setIsModalOpen(false);
-        fetchInventory();
+      if (modalType === 'create') {
+        await apiClient.post('/inventory/', payload);
       } else {
-        const errData = await response.json();
-        setFormError(errData.detail || 'Ошибка при сохранении');
+        await apiClient.patch(`/inventory/${currentItemId}`, payload);
       }
-    } catch (err) {
-      setFormError('Сбой сети при отправке данных');
+      setIsModalOpen(false);
+      fetchInventory();
+    } catch (err: any) {
+      setFormError(err?.message || 'Ошибка при сохранении');
     }
   };
 
@@ -616,28 +571,15 @@ export const Inventory: React.FC = () => {
     if (!item) return;
 
     const newQty = Math.max(0, item.quantity + delta);
-    
-    // Update local state instantly for snappiness
     setItems(prev => prev.map(i => i.id === id ? { ...i, quantity: newQty } : i));
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || 'http://localhost:8000') + ''}/inventory/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: item.name,
-          quantity: newQty,
-          unit: item.unit,
-          category: item.category
-        })
+      await apiClient.patch(`/inventory/${id}`, {
+        name: item.name,
+        quantity: newQty,
+        unit: item.unit,
+        category: item.category
       });
-
-      if (!response.ok) {
-        // Rollback on error
-        fetchInventory();
-      }
     } catch (e) {
       console.error(e);
       fetchInventory();
@@ -646,16 +588,10 @@ export const Inventory: React.FC = () => {
 
   const handleDeleteItem = async (id: number) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || 'http://localhost:8000') + ''}/inventory/${id}`, {
-        method: 'DELETE',
-        headers: {
-        }
-      });
-      if (response.ok) {
-        setDeleteId(null);
-        setSelectedIds(prev => prev.filter(item_id => item_id !== id));
-        fetchInventory();
-      }
+      await apiClient.delete(`/inventory/${id}`);
+      setDeleteId(null);
+      setSelectedIds(prev => prev.filter(item_id => item_id !== id));
+      fetchInventory();
     } catch (e) {
       console.error('Failed to delete item', e);
     }
@@ -670,9 +606,7 @@ export const Inventory: React.FC = () => {
     setIsBulkDeleteModalOpen(false);
     try {
       for (const id of selectedIds) {
-        await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/inventory/${id}`, {
-          method: 'DELETE'
-        });
+        await apiClient.delete(`/inventory/${id}`);
       }
       setSelectedIds([]);
       fetchInventory();
