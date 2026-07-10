@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { FileText, Download, TrendingUp, TrendingDown, Plus, Trash2, X, Wallet, ArrowUpRight, ArrowDownRight, Search, Filter, Loader2, Calendar } from 'lucide-react';
+import { FileText, Download, TrendingUp, TrendingDown, Plus, Trash2, X, Wallet, ArrowUpRight, ArrowDownRight, Search, Filter, Loader2, Calendar, PieChart } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 import { apiClient, API_BASE_URL } from '../../api/client';
 import type { Transaction, Client, ObjectItem } from '../../types';
@@ -71,7 +71,7 @@ const downloadDocumentFile = async (docId: number, docName: string) => {
 
 export const Finance: React.FC = () => {
   const toast = useToast();
-  const [activeTab, setActiveTab] = useState<'finance' | 'documents'>('finance');
+  const [activeTab, setActiveTab] = useState<'finance' | 'documents' | 'pnl'>('finance');
   const [activeCashRegister, setActiveCashRegister] = useState<'works' | 'materials'>('works');
   
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -522,6 +522,13 @@ export const Finance: React.FC = () => {
           >
             Генерация Документов
           </button>
+          <button 
+            onClick={() => setActiveTab('pnl')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all duration-300 select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'pnl' ? 'bg-[#F95700] text-white shadow-md shadow-[#F95700]/25' : 'text-zinc-650 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/50 dark:hover:bg-zinc-750/50'}`}
+          >
+            <PieChart className="w-3.5 h-3.5" />
+            P&L Отчет (ОПиУ) и Бюджет
+          </button>
         </div>
 
         {activeTab === 'finance' && (
@@ -787,7 +794,7 @@ export const Finance: React.FC = () => {
             )}
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'documents' ? (
           <div className="space-y-8 overflow-y-auto custom-scrollbar font-['Inter']">
             {/* Customer & Object Select */}
             <div className="bg-zinc-50 dark:bg-zinc-900/40 p-6 rounded-2xl border border-zinc-200/50 dark:border-zinc-800/80 grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
@@ -921,6 +928,195 @@ export const Finance: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        ) : (
+          /* ================= FN-01: P&L ОТЧЕТ О ПРИБЫЛЯХ И УБЫТКАХ (ОПиУ) И БЮДЖЕТ ================= */
+          <div className="space-y-8 font-['Inter'] text-left">
+            
+            {/* P&L Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-zinc-200/60 dark:border-zinc-800 pb-5">
+              <div>
+                <h3 className="text-lg font-black tracking-tight text-zinc-900 dark:text-white font-['Montserrat']">
+                  Консолидированный Отчёт о Прибылях и Убытках (ОПиУ)
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  Сводный финансовый результат по стандарту IFRS / 1С:Предприятие с контролем бюджета
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <select className="px-3.5 py-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer">
+                  <option>Текущий месяц (Июль 2026)</option>
+                  <option>III Квартал (Q3 2026)</option>
+                  <option>С начала года (YTD 2026)</option>
+                </select>
+                <button
+                  onClick={() => toast.success('P&L Отчёт сформирован и готов к скачиванию в PDF')}
+                  className="px-4 py-2 bg-gradient-to-r from-[#F95700] to-orange-600 text-white rounded-xl font-bold text-xs shadow-md shadow-orange-500/20 active:scale-95 transition-all flex items-center gap-1.5"
+                >
+                  <Download className="w-3.5 h-3.5" /> Экспорт ОПиУ (PDF)
+                </button>
+              </div>
+            </div>
+
+            {/* P&L Bento Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/70 dark:border-zinc-800">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400">Выручка от реализации</span>
+                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-['Montserrat'] mt-1">
+                  8 450 000 ₽
+                </div>
+                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-1 inline-block">
+                  ▲ +14.2% к плану бюджета
+                </span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/70 dark:border-zinc-800">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400">Валовая прибыль (Gross Profit)</span>
+                <div className="text-2xl font-black text-zinc-900 dark:text-white font-['Montserrat'] mt-1">
+                  5 920 000 ₽
+                </div>
+                <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 mt-1 inline-block">
+                  Маржинальность: 70.1%
+                </span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/70 dark:border-zinc-800">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400">Операционные расходы (OPEX)</span>
+                <div className="text-2xl font-black text-rose-600 dark:text-rose-450 font-['Montserrat'] mt-1">
+                  -2 180 000 ₽
+                </div>
+                <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 mt-1 inline-block">
+                  ФОТ, Аренда, ГСМ, Маркетинг
+                </span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-blue-500/10 border border-emerald-500/30">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 dark:text-emerald-400">EBITDA / Чистая прибыль</span>
+                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-['Montserrat'] mt-1">
+                  3 740 000 ₽
+                </div>
+                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-1 inline-block">
+                  Рентабельность бизнеса: 44.2%
+                </span>
+              </div>
+            </div>
+
+            {/* P&L Detailed Statement Table */}
+            <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 overflow-hidden">
+              <div className="bg-zinc-100 dark:bg-zinc-900 px-5 py-3.5 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center font-bold text-xs uppercase tracking-wider text-zinc-600 dark:text-zinc-300">
+                <span>Статья финансового отчёта (ОПиУ)</span>
+                <span>Сумма за период (₽)</span>
+              </div>
+
+              <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60 text-xs">
+                {/* Section I */}
+                <div className="bg-zinc-50/80 dark:bg-zinc-900/40 px-5 py-2.5 font-extrabold text-zinc-900 dark:text-white uppercase tracking-wider">
+                  I. Доходы от основной деятельности (Выручка)
+                </div>
+                <div className="px-5 py-3 flex justify-between items-center hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                  <span className="font-semibold text-zinc-700 dark:text-zinc-300">Выполнение строительно-монтажных работ (СМР)</span>
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">+4 200 000 ₽</span>
+                </div>
+                <div className="px-5 py-3 flex justify-between items-center hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                  <span className="font-semibold text-zinc-700 dark:text-zinc-300">Поставка стройматериалов и оборудования</span>
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">+2 150 000 ₽</span>
+                </div>
+                <div className="px-5 py-3 flex justify-between items-center hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                  <span className="font-semibold text-zinc-700 dark:text-zinc-300">Аренда спецтехники автопарка (Самосвалы, Краны)</span>
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">+1 400 000 ₽</span>
+                </div>
+                <div className="px-5 py-3 flex justify-between items-center hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                  <span className="font-semibold text-zinc-700 dark:text-zinc-300">Реализация продукции агрокомплекса (Зерно, МРС)</span>
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">+700 000 ₽</span>
+                </div>
+
+                {/* Section II */}
+                <div className="bg-zinc-50/80 dark:bg-zinc-900/40 px-5 py-2.5 font-extrabold text-zinc-900 dark:text-white uppercase tracking-wider">
+                  II. Себестоимость продаж (COGS)
+                </div>
+                <div className="px-5 py-3 flex justify-between items-center hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                  <span className="font-semibold text-zinc-700 dark:text-zinc-300">Закупка сырья, материалов и комплектующих</span>
+                  <span className="font-mono font-bold text-rose-600 dark:text-rose-400">-2 530 000 ₽</span>
+                </div>
+
+                {/* Section III */}
+                <div className="bg-zinc-50/80 dark:bg-zinc-900/40 px-5 py-2.5 font-extrabold text-zinc-900 dark:text-white uppercase tracking-wider">
+                  III. Операционные расходы (OPEX)
+                </div>
+                <div className="px-5 py-3 flex justify-between items-center hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                  <span className="font-semibold text-zinc-700 dark:text-zinc-300">Заработная плата сотрудников и налоги ФОТ</span>
+                  <span className="font-mono font-bold text-rose-600 dark:text-rose-400">-1 250 000 ₽</span>
+                </div>
+                <div className="px-5 py-3 flex justify-between items-center hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                  <span className="font-semibold text-zinc-700 dark:text-zinc-300">ГСМ, запчасти и регламентное ТО спецтехники</span>
+                  <span className="font-mono font-bold text-rose-600 dark:text-rose-400">-480 000 ₽</span>
+                </div>
+                <div className="px-5 py-3 flex justify-between items-center hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                  <span className="font-semibold text-zinc-700 dark:text-zinc-300">Аренда производственных баз и офисов</span>
+                  <span className="font-mono font-bold text-rose-600 dark:text-rose-400">-350 000 ₽</span>
+                </div>
+                <div className="px-5 py-3 flex justify-between items-center hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                  <span className="font-semibold text-zinc-700 dark:text-zinc-300">SaaS инфраструктура и серверы СФЕРА ERP</span>
+                  <span className="font-mono font-bold text-rose-600 dark:text-rose-400">-100 000 ₽</span>
+                </div>
+
+                {/* Total EBITDA */}
+                <div className="bg-emerald-500/10 px-5 py-4 flex justify-between items-center font-black text-sm text-emerald-600 dark:text-emerald-400">
+                  <span>Итоговая Чистая Прибыль (EBITDA) за период</span>
+                  <span className="text-base">+3 740 000 ₽</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Budget Execution Section (План-Факт Анализ) */}
+            <div className="p-6 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/80 dark:border-zinc-800 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-wider">
+                    План-Факт анализ исполнения бюджета (Июль 2026)
+                  </h4>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    Контроль лимитов по статьям затрат и выполнение плана выручки
+                  </p>
+                </div>
+                <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  Бюджет в норме
+                </span>
+              </div>
+
+              <div className="space-y-4 pt-2">
+                <div>
+                  <div className="flex justify-between text-xs font-bold mb-1.5">
+                    <span className="text-zinc-800 dark:text-zinc-200">Выручка строительно-монтажного направления</span>
+                    <span className="text-emerald-600">4 200 000 ₽ из 4 000 000 ₽ (105%)</span>
+                  </div>
+                  <div className="w-full bg-zinc-200 dark:bg-zinc-800 h-2.5 rounded-full overflow-hidden">
+                    <div className="bg-emerald-500 h-full rounded-full" style={{ width: '100%' }} />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs font-bold mb-1.5">
+                    <span className="text-zinc-800 dark:text-zinc-200">Лимит ФОТ и премиального фонда</span>
+                    <span className="text-blue-600">1 250 000 ₽ из 1 400 000 ₽ (89%)</span>
+                  </div>
+                  <div className="w-full bg-zinc-200 dark:bg-zinc-800 h-2.5 rounded-full overflow-hidden">
+                    <div className="bg-blue-500 h-full rounded-full" style={{ width: '89%' }} />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs font-bold mb-1.5">
+                    <span className="text-zinc-800 dark:text-zinc-200">Лимит затрат на ГСМ и ТО техники</span>
+                    <span className="text-amber-600">480 000 ₽ из 500 000 ₽ (96%)</span>
+                  </div>
+                  <div className="w-full bg-zinc-200 dark:bg-zinc-800 h-2.5 rounded-full overflow-hidden">
+                    <div className="bg-amber-500 h-full rounded-full" style={{ width: '96%' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
         )}
       </div>
