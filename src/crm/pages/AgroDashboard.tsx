@@ -307,31 +307,31 @@ export default function AgroDashboard() {
                 <div className="flex flex-wrap gap-2">
                     <button
                         onClick={() => setIsAddFieldModalOpen(true)}
-                        className="px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-white dark:bg-zinc-700 dark:hover:bg-zinc-600 rounded-xl font-medium flex items-center gap-2 shadow-sm transition-all text-xs"
+                        className="px-3.5 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-200 rounded-xl font-medium flex items-center gap-2 shadow-sm transition-all text-xs cursor-pointer"
                     >
-                        <Plus className="w-4 h-4" /> Поле
+                        <Plus className="w-4 h-4 text-[#F95700]" /> Поле
                     </button>
                     <button
                         onClick={() => setIsAddOperationModalOpen(true)}
-                        className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium flex items-center gap-2 shadow-sm transition-all text-xs"
+                        className="px-3.5 py-2 bg-[#F95700] hover:bg-orange-600 text-white rounded-xl font-medium flex items-center gap-2 shadow-sm transition-all text-xs cursor-pointer"
                     >
                         <Plus className="w-4 h-4" /> Операция
                     </button>
                     <button
                         onClick={() => setIsAddLivestockModalOpen(true)}
-                        className="px-3.5 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-medium flex items-center gap-2 shadow-sm transition-all text-xs"
+                        className="px-3.5 py-2 bg-zinc-900 hover:bg-black text-white dark:bg-zinc-800 dark:hover:bg-zinc-700 rounded-xl font-medium flex items-center gap-2 shadow-sm transition-all text-xs cursor-pointer"
                     >
-                        <Plus className="w-4 h-4" /> Голова / Стадо
+                        <Plus className="w-4 h-4 text-[#F95700]" /> Голова / Стадо
                     </button>
                     <button
                         onClick={() => setIsAddOffspringModalOpen(true)}
-                        className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium flex items-center gap-2 shadow-sm transition-all text-xs"
+                        className="px-3.5 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-200 rounded-xl font-medium flex items-center gap-2 shadow-sm transition-all text-xs cursor-pointer"
                     >
-                        <Plus className="w-4 h-4" /> Приплод
+                        <Plus className="w-4 h-4 text-[#F95700]" /> Приплод
                     </button>
                     <button
                         onClick={() => setIsAddMortalityModalOpen(true)}
-                        className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium flex items-center gap-2 shadow-sm transition-all text-xs"
+                        className="px-3.5 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-xl font-medium flex items-center gap-2 shadow-sm transition-all text-xs cursor-pointer"
                     >
                         <AlertTriangle className="w-4 h-4" /> Акт убыли
                     </button>
@@ -342,43 +342,43 @@ export default function AgroDashboard() {
             <div className="flex gap-3 overflow-x-auto border-b border-zinc-200 dark:border-zinc-800 pb-px">
                 <button 
                     onClick={() => setActiveTab('map')}
-                    className={`pb-3 px-3 font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap text-sm ${activeTab === 'map' ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'}`}
+                    className={`pb-3 px-3 font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap text-sm cursor-pointer ${activeTab === 'map' ? 'border-[#F95700] text-[#F95700] font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'}`}
                 >
                     <Map className="w-4 h-4" /> Карта Полей (2GIS)
                 </button>
                 <button 
                     onClick={() => setActiveTab('operations')}
-                    className={`pb-3 px-3 font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap text-sm ${activeTab === 'operations' ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'}`}
+                    className={`pb-3 px-3 font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap text-sm cursor-pointer ${activeTab === 'operations' ? 'border-[#F95700] text-[#F95700] font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'}`}
                 >
                     <Tractor className="w-4 h-4" /> Канбан Операций
                 </button>
                 <button 
                     onClick={() => setActiveTab('livestock_cattle')}
-                    className={`pb-3 px-3 font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap text-sm ${activeTab === 'livestock_cattle' ? 'border-orange-500 text-orange-600 dark:text-orange-400 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'}`}
+                    className={`pb-3 px-3 font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap text-sm cursor-pointer ${activeTab === 'livestock_cattle' ? 'border-[#F95700] text-[#F95700] font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'}`}
                 >
                     <Beef className="w-4 h-4" /> Стадо КРС
                 </button>
                 <button 
                     onClick={() => setActiveTab('livestock_small')}
-                    className={`pb-3 px-3 font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap text-sm ${activeTab === 'livestock_small' ? 'border-orange-500 text-orange-600 dark:text-orange-400 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'}`}
+                    className={`pb-3 px-3 font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap text-sm cursor-pointer ${activeTab === 'livestock_small' ? 'border-[#F95700] text-[#F95700] font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'}`}
                 >
                     <Tag className="w-4 h-4" /> МРС (Овцы/Козы)
                 </button>
                 <button 
                     onClick={() => setActiveTab('livestock_horses')}
-                    className={`pb-3 px-3 font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap text-sm ${activeTab === 'livestock_horses' ? 'border-orange-500 text-orange-600 dark:text-orange-400 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'}`}
+                    className={`pb-3 px-3 font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap text-sm cursor-pointer ${activeTab === 'livestock_horses' ? 'border-[#F95700] text-[#F95700] font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'}`}
                 >
                     <Activity className="w-4 h-4" /> Лошади
                 </button>
                 <button 
                     onClick={() => setActiveTab('feed')}
-                    className={`pb-3 px-3 font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap text-sm ${activeTab === 'feed' ? 'border-blue-500 text-blue-600 dark:text-blue-400 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'}`}
+                    className={`pb-3 px-3 font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap text-sm cursor-pointer ${activeTab === 'feed' ? 'border-[#F95700] text-[#F95700] font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'}`}
                 >
                     <Wheat className="w-4 h-4" /> Корма и Рационы
                 </button>
                 <button 
                     onClick={() => setActiveTab('vet')}
-                    className={`pb-3 px-3 font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap text-sm ${activeTab === 'vet' ? 'border-red-500 text-red-600 dark:text-red-400 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'}`}
+                    className={`pb-3 px-3 font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap text-sm cursor-pointer ${activeTab === 'vet' ? 'border-[#F95700] text-[#F95700] font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'}`}
                 >
                     <HeartPulse className="w-4 h-4" /> Ветжурнал и Убыль
                 </button>

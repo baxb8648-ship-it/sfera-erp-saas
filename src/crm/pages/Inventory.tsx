@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Edit2, Trash2, X, AlertTriangle, Package, Check, RefreshCw, QrCode, Scan, Camera, Volume2, Printer } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, AlertTriangle, Package, Check, RefreshCw, QrCode, Scan, Camera, Volume2, Printer, ClipboardCheck } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { Helmet } from 'react-helmet-async';
 import QRCode from 'qrcode';
@@ -37,6 +37,70 @@ export const Inventory: React.FC = () => {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+  const [auditFacts, setAuditFacts] = useState<{ [id: number]: number }>({});
+
+  const handleOpenAudit = () => {
+    const facts: { [id: number]: number } = {};
+    items.forEach(i => {
+      facts[i.id] = i.quantity;
+    });
+    setAuditFacts(facts);
+    setIsAuditModalOpen(true);
+  };
+
+  const handlePrintAuditAct = () => {
+    const printWin = window.open('', '_blank');
+    if (!printWin) return;
+    const rows = items.map(i => {
+      const fact = auditFacts[i.id] ?? i.quantity;
+      const diff = fact - i.quantity;
+      return `
+        <tr>
+          <td>${i.id}</td>
+          <td>${i.name}</td>
+          <td>${i.category || '—'}</td>
+          <td>${i.quantity} ${i.unit}</td>
+          <td><b>${fact} ${i.unit}</b></td>
+          <td style="color:${diff < 0 ? 'red' : diff > 0 ? 'green' : '#444'}">${diff > 0 ? '+' : ''}${diff} ${i.unit}</td>
+        </tr>
+      `;
+    }).join('');
+
+    printWin.document.write(`
+      <html>
+        <head>
+          <title>Инвентаризационная опись ИНВ-3 • СФЕРА ERP</title>
+          <style>
+            body { font-family: sans-serif; padding: 24px; color: #111; }
+            h1 { font-size: 20px; margin-bottom: 4px; }
+            p { font-size: 13px; color: #666; margin-bottom: 18px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+            th, td { border: 1px solid #ccc; padding: 8px 10px; text-align: left; }
+            th { background: #f4f4f5; }
+          </style>
+        </head>
+        <body onload="window.print(); window.close();">
+          <h1>ИНВЕНТАРИЗАЦИОННАЯ СЛИЧИТЕЛЬНАЯ ВЕДОМОСТЬ (ИНВ-3)</h1>
+          <p>Дата формирования: ${new Date().toLocaleDateString('ru-RU')} • Склад: Основной склад СФЕРА ERP</p>
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Наименование ТМЦ</th>
+                <th>Категория</th>
+                <th>По учету (книга)</th>
+                <th>Фактически на складе</th>
+                <th>Отклонение (Излишек / Недостача)</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    printWin.document.close();
+  };
 
   useEffect(() => {
     setSelectedIds([]);
@@ -692,6 +756,14 @@ export const Inventory: React.FC = () => {
               <span className="truncate">Удалить ({selectedIds.length})</span>
             </button>
           )}
+
+          <button
+            onClick={handleOpenAudit}
+            className="active:scale-95 transition-all flex-1 md:flex-initial flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer"
+          >
+            <ClipboardCheck className="w-4 h-4 mr-2 text-[#F95700]" />
+            Инвентаризация (ИНВ-3)
+          </button>
 
           <button
             onClick={() => startScanner('adjust')}
@@ -1438,6 +1510,101 @@ export const Inventory: React.FC = () => {
               >
                 Удалить
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Инвентаризационная ведомость ИНВ-3 (Сличительный Акт) */}
+      {isAuditModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl max-w-4xl w-full p-6 space-y-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-4">
+              <div>
+                <h3 className="text-lg font-bold font-['Montserrat'] text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                  <ClipboardCheck className="w-5 h-5 text-[#F95700]" />
+                  Сличительная ведомость инвентаризации (ИНВ-3)
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  Сверка книжного остатка с фактическим наличием на складе и расчет излишков/недостач
+                </p>
+              </div>
+              <button
+                onClick={() => setIsAuditModalOpen(false)}
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 rounded-lg cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 pr-1 custom-scrollbar">
+              <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800 text-left text-xs">
+                <thead className="bg-zinc-50 dark:bg-zinc-800/60 font-bold text-zinc-500 uppercase">
+                  <tr>
+                    <th className="p-3">ID</th>
+                    <th className="p-3">Наименование ТМЦ</th>
+                    <th className="p-3">По учету</th>
+                    <th className="p-3 w-36">Факт. наличие</th>
+                    <th className="p-3">Отклонение</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
+                  {items.map((item) => {
+                    const fact = auditFacts[item.id] ?? item.quantity;
+                    const diff = fact - item.quantity;
+                    return (
+                      <tr key={item.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30">
+                        <td className="p-3 font-mono text-zinc-400">#{item.id}</td>
+                        <td className="p-3 font-bold text-zinc-800 dark:text-zinc-200">{item.name}</td>
+                        <td className="p-3 font-semibold text-zinc-600 dark:text-zinc-300">
+                          {item.quantity} {item.unit}
+                        </td>
+                        <td className="p-3">
+                          <input
+                            type="number"
+                            value={fact}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0;
+                              setAuditFacts(prev => ({ ...prev, [item.id]: val }));
+                            }}
+                            className="w-24 bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs font-bold text-zinc-900 dark:text-white focus:outline-none focus:border-[#F95700]"
+                          />
+                        </td>
+                        <td className="p-3 font-extrabold">
+                          {diff === 0 ? (
+                            <span className="text-zinc-400">Норма (0)</span>
+                          ) : diff > 0 ? (
+                            <span className="text-emerald-500">+{diff} {item.unit} (Излишек)</span>
+                          ) : (
+                            <span className="text-rose-500">{diff} {item.unit} (Недостача)</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-between items-center border-t border-zinc-200 dark:border-zinc-800 pt-4">
+              <span className="text-xs text-zinc-500">
+                Всего позиций в описи: <b>{items.length}</b>
+              </span>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setIsAuditModalOpen(false)}
+                  className="px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                >
+                  Закрыть
+                </button>
+                <button
+                  onClick={handlePrintAuditAct}
+                  className="px-4 py-2 bg-[#F95700] hover:bg-orange-600 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-md cursor-pointer"
+                >
+                  <Printer className="w-4 h-4" />
+                  Печать АКТА ИНВ-3
+                </button>
+              </div>
             </div>
           </div>
         </div>
