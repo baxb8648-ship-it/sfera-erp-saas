@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Plus, Search, FileText, Edit2, Trash2, X, Download, TrendingUp, Wallet, Building2, FileCheck, Check, Mail, Sparkles } from 'lucide-react';
+import { Upload, Plus, Search, FileText, Edit2, Trash2, X, Download, TrendingUp, Wallet, Building2, FileCheck, Check, Mail, Sparkles, Table as TableIcon, LayoutGrid, FileSpreadsheet } from 'lucide-react';
 import { GodTierModal } from '../components/GodTierModal';
 import { Helmet } from 'react-helmet-async';
 import { useQuery } from '@tanstack/react-query';
@@ -108,6 +108,7 @@ export const Clients: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSegmentTab, setActiveSegmentTab] = useState<string>('Все');
+  const [clientViewMode, setClientViewMode] = useState<'table' | 'funnel'>('table');
   const [, setIsUploading] = useState(false);
   
   // Modal states
@@ -608,6 +609,65 @@ export const Clients: React.FC = () => {
     }
   };
 
+  const handleCSVUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target?.result as string;
+      if (!text) return;
+      const rows = text.split(/\r?\n/).filter(r => r.trim().length > 0);
+      if (rows.length <= 1) {
+        alert('Файл CSV пуст или содержит только заголовок');
+        return;
+      }
+      setIsUploading(true);
+      let createdCount = 0;
+      for (let i = 1; i < rows.length; i++) {
+        const cols = rows[i].split(/[,;]/).map(c => c.trim().replace(/^["']|["']$/g, ''));
+        if (!cols[0]) continue;
+        const [name, inn, phone, email, segment, status] = cols;
+        try {
+          await apiClient.post('/clients/', {
+            name: name || 'Новый клиент',
+            inn: inn || null,
+            phone: phone || null,
+            email: email || null,
+            segment: segment || 'Нефтегаз',
+            status: status || 'Новый',
+            notes: 'Импортировано из CSV'
+          });
+          createdCount++;
+        } catch (err) {
+          console.error('Ошибка импорта строки CSV:', err);
+        }
+      }
+      setIsUploading(false);
+      alert(`Успешно импортировано клиентов из CSV: ${createdCount}`);
+      fetchClients();
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
+
+  const handleClientStatusChange = async (client: Client, newStatus: string) => {
+    try {
+      await apiClient.put(`/clients/${client.id}`, {
+        name: client.name,
+        inn: client.inn,
+        contact_person: client.contact_person,
+        phone: client.phone,
+        email: client.email,
+        segment: client.segment,
+        status: newStatus,
+        notes: client.notes
+      });
+      fetchClients();
+    } catch (e) {
+      console.error(e);
+      alert('Ошибка при изменении этапа воронки');
+    }
+  };
+
   const handleExportExcel = async () => {
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
     const url = `${baseUrl}/export/clients`;
@@ -1093,6 +1153,19 @@ export const Clients: React.FC = () => {
             <span className="truncate">Экспорт</span>
           </button>
 
+          {/* Кнопка импорта CSV */}
+          <label className="flex items-center justify-center px-2 py-2 sm:px-4 bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 rounded-lg hover:bg-gray-200 dark:hover:bg-zinc-700 active:scale-95 cursor-pointer transition-all duration-150 font-medium select-none text-xs sm:text-sm w-full sm:w-auto">
+            <FileSpreadsheet className="w-4 h-4 mr-1.5 sm:mr-2 shrink-0 text-emerald-600" />
+            <span className="truncate">Импорт CSV</span>
+            <input 
+              type="file" 
+              accept=".csv" 
+              className="hidden" 
+              onChange={handleCSVUpload}
+              disabled={isLoading}
+            />
+          </label>
+
           {/* Кнопка импорта XML */}
           <label className="flex items-center justify-center px-2 py-2 sm:px-4 bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 rounded-lg hover:bg-gray-200 dark:hover:bg-zinc-700 active:scale-95 cursor-pointer transition-all duration-150 font-medium select-none text-xs sm:text-sm w-full sm:w-auto">
             <Upload className="w-4 h-4 mr-1.5 sm:mr-2 shrink-0" />
@@ -1116,8 +1189,10 @@ export const Clients: React.FC = () => {
         </div>
       </div>
 
-      {/* Подразделы по сегментам (Категории) */}
-      <div className="flex flex-wrap gap-2 pb-1 border-b border-gray-200 dark:border-zinc-800">
+      {/* Переключатель режимов: Реестр (Таблица) / Воронка продаж */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        {/* Подразделы по сегментам (Категории) */}
+        <div className="flex flex-wrap gap-2 pb-1 border-b border-gray-200 dark:border-zinc-800">
         {segmentsMapping.map((tab) => {
           const isActive = activeSegmentTab === tab.dbValue;
           const count = getTabCount(tab.dbValue);
@@ -1138,11 +1213,91 @@ export const Clients: React.FC = () => {
             </button>
           );
         })}
+        </div>
+
+        <div className="bg-gray-100 dark:bg-zinc-800 p-1 rounded-xl flex items-center gap-1 shrink-0">
+          <button
+            onClick={() => setClientViewMode('table')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              clientViewMode === 'table'
+                ? 'bg-white dark:bg-zinc-900 text-[#F95700] shadow-sm'
+                : 'text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            <TableIcon className="w-3.5 h-3.5" />
+            <span>Реестр</span>
+          </button>
+          <button
+            onClick={() => setClientViewMode('funnel')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              clientViewMode === 'funnel'
+                ? 'bg-white dark:bg-zinc-900 text-[#F95700] shadow-sm'
+                : 'text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            <LayoutGrid className="w-3.5 h-3.5" />
+            <span>Воронка продаж ({filteredClients.length})</span>
+          </button>
+        </div>
       </div>
 
-      {/* Таблица */}
-      <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800 overflow-hidden">
-        <div className="overflow-x-auto">
+      {clientViewMode === 'funnel' ? (
+        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-zinc-700">
+          {statuses.map(stage => {
+            const stageClients = filteredClients.filter(c => (c.status || 'Новый') === stage);
+            return (
+              <div
+                key={stage}
+                className="min-w-[280px] w-[280px] bg-gray-50 dark:bg-zinc-900/50 rounded-2xl border border-gray-200 dark:border-zinc-800 flex flex-col shrink-0"
+              >
+                <div className="p-3.5 border-b border-gray-200 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-zinc-900 rounded-t-2xl">
+                  <h4 className="font-bold text-sm text-gray-900 dark:text-white">{stage}</h4>
+                  <span className="bg-[#F95700]/10 text-[#F95700] text-xs font-black px-2 py-0.5 rounded-full">
+                    {stageClients.length}
+                  </span>
+                </div>
+                <div className="p-3 space-y-3 overflow-y-auto max-h-[560px] flex-1">
+                  {stageClients.map(c => (
+                    <div
+                      key={c.id}
+                      onClick={() => handleOpenCard(c)}
+                      className="bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-700 hover:border-[#F95700] cursor-pointer transition-all space-y-2 group"
+                    >
+                      <div className="flex justify-between items-start">
+                        <span className="text-[10px] font-mono text-zinc-400 uppercase">{c.segment || 'Нефтегаз'}</span>
+                        <span className="text-[10px] font-mono text-zinc-400">#{c.id}</span>
+                      </div>
+                      <h5 className="font-bold text-sm text-gray-900 dark:text-white group-hover:text-[#F95700] transition-colors">{c.name}</h5>
+                      {c.inn && <p className="text-xs text-zinc-500">ИНН: {c.inn}</p>}
+                      <div className="pt-2 border-t border-zinc-100 dark:border-zinc-700/50 flex items-center justify-between text-xs">
+                        <span className="text-zinc-400">{c.contact_person || 'Без контакта'}</span>
+                        <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                          {statuses.indexOf(stage) < statuses.length - 1 && (
+                            <button
+                              onClick={() => handleClientStatusChange(c, statuses[statuses.indexOf(stage) + 1])}
+                              title="Перевести на следующий этап"
+                              className="px-2 py-1 bg-gray-100 hover:bg-[#F95700] hover:text-white dark:bg-zinc-700 rounded-md text-[10px] font-bold transition-colors"
+                            >
+                              Далее &rarr;
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {stageClients.length === 0 && (
+                    <div className="text-center py-8 text-zinc-400 text-xs">Нет клиентов на этапе</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+      <>
+        {/* Таблица */}
+        <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800 overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-gray-600 dark:text-zinc-400">
             <thead className="bg-gray-50 dark:bg-zinc-800/50 border-b border-gray-100 dark:border-zinc-800 font-medium text-gray-700 dark:text-zinc-200">
               <tr>
@@ -1422,6 +1577,8 @@ export const Clients: React.FC = () => {
           ))
         )}
       </div>
+      </>
+      )}
 
       {/* -------------------- КАРТОЧКА КЛИЕНТА (ДЕТАЛЬНОЕ ОКНО) -------------------- */}
       {isCardOpen && selectedClient && (

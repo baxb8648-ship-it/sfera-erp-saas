@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Lock, Activity, Sparkles
+  Lock, Activity, Sparkles, Terminal, CheckCircle2, Clock, Cpu, TrendingUp, Search
 } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 import { AIFineTuneSettings } from '../components/AIFineTuneSettings';
@@ -146,13 +146,34 @@ const PRESET_SCENARIOS: AutomationScenario[] = [
   }
 ];
 
+interface AgentLogEntry {
+  id: string;
+  timestamp: string;
+  agentName: string;
+  agentRole: string;
+  action: string;
+  status: 'success' | 'processing' | 'warning';
+  latency: string;
+  details: string;
+}
+
+const PRESET_LIVE_LOGS: AgentLogEntry[] = [
+  { id: 'log-101', timestamp: '10:04:12', agentName: 'ИИ-Юрист «Арбитр»', agentRole: 'legal', action: 'Проверка договора подряда №489/СМР от ООО "ТехноСтрой"', status: 'success', latency: '3.4s', details: 'Выявлен пункт 7.4 с завышенной пеней 0.5% в день. Сформирован протокол разногласий.' },
+  { id: 'log-102', timestamp: '10:01:45', agentName: 'ИИ-Сметчик «Прораб-AI»', agentRole: 'construction', action: 'Сверка КС-2 по объекту «ЖК Северный» (Этап 3)', status: 'warning', latency: '4.1s', details: 'Обнаружен перерасход арматуры А500С на +14.2% относительно проектной сметы.' },
+  { id: 'log-103', timestamp: '09:58:10', agentName: 'ИИ-Менеджер продаж 24/7', agentRole: 'sales', action: 'Квалификация входящего лида (Telegram @alex_dev)', status: 'success', latency: '1.2s', details: 'Лид квалифицирован (Бюджет: 8.5 млн ₽). Создана сделка #1049, назначена встреча на 14:00.' },
+  { id: 'log-104', timestamp: '09:00:02', agentName: 'ИИ-Аналитик «Казначей»', agentRole: 'finance', action: 'Генерация утреннего VIP-отчета директору в Telegram', status: 'success', latency: '2.8s', details: 'Сводка отправлена: Остаток на счетах 42,400,000 ₽, ожидаемые поступления 6,100,000 ₽.' },
+  { id: 'log-105', timestamp: '08:45:30', agentName: 'ИИ-Снабженец «СпецСнаб»', agentRole: 'supply', action: 'Сравнение 4 прайс-листов на кабель ВВГнг 3х2.5', status: 'success', latency: '3.9s', details: 'Выбрано предложение ООО "ПромТехСнаб" с экономией 18% и доставкой за 24 часа.' }
+];
+
 export const AIAgentsPage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
   
-  const [activeTab, setActiveTab] = useState<'employees' | 'scenarios' | 'finetune' | 'knowledge'>('employees');
+  const [activeTab, setActiveTab] = useState<'employees' | 'scenarios' | 'livelog' | 'finetune' | 'knowledge'>('employees');
   const [employees, setEmployees] = useState<DigitalEmployee[]>(PRESET_EMPLOYEES);
   const [scenarios, setScenarios] = useState<AutomationScenario[]>(PRESET_SCENARIOS);
+  const [liveLogs] = useState<AgentLogEntry[]>(PRESET_LIVE_LOGS);
+  const [logSearch, setLogSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   const toggleEmployeeStatus = (id: string) => {
@@ -234,6 +255,7 @@ export const AIAgentsPage: React.FC = () => {
           {[
             { key: 'employees', label: '🤖 Штат ИИ-Сотрудников', badge: employees.length },
             { key: 'scenarios', label: '⚡ Готовые сценарии и Боты', badge: scenarios.length },
+            { key: 'livelog', label: '🔴 Live-лог и Счётчики', badge: liveLogs.length },
             { key: 'finetune', label: '🧠 Обучение моделей (Fine-Tune)', badge: 'QLoRA' },
             { key: 'knowledge', label: '📚 База Знаний ИИ (RAG)', badge: 'RAG' }
           ].map(tab => (
@@ -422,7 +444,113 @@ export const AIAgentsPage: React.FC = () => {
         </div>
       )}
 
-      {/* ══════════════ Вкладка 3: ОБУЧЕНИЕ И FINE-TUNING ИИ ══════════════ */}
+      {/* ══════════════ Вкладка 3: LIVE-ЛОГ И СЧЁТЧИКИ ВЫПОЛНЕНИЯ ══════════════ */}
+      {activeTab === 'livelog' && (
+        <div className="space-y-6">
+          {/* Счётчики выполнения агентов */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
+              <div className="flex justify-between items-start">
+                <span className="text-xs font-bold text-zinc-400 uppercase">ИИ-Юрист «Арбитр»</span>
+                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-black text-zinc-900 dark:text-white">142 договора</div>
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">Экономия: ~42.6 ч работы</p>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
+              <div className="flex justify-between items-start">
+                <span className="text-xs font-bold text-zinc-400 uppercase">ИИ-Сметчик «Прораб-AI»</span>
+                <Cpu className="w-5 h-5 text-[#F95700]" />
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-black text-zinc-900 dark:text-white">318 смет КС-2</div>
+                <p className="text-xs text-[#F95700] font-semibold mt-0.5">Предотвращено: 1,420,000 ₽</p>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
+              <div className="flex justify-between items-start">
+                <span className="text-xs font-bold text-zinc-400 uppercase">ИИ-Менеджер продаж</span>
+                <TrendingUp className="w-5 h-5 text-blue-500" />
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-black text-zinc-900 dark:text-white">840 диалогов</div>
+                <p className="text-xs text-blue-500 font-semibold mt-0.5">Ср. время ответа: 1.8 сек</p>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
+              <div className="flex justify-between items-start">
+                <span className="text-xs font-bold text-zinc-400 uppercase">ИИ-Аналитик «Казначей»</span>
+                <Clock className="w-5 h-5 text-amber-500" />
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-black text-zinc-900 dark:text-white">94 отчета</div>
+                <p className="text-xs text-amber-500 font-semibold mt-0.5">Точность прогноза: 98.4%</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Терминал Live-лога */}
+          <div className="bg-zinc-900 rounded-2xl border border-zinc-800 overflow-hidden shadow-xl">
+            <div className="px-6 py-4 bg-zinc-950 border-b border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex items-center gap-3">
+                <Terminal className="w-5 h-5 text-[#F95700]" />
+                <h3 className="font-bold text-sm text-white">
+                  Live-лог выполнения операций ИИ-агентами в реальном времени
+                </h3>
+              </div>
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+                  <input
+                    type="text"
+                    placeholder="Поиск по логам..."
+                    value={logSearch}
+                    onChange={(e) => setLogSearch(e.target.value)}
+                    className="w-full bg-zinc-900 text-xs text-white placeholder-zinc-500 pl-8 pr-3 py-1.5 rounded-lg border border-zinc-700 outline-none focus:border-[#F95700]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 space-y-2.5 font-mono text-xs max-h-[480px] overflow-y-auto">
+              {liveLogs
+                .filter(l => l.agentName.toLowerCase().includes(logSearch.toLowerCase()) || l.action.toLowerCase().includes(logSearch.toLowerCase()) || l.details.toLowerCase().includes(logSearch.toLowerCase()))
+                .map(log => (
+                  <div
+                    key={log.id}
+                    className="p-3.5 rounded-xl bg-zinc-950/60 border border-zinc-800/80 hover:border-zinc-700 transition-colors space-y-1.5"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-zinc-500">[{log.timestamp}]</span>
+                        <span className="font-bold text-[#F95700]">{log.agentName}</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                          log.status === 'success'
+                            ? 'bg-emerald-500/10 text-emerald-400'
+                            : log.status === 'warning'
+                            ? 'bg-amber-500/10 text-amber-400'
+                            : 'bg-blue-500/10 text-blue-400'
+                        }`}>
+                          {log.status.toUpperCase()}
+                        </span>
+                      </div>
+                      <span className="text-zinc-500 text-[11px]">{log.latency}</span>
+                    </div>
+                    <div className="text-zinc-200 font-semibold">{log.action}</div>
+                    <div className="text-zinc-400 text-[11px]">{log.details}</div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════ Вкладка 4: ОБУЧЕНИЕ И FINE-TUNING ИИ ══════════════ */}
       {activeTab === 'finetune' && (
         <div className="space-y-6">
           <AIFineTuneSettings />
