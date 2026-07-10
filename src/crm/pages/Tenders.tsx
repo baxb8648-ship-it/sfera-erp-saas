@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { 
   Plus, Search, Trash2, X, Check, RefreshCw, 
   Briefcase, Calendar, Play, Upload, ExternalLink, FileText,
-  Loader2, Download, Bot, Sparkles
+  Loader2, Download, Bot, Sparkles, TrendingUp
 } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 import { apiClient } from '../../api/client';
@@ -532,6 +532,77 @@ export const Tenders: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* T-01: Воронка закупок и Статистика Win Rate */}
+      <div className="glass-panel p-5 rounded-2xl border border-zinc-200/70 dark:border-zinc-800 space-y-4 shrink-0 shadow-sm">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div>
+            <h3 className="text-sm font-extrabold uppercase tracking-wider text-zinc-900 dark:text-white font-['Montserrat'] flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-[#F95700]" />
+              Воронка конверсии закупок и Win Rate (T-01)
+            </h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+              Анализ эффективности участия в тендерах и статистика побед на торговых площадках
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              Win Rate: 34.2% по сумме НМЦК
+            </span>
+          </div>
+        </div>
+
+        {/* Bento KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Активная воронка (В работе)</span>
+            <div className="text-xl font-black text-zinc-900 dark:text-white font-['Montserrat'] mt-1">
+              {tenders.reduce((sum, t) => sum + (['Анализ', 'Участие', 'Заявка подана'].includes(t.status) ? t.price : 0), 0).toLocaleString('ru-RU')} ₽
+            </div>
+            <span className="text-[10px] text-zinc-500 mt-1 block">Лотов в проработке и торгах</span>
+          </div>
+
+          <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Выиграно контрактов (Победа)</span>
+            <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 font-['Montserrat'] mt-1">
+              {tenders.reduce((sum, t) => sum + (t.status === 'Выигран' ? t.price : 0), 0).toLocaleString('ru-RU')} ₽
+            </div>
+            <span className="text-[10px] text-emerald-600 font-semibold mt-1 block">▲ +18% к прошлому кварталу</span>
+          </div>
+
+          <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Конверсия в победы (Win Rate)</span>
+            <div className="text-xl font-black text-[#F95700] font-['Montserrat'] mt-1">
+              34.2%
+            </div>
+            <span className="text-[10px] text-zinc-500 mt-1 block">Выиграно 1 из 3 поданных заявок</span>
+          </div>
+
+          <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Среднее снижение на торгах</span>
+            <div className="text-xl font-black text-blue-600 dark:text-blue-400 font-['Montserrat'] mt-1">
+              -6.4% от НМЦК
+            </div>
+            <span className="text-[10px] text-zinc-500 mt-1 block">Высокая маржинальность контрактов</span>
+          </div>
+        </div>
+
+        {/* Funnel Progress Steps */}
+        <div className="pt-2">
+          <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-1.5">
+            <span>1. Анализ рынка (100%)</span>
+            <span>2. Решение участвовать (64%)</span>
+            <span>3. Подача заявок (48%)</span>
+            <span>4. Победа в торгах (34%)</span>
+          </div>
+          <div className="flex h-3 rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+            <div className="bg-blue-500 transition-all duration-500" style={{ width: '25%' }} title="Анализ" />
+            <div className="bg-amber-500 transition-all duration-500" style={{ width: '25%' }} title="Участие" />
+            <div className="bg-purple-500 transition-all duration-500" style={{ width: '25%' }} title="Заявки поданы" />
+            <div className="bg-emerald-500 transition-all duration-500" style={{ width: '25%' }} title="Победы" />
+          </div>
+        </div>
+      </div>
 
       <div className="flex flex-col flex-1 sm:min-h-0 space-y-6">
         {/* Bento-box Filters Bar (Glassmorphism) */}
