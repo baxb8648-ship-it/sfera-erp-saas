@@ -35,6 +35,24 @@ export default function FurnitureDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
   const [orderSubtabs, setOrderSubtabs] = useState<Record<number, 'ops' | 'fittings' | 'details'>>({});
 
+  // Модалка «Создать изделие (BOM)»
+  const [isCreateProductModalOpen, setIsCreateProductModalOpen] = useState(false);
+  const [newProductData, setNewProductData] = useState({
+    name: '',
+    description: '',
+    weight: 0,
+    cost_price: 0,
+  });
+
+  // Модалка «Запустить партию»
+  const [isLaunchBatchModalOpen, setIsLaunchBatchModalOpen] = useState(false);
+  const [newBatchData, setNewBatchData] = useState({
+    product_id: 0,
+    quantity: 1,
+    client_name: '',
+    deadline: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+  });
+
   // Modals for Fittings and Details
   const [addFittingOrderId, setAddFittingOrderId] = useState<number | null>(null);
   const [newFitting, setNewFitting] = useState({
@@ -73,6 +91,34 @@ export default function FurnitureDashboard() {
       setOrders(Array.isArray(ordRes) ? ordRes : []);
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleCreateProductSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newProductData.name) return;
+    try {
+      await apiClient.post('/furniture/products', newProductData);
+      showToast('Изделие добавлено в реестр BOM!', 'success');
+      setIsCreateProductModalOpen(false);
+      setNewProductData({ name: '', description: '', weight: 0, cost_price: 0 });
+      fetchSerialData();
+    } catch (err: any) {
+      showToast(err.response?.data?.detail || 'Ошибка создания изделия', 'error');
+    }
+  };
+
+  const handleLaunchBatchSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBatchData.product_id || newBatchData.quantity < 1) return;
+    try {
+      await apiClient.post('/furniture/orders', newBatchData);
+      showToast('Производственная партия запущена!', 'success');
+      setIsLaunchBatchModalOpen(false);
+      setNewBatchData({ product_id: 0, quantity: 1, client_name: '', deadline: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0] });
+      fetchSerialData();
+    } catch (err: any) {
+      showToast(err.response?.data?.detail || 'Ошибка запуска партии', 'error');
     }
   };
 
@@ -500,7 +546,7 @@ export default function FurnitureDashboard() {
               <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-zinc-800">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="font-black text-xl flex items-center gap-2 dark:text-white"><PackageSearch className="w-6 h-6 text-[#E64D00]"/> Реестр изделий (BOM)</h3>
-                  <button className="bg-[#E64D00] text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1"><Plus className="w-4 h-4"/> Создать</button>
+                  <button onClick={() => setIsCreateProductModalOpen(true)} className="bg-[#E64D00] hover:bg-[#ff6a1a] text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1 transition-colors cursor-pointer"><Plus className="w-4 h-4"/> Создать</button>
                 </div>
                 
                 <div className="space-y-4">
@@ -536,7 +582,7 @@ export default function FurnitureDashboard() {
               <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-zinc-800">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="font-black text-xl flex items-center gap-2 dark:text-white"><Factory className="w-6 h-6 text-blue-500"/> Заказы в производстве</h3>
-                  <button className="bg-blue-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1"><Plus className="w-4 h-4"/> Запустить партию</button>
+                  <button onClick={() => setIsLaunchBatchModalOpen(true)} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1 transition-colors cursor-pointer"><Plus className="w-4 h-4"/> Запустить партию</button>
                 </div>
                 
                 <div className="space-y-4">
@@ -1169,6 +1215,147 @@ export default function FurnitureDashboard() {
                   className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md transition-all"
                 >
                   Рассчитать кромку и сохранить
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ====== MODAL: СОЗДАТЬ ИЗДЕЛИЕ BOM ====== */}
+      {isCreateProductModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold dark:text-white flex items-center gap-2">
+                <PackageSearch className="w-5 h-5 text-[#E64D00]" /> Новое изделие (BOM)
+              </h3>
+              <button onClick={() => setIsCreateProductModalOpen(false)} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form onSubmit={handleCreateProductSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 mb-1">Название изделия *</label>
+                <input
+                  type="text" required
+                  placeholder="Шкаф-купе двухдверный, Тумба под TV..."
+                  value={newProductData.name}
+                  onChange={e => setNewProductData({ ...newProductData, name: e.target.value })}
+                  className="w-full px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E64D00]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 mb-1">Описание / Спецификация</label>
+                <textarea
+                  rows={2} placeholder="Технические характеристики, особенности производства..."
+                  value={newProductData.description}
+                  onChange={e => setNewProductData({ ...newProductData, description: e.target.value })}
+                  className="w-full px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E64D00] resize-none"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Масса изделия (кг)</label>
+                  <input
+                    type="number" min={0} step={0.1}
+                    value={newProductData.weight}
+                    onChange={e => setNewProductData({ ...newProductData, weight: Number(e.target.value) })}
+                    className="w-full px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E64D00]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Себестоимость ТМЦ (₽)</label>
+                  <input
+                    type="number" min={0}
+                    value={newProductData.cost_price}
+                    onChange={e => setNewProductData({ ...newProductData, cost_price: Number(e.target.value) })}
+                    className="w-full px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E64D00]"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setIsCreateProductModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">
+                  Отмена
+                </button>
+                <button type="submit"
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-[#E64D00] hover:bg-[#ff6a1a] text-white shadow-md transition-all">
+                  Создать изделие
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ====== MODAL: ЗАПУСТИТЬ ПАРТИЮ ====== */}
+      {isLaunchBatchModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold dark:text-white flex items-center gap-2">
+                <Factory className="w-5 h-5 text-blue-500" /> Запуск производственной партии
+              </h3>
+              <button onClick={() => setIsLaunchBatchModalOpen(false)} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form onSubmit={handleLaunchBatchSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 mb-1">Изделие из реестра BOM *</label>
+                <select
+                  required
+                  value={newBatchData.product_id}
+                  onChange={e => setNewBatchData({ ...newBatchData, product_id: Number(e.target.value) })}
+                  className="w-full px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value={0} disabled>— Выберите изделие —</option>
+                  {products.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                {products.length === 0 && (
+                  <p className="text-xs text-amber-500 mt-1">Сначала создайте изделие в реестре BOM</p>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Количество (шт)</label>
+                  <input
+                    type="number" required min={1}
+                    value={newBatchData.quantity}
+                    onChange={e => setNewBatchData({ ...newBatchData, quantity: Number(e.target.value) })}
+                    className="w-full px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Дата готовности</label>
+                  <input
+                    type="date"
+                    value={newBatchData.deadline}
+                    onChange={e => setNewBatchData({ ...newBatchData, deadline: e.target.value })}
+                    className="w-full px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 mb-1">Клиент / Заказчик</label>
+                <input
+                  type="text" placeholder="ООО Заказчик..."
+                  value={newBatchData.client_name}
+                  onChange={e => setNewBatchData({ ...newBatchData, client_name: e.target.value })}
+                  className="w-full px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setIsLaunchBatchModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">
+                  Отмена
+                </button>
+                <button type="submit" disabled={products.length === 0}
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                  🚀 Запустить в производство
                 </button>
               </div>
             </form>

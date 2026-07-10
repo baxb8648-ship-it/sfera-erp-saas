@@ -65,6 +65,13 @@ export default function AgroDashboard() {
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<'map' | 'operations' | 'livestock_cattle' | 'livestock_small' | 'livestock_horses' | 'feed' | 'vet'>('map');
 
+    // Кастомный конферм для «Завершить операцию»
+    const [confirmCompleteOpId, setConfirmCompleteOpId] = useState<number | null>(null);
+
+    // Модалка «Реализовать животное»
+    const [sellModalAnimalId, setSellModalAnimalId] = useState<number | null>(null);
+    const [sellAmount, setSellAmount] = useState('');
+
     const [isAddFieldModalOpen, setIsAddFieldModalOpen] = useState(false);
     const [newFieldData, setNewFieldData] = useState({
         name: '',
@@ -203,10 +210,10 @@ export default function AgroDashboard() {
                     try {
                         const coords = JSON.parse(f.geo_json);
                         const poly = (window as any).DG.polygon(coords, {
-                            color: '#3b82f6',
+                            color: '#F95700',
                             weight: 2,
-                            opacity: 0.8,
-                            fillOpacity: 0.2
+                            opacity: 0.85,
+                            fillOpacity: 0.15
                         }).addTo(map);
                         poly.bindPopup(`<b>${f.name}</b><br/>Площадь: ${f.area_hectares} га<br/>Почва: ${f.soil_type || '-'}`);
                     } catch (e) {
@@ -234,7 +241,13 @@ export default function AgroDashboard() {
     }, [activeTab, fields]);
 
     const handleCompleteOp = async (opId: number) => {
-        if (!window.confirm("Завершить операцию? ГСМ и семена/удобрения будут списаны со склада.")) return;
+        setConfirmCompleteOpId(opId);
+    };
+
+    const handleCompleteOpConfirmed = async () => {
+        if (!confirmCompleteOpId) return;
+        const opId = confirmCompleteOpId;
+        setConfirmCompleteOpId(null);
         try {
             await apiClient.post(`/agro/operations/${opId}/complete`);
             success('Операция завершена, склад обновлен');
@@ -246,10 +259,16 @@ export default function AgroDashboard() {
     };
 
     const handleSellLivestock = async (id: number) => {
-        const amount = prompt("Укажите сумму продажи (руб):");
-        if (!amount) return;
+        setSellModalAnimalId(id);
+        setSellAmount('');
+    };
+
+    const handleSellLivestockConfirmed = async () => {
+        if (!sellModalAnimalId || !sellAmount) return;
+        const id = sellModalAnimalId;
+        setSellModalAnimalId(null);
         try {
-            await apiClient.post(`/agro/livestock/${id}/sell?amount=${amount}`);
+            await apiClient.post(`/agro/livestock/${id}/sell?amount=${sellAmount}`);
             success('Животное реализовано! Деньги зачислены в Кассу: Товары и материалы.');
             fetchData();
         } catch (err: any) {
@@ -998,6 +1017,77 @@ export default function AgroDashboard() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* ====== КАСТОМНЫЙ КОНФЕРМ: ЗАВЕРШИТЬ ОПЕРАЦИЮ ====== */}
+            {confirmCompleteOpId !== null && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center">
+                        <div className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mx-auto mb-4">
+                            <CheckCircle2 className="w-7 h-7 text-emerald-600" />
+                        </div>
+                        <h3 className="text-lg font-bold dark:text-white mb-2">Завершить полевую операцию?</h3>
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
+                            ГСМ, семена и удобрения будут автоматически списаны со склада. Это действие нельзя отменить.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setConfirmCompleteOpId(null)}
+                                className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+                            >
+                                Отмена
+                            </button>
+                            <button
+                                onClick={handleCompleteOpConfirmed}
+                                className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer shadow-md"
+                            >
+                                ✓ Завершить и списать
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ====== МОДАЛКА: РЕАЛИЗАЦИЯ ЖИВОТНОГО ====== */}
+            {sellModalAnimalId !== null && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+                        <h3 className="text-lg font-bold dark:text-white mb-2 flex items-center gap-2">
+                            <DollarSign className="w-5 h-5 text-emerald-500" /> Реализация животного
+                        </h3>
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
+                            Сумма будет зачислена в Кассу (раздел: Товары и материалы). Статус животного изменится на «Реализован».
+                        </p>
+                        <div className="mb-5">
+                            <label className="block text-xs font-semibold text-zinc-500 mb-1">Сумма продажи (руб.) *</label>
+                            <input
+                                type="number"
+                                autoFocus
+                                min={0}
+                                placeholder="Например: 85000"
+                                value={sellAmount}
+                                onChange={e => setSellAmount(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter' && sellAmount) handleSellLivestockConfirmed(); }}
+                                className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-lg font-bold dark:text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                            />
+                        </div>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setSellModalAnimalId(null)}
+                                className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+                            >
+                                Отмена
+                            </button>
+                            <button
+                                onClick={handleSellLivestockConfirmed}
+                                disabled={!sellAmount || Number(sellAmount) <= 0}
+                                className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                💰 Зачислить и реализовать
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

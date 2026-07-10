@@ -368,7 +368,12 @@ export const FleetChessboard: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<EquipmentCategory>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [viewDaysCount, setViewDaysCount] = useState<number>(14); // 14 или 30 дней
-  const [timelineStartDate, setTimelineStartDate] = useState<string>('2026-06-28'); // Стартовая дата отображения (под мок)
+  const [timelineStartDate, setTimelineStartDate] = useState<string>(() => {
+    // Начинаем с 7 дней назад, чтобы видеть текущие брони
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    return d.toISOString().split('T')[0];
+  });
 
   // Модальные окна
   const [selectedBooking, setSelectedBooking] = useState<BookingItem | null>(null);
@@ -387,16 +392,16 @@ export const FleetChessboard: React.FC = () => {
   });
 
   const [newBookingData, setNewBookingData] = useState<Partial<BookingItem>>({
-    equipmentId: INITIAL_EQUIPMENT[0].id,
-    startDate: '2026-07-08',
-    endDate: '2026-07-12',
+    equipmentId: '',
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
     status: 'reserved',
-    clientName: 'ООО "Новый Клиент"',
-    clientInn: '7701112233',
-    objectName: 'Строительство складского комплекса',
-    objectAddress: 'МО, Подольский район',
-    managerName: 'Смирнов К.А.',
-    contractNumber: 'БР-2026/07-99'
+    clientName: '',
+    clientInn: '',
+    objectName: '',
+    objectAddress: '',
+    managerName: '',
+    contractNumber: ''
   });
 
   // Загрузка техники из бэкенда /fleet/vehicles
@@ -1251,6 +1256,7 @@ export const FleetChessboard: React.FC = () => {
                   onChange={e => setNewBookingData({ ...newBookingData, equipmentId: e.target.value })}
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-amber-500"
                 >
+                  <option value="">-- Выберите единицу техники --</option>
                   {equipmentList.map(eq => (
                     <option key={eq.id} value={eq.id}>
                       {eq.name} ({eq.model}) — {eq.plateNumber} [{eq.dailyRate.toLocaleString()} ₽/смена]
