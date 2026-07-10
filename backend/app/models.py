@@ -1415,6 +1415,15 @@ class FleetVehicle(Base):
     osago_until = Column(String, nullable=True)                 # Срок действия ОСАГО (YYYY-MM-DD)
     status = Column(String, default="available")                # available | rented | reserved | maintenance
     notes = Column(Text, nullable=True)                         # Примечания
+    gps_lat = Column(Float, nullable=True)                      # Широта (например, 55.7558)
+    gps_lng = Column(Float, nullable=True)                      # Долгота (например, 37.6173)
+    fuel_level_percent = Column(Integer, default=85)            # Остаток топлива в % по ДУТ
+    fuel_liters = Column(Float, default=180.0)                  # Остаток в литрах
+    engine_hours = Column(Float, default=1240.5)                # Наработка в моточасах
+    speed_kmh = Column(Integer, default=0)                      # Скорость км/ч
+    ignition_status = Column(Boolean, default=False)            # Зажигание вкл/выкл
+    tracker_id = Column(String(100), nullable=True)             # IMEI или ID GPS-трекера
+    tracker_protocol = Column(String(50), default="wialon")     # wialon | omnicomm | autograph | manual
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
     tenant = relationship("Tenant")

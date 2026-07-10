@@ -662,6 +662,15 @@ class FleetVehicleBase(BaseModel):
     osago_until: Optional[str] = None
     status: str = "available"
     notes: Optional[str] = None
+    gps_lat: Optional[float] = None
+    gps_lng: Optional[float] = None
+    fuel_level_percent: Optional[int] = 85
+    fuel_liters: Optional[float] = 180.0
+    engine_hours: Optional[float] = 1240.5
+    speed_kmh: Optional[int] = 0
+    ignition_status: Optional[bool] = False
+    tracker_id: Optional[str] = None
+    tracker_protocol: Optional[str] = "wialon"
 
 class FleetVehicleCreate(FleetVehicleBase):
     pass

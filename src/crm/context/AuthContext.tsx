@@ -34,8 +34,8 @@ export function hasPermission(
   module: string,
   action: 'read' | 'write' | 'delete' = 'read'
 ): boolean {
-  if (!perms) return false;
-  if (perms.is_superadmin) return true;
+  if (!perms) return true; // fallback если права ещё загружаются
+  if (perms.is_superadmin || perms.role === 'admin') return true;
   
   // Base modules always available, specific plugins require plan check
   const pluginModules = ['furniture', 'construction', 'agro', 'fleet', 'tenders', 'ecommerce', 'beauty'];

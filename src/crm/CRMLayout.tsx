@@ -274,9 +274,10 @@ export const CRMLayout: React.FC = () => {
     { name: 'Финансы', path: '/crm/finance', icon: Wallet, module: 'finance' },
     { name: 'Снабжение', path: '/crm/supply', icon: Truck, module: 'inventory' },
     { name: 'Склад', path: '/crm/inventory', icon: Package, module: 'inventory' },
+    { name: 'Оборудование и Инструмент', path: '/crm/equipment', icon: Wrench, module: 'inventory' },
     { name: 'Мебельное производство', path: '/crm/furniture', icon: Hammer, module: 'furniture' },
     { name: 'Агропромышленность', path: '/crm/agro', icon: Wheat, module: 'agro' },
-    { name: 'Аренда спецтехники', path: '/crm/fleet', icon: Tractor, module: 'fleet' },
+    { name: '🚜 Автопарк (Шахматка)', path: '/crm/fleet', icon: Tractor, module: 'fleet' },
     { name: 'Салон Красоты', path: '/crm/beauty', icon: Sparkles, module: 'beauty' },
     { name: 'ТОиР (Механики)', path: '/crm/service', icon: Wrench, module: 'service' },
     { name: 'ИИ-Центр (Агенты & База)', path: '/crm/ai-agents', icon: Bot, module: null },
@@ -523,6 +524,11 @@ export const CRMLayout: React.FC = () => {
     if (item.isSuperadminOnly) return permissions?.is_superadmin;
     if (!item.module) return true;
     
+    // Администраторы тенанта и супер-админы видят все доступные отраслевые модули СФЕРА ERP (включая Автопарк, Агро и др.)
+    if (userRole === 'admin' || permissions?.is_superadmin || permissions?.role === 'admin') {
+      return true;
+    }
+
     // Проверка прав пользователя
     if (!hasPermission(permissions, item.module, 'read')) return false;
 

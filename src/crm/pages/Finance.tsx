@@ -72,6 +72,7 @@ const downloadDocumentFile = async (docId: number, docName: string) => {
 export const Finance: React.FC = () => {
   const toast = useToast();
   const [activeTab, setActiveTab] = useState<'finance' | 'documents' | 'pnl'>('finance');
+  const [pnlMode, setPnlMode] = useState<'actual' | 'budget'>('actual');
   const [activeCashRegister, setActiveCashRegister] = useState<'works' | 'materials'>('works');
   
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -230,6 +231,50 @@ export const Finance: React.FC = () => {
     .reduce((sum, t) => sum + t.amount, 0);
 
   const balance = totalIncome - totalExpense;
+
+  // P&L Динамическая аналитика по статьям доходов и расходов
+  const pnlAnalytics = useMemo(() => {
+    const incomeByCategory: Record<string, number> = {};
+    const expenseByCategory: Record<string, number> = {};
+    let actualIncome = 0;
+    let actualExpense = 0;
+
+    transactions.forEach(t => {
+      const cat = t.category || 'Прочее';
+      const amt = Number(t.amount) || 0;
+      if (t.transaction_type === 'income') {
+        incomeByCategory[cat] = (incomeByCategory[cat] || 0) + amt;
+        actualIncome += amt;
+      } else {
+        expenseByCategory[cat] = (expenseByCategory[cat] || 0) + amt;
+        actualExpense += amt;
+      }
+    });
+
+    const incomeList = Object.entries(incomeByCategory).map(([category, amount]) => ({
+      category,
+      amount,
+      percentage: actualIncome > 0 ? ((amount / actualIncome) * 100).toFixed(1) : '0'
+    })).sort((a, b) => b.amount - a.amount);
+
+    const expenseList = Object.entries(expenseByCategory).map(([category, amount]) => ({
+      category,
+      amount,
+      percentage: actualExpense > 0 ? ((amount / actualExpense) * 100).toFixed(1) : '0'
+    })).sort((a, b) => b.amount - a.amount);
+
+    const actualNetProfit = actualIncome - actualExpense;
+    const actualMargin = actualIncome > 0 ? ((actualNetProfit / actualIncome) * 100).toFixed(1) : '0';
+
+    return {
+      incomeList,
+      expenseList,
+      actualIncome,
+      actualExpense,
+      actualNetProfit,
+      actualMargin
+    };
+  }, [transactions]);
 
   const handleExportCSV = () => {
     if (filteredTransactions.length === 0) {
@@ -958,11 +1003,142 @@ export const Finance: React.FC = () => {
               </div>
             </div>
 
-            {/* P&L Bento Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/70 dark:border-zinc-800">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400">Выручка от реализации</span>
-                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-['Montserrat'] mt-1">
+            {/* Mode Switcher */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-zinc-100/80 dark:bg-zinc-800/80 p-1.5 rounded-2xl border border-zinc-200/50 dark:border-zinc-700/50 w-fit">
+              <div className="flex space-x-1">
+                <button
+                  onClick={() => setPnlMode('actual')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${pnlMode === 'actual' ? 'bg-[#F95700] text-white shadow-md' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'}`}
+                >
+                  📊 Фактический P&L (По статьям проводок СФЕРА ERP)
+                </button>
+                <button
+                  onClick={() => setPnlMode('budget')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${pnlMode === 'budget' ? 'bg-[#F95700] text-white shadow-md' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'}`}
+                >
+                  📋 Консолидированный бюджет (Стандарт IFRS / 1С)
+                </button>
+              </div>
+            </div>
+
+            {pnlMode === 'actual' ? (
+              <div className="space-y-6">
+                {/* 4 Bento Cards for Actual P&L */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/70 dark:border-zinc-800">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400">Итого Фактических Доходов</span>
+                    <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-['Montserrat'] mt-1">
+                      +{pnlAnalytics.actualIncome.toLocaleString('ru-RU')} ₽
+                    </div>
+                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-1 inline-block">
+                      Поступило по всем кассам
+                    </span>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/70 dark:border-zinc-800">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400">Итого Фактических Расходов</span>
+                    <div className="text-2xl font-black text-rose-600 dark:text-rose-450 font-['Montserrat'] mt-1">
+                      -{pnlAnalytics.actualExpense.toLocaleString('ru-RU')} ₽
+                    </div>
+                    <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 mt-1 inline-block">
+                      Затраты и платежи
+                    </span>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/70 dark:border-zinc-800">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400">Чистый результат (EBITDA)</span>
+                    <div className={`text-2xl font-black font-['Montserrat'] mt-1 ${pnlAnalytics.actualNetProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-450'}`}>
+                      {pnlAnalytics.actualNetProfit >= 0 ? '+' : ''}{pnlAnalytics.actualNetProfit.toLocaleString('ru-RU')} ₽
+                    </div>
+                    <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 mt-1 inline-block">
+                      Сальдо периода
+                    </span>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-orange-500/10 to-amber-500/10 border border-orange-500/30">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-[#F95700]">Фактическая Рентабельность</span>
+                    <div className="text-2xl font-black text-[#F95700] font-['Montserrat'] mt-1">
+                      {pnlAnalytics.actualMargin}%
+                    </div>
+                    <span className="text-[11px] font-bold text-zinc-600 dark:text-zinc-300 mt-1 inline-block">
+                      Доля чистой прибыли
+                    </span>
+                  </div>
+                </div>
+
+                {/* Actual Breakdown Table by Categories */}
+                <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 overflow-hidden">
+                  <div className="bg-zinc-100 dark:bg-zinc-900 px-5 py-3.5 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center font-bold text-xs uppercase tracking-wider text-zinc-600 dark:text-zinc-300">
+                    <span>Статья движения денежных средств</span>
+                    <span>Сумма и доля в структуре</span>
+                  </div>
+
+                  <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60 text-xs">
+                    {/* Income categories */}
+                    <div className="bg-emerald-500/10 px-5 py-2.5 font-extrabold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider flex justify-between">
+                      <span>I. Поступления по статьям доходов</span>
+                      <span>Итого: +{pnlAnalytics.actualIncome.toLocaleString('ru-RU')} ₽</span>
+                    </div>
+                    {pnlAnalytics.incomeList.length === 0 ? (
+                      <div className="px-5 py-4 text-zinc-500">Нет записей по доходам за выбранный период</div>
+                    ) : (
+                      pnlAnalytics.incomeList.map((inc) => (
+                        <div key={inc.category} className="px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                          <span className="font-semibold text-zinc-800 dark:text-zinc-200">{inc.category}</span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-24 bg-zinc-200 dark:bg-zinc-700 h-2 rounded-full overflow-hidden hidden sm:block">
+                              <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${Math.min(100, Number(inc.percentage))}%` }} />
+                            </div>
+                            <span className="text-zinc-500 w-12 text-right">{inc.percentage}%</span>
+                            <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 w-32 text-right">
+                              +{inc.amount.toLocaleString('ru-RU')} ₽
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+
+                    {/* Expense categories */}
+                    <div className="bg-rose-500/10 px-5 py-2.5 font-extrabold text-rose-700 dark:text-rose-300 uppercase tracking-wider flex justify-between">
+                      <span>II. Выплаты по статьям расходов</span>
+                      <span>Итого: -{pnlAnalytics.actualExpense.toLocaleString('ru-RU')} ₽</span>
+                    </div>
+                    {pnlAnalytics.expenseList.length === 0 ? (
+                      <div className="px-5 py-4 text-zinc-500">Нет записей по расходам за выбранный период</div>
+                    ) : (
+                      pnlAnalytics.expenseList.map((exp) => (
+                        <div key={exp.category} className="px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                          <span className="font-semibold text-zinc-800 dark:text-zinc-200">{exp.category}</span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-24 bg-zinc-200 dark:bg-zinc-700 h-2 rounded-full overflow-hidden hidden sm:block">
+                              <div className="bg-rose-500 h-full rounded-full" style={{ width: `${Math.min(100, Number(exp.percentage))}%` }} />
+                            </div>
+                            <span className="text-zinc-500 w-12 text-right">{exp.percentage}%</span>
+                            <span className="font-mono font-bold text-rose-600 dark:text-rose-400 w-32 text-right">
+                              -{exp.amount.toLocaleString('ru-RU')} ₽
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+
+                    {/* Net Result Row */}
+                    <div className="bg-zinc-100 dark:bg-zinc-900 px-5 py-4 font-black flex justify-between items-center text-sm">
+                      <span>ФАКТИЧЕСКИЙ ЧИСТЫЙ РЕЗУЛЬТАТ (ПРИБЫЛЬ / УБЫТОК):</span>
+                      <span className={`font-mono text-base ${pnlAnalytics.actualNetProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                        {pnlAnalytics.actualNetProfit >= 0 ? '+' : ''}{pnlAnalytics.actualNetProfit.toLocaleString('ru-RU')} ₽
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* P&L Bento Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/70 dark:border-zinc-800">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400">Выручка от реализации</span>
+                    <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-['Montserrat'] mt-1">
                   8 450 000 ₽
                 </div>
                 <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-1 inline-block">
@@ -1116,7 +1292,8 @@ export const Finance: React.FC = () => {
                 </div>
               </div>
             </div>
-
+          </div>
+        )}
           </div>
         )}
       </div>

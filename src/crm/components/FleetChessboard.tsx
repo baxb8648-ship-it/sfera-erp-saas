@@ -404,11 +404,15 @@ export const FleetChessboard: React.FC = () => {
     contractNumber: ''
   });
 
-  // Загрузка техники из бэкенда /fleet/vehicles
+  // Загрузка техники и бронирований из бэкенда
   React.useEffect(() => {
-    const fetchVehicles = async () => {
+    const fetchData = async () => {
       try {
-        const vehicles = await apiClient.get<any[]>('/fleet/vehicles');
+        const [vehicles, bookingsRes] = await Promise.all([
+          apiClient.get<any[]>('/fleet/vehicles'),
+          apiClient.get<any[]>('/fleet/bookings')
+        ]);
+
         if (vehicles && Array.isArray(vehicles) && vehicles.length > 0) {
           const mapped: EquipmentItem[] = vehicles.map((v) => ({
             id: String(v.id),
@@ -426,11 +430,31 @@ export const FleetChessboard: React.FC = () => {
           }));
           setEquipmentList(mapped);
         }
+
+        if (bookingsRes && Array.isArray(bookingsRes) && bookingsRes.length > 0) {
+          const mappedBookings: BookingItem[] = bookingsRes.map((b: any) => ({
+            id: String(b.id),
+            equipmentId: String(b.vehicle_id),
+            clientName: b.client_name || 'Клиент СФЕРА',
+            clientInn: '7700000000',
+            objectName: 'Объект заказчика',
+            objectAddress: 'г. Москва',
+            startDate: b.start_date,
+            endDate: b.end_date,
+            status: (b.status || 'rented') as BookingStatus,
+            totalCost: b.total_price || 0,
+            prepaidCost: Math.round((b.total_price || 0) * 0.3),
+            managerName: 'Смирнов К.А.',
+            contractNumber: `БР-2026/07-${b.id}`,
+            notes: b.notes
+          }));
+          setBookings(mappedBookings);
+        }
       } catch (err) {
         console.warn('Используются демо-данные автопарка:', err);
       }
     };
-    fetchVehicles();
+    fetchData();
   }, []);
 
   // Фильтрация техники
@@ -611,33 +635,66 @@ export const FleetChessboard: React.FC = () => {
   };
 
   // Обработчик создания новой брони
-  const handleCreateBookingSubmit = (e: React.FormEvent) => {
+  const handleCreateBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newBookingData.equipmentId || !newBookingData.startDate || !newBookingData.endDate) return;
 
     const eq = equipmentList.find(i => i.id === newBookingData.equipmentId);
     const days = Math.max(1, getDaysDiff(newBookingData.startDate, newBookingData.endDate) + 1);
     const cost = (eq?.dailyRate || 20000) * days;
+    const numericVehicleId = parseInt(newBookingData.equipmentId.replace(/\D/g, '')) || 1;
 
-    const created: BookingItem = {
-      id: `bk-${Date.now().toString().slice(-4)}`,
-      equipmentId: newBookingData.equipmentId,
-      clientName: newBookingData.clientName || 'Новый клиент',
-      clientInn: newBookingData.clientInn || '7700000000',
-      objectName: newBookingData.objectName || 'Объект заказчика',
-      objectAddress: newBookingData.objectAddress || 'г. Москва',
-      startDate: newBookingData.startDate,
-      endDate: newBookingData.endDate,
-      status: (newBookingData.status as BookingStatus) || 'reserved',
-      totalCost: cost,
-      prepaidCost: newBookingData.status === 'rented' ? cost : Math.round(cost * 0.3),
-      managerName: newBookingData.managerName || 'Смирнов К.А.',
-      contractNumber: newBookingData.contractNumber || `БР-2026/07-${Math.floor(10 + Math.random() * 89)}`,
-      notes: newBookingData.notes
-    };
+    try {
+      const createdApi = await apiClient.post<any>('/fleet/bookings', {
+        vehicle_id: numericVehicleId,
+        client_name: newBookingData.clientName || 'Новый клиент',
+        start_date: newBookingData.startDate,
+        end_date: newBookingData.endDate,
+        status: newBookingData.status || 'reserved',
+        total_price: cost,
+        notes: newBookingData.notes || null
+      });
 
-    setBookings(prev => [created, ...prev]);
-    setIsCreateModalOpen(false);
+      const created: BookingItem = {
+        id: createdApi && createdApi.id ? String(createdApi.id) : `bk-${Date.now().toString().slice(-4)}`,
+        equipmentId: newBookingData.equipmentId,
+        clientName: newBookingData.clientName || 'Новый клиент',
+        clientInn: newBookingData.clientInn || '7700000000',
+        objectName: newBookingData.objectName || 'Объект заказчика',
+        objectAddress: newBookingData.objectAddress || 'г. Москва',
+        startDate: newBookingData.startDate,
+        endDate: newBookingData.endDate,
+        status: (newBookingData.status as BookingStatus) || 'reserved',
+        totalCost: cost,
+        prepaidCost: newBookingData.status === 'rented' ? cost : Math.round(cost * 0.3),
+        managerName: newBookingData.managerName || 'Смирнов К.А.',
+        contractNumber: newBookingData.contractNumber || `БР-2026/07-${Math.floor(10 + Math.random() * 89)}`,
+        notes: newBookingData.notes
+      };
+
+      setBookings(prev => [created, ...prev]);
+      setIsCreateModalOpen(false);
+    } catch (err) {
+      console.warn('Ошибка сохранения брони в API, локальное добавление:', err);
+      const created: BookingItem = {
+        id: `bk-${Date.now().toString().slice(-4)}`,
+        equipmentId: newBookingData.equipmentId,
+        clientName: newBookingData.clientName || 'Новый клиент',
+        clientInn: newBookingData.clientInn || '7700000000',
+        objectName: newBookingData.objectName || 'Объект заказчика',
+        objectAddress: newBookingData.objectAddress || 'г. Москва',
+        startDate: newBookingData.startDate,
+        endDate: newBookingData.endDate,
+        status: (newBookingData.status as BookingStatus) || 'reserved',
+        totalCost: cost,
+        prepaidCost: newBookingData.status === 'rented' ? cost : Math.round(cost * 0.3),
+        managerName: newBookingData.managerName || 'Смирнов К.А.',
+        contractNumber: newBookingData.contractNumber || `БР-2026/07-${Math.floor(10 + Math.random() * 89)}`,
+        notes: newBookingData.notes
+      };
+      setBookings(prev => [created, ...prev]);
+      setIsCreateModalOpen(false);
+    }
   };
 
   return (

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Map, Leaf, Tractor, Clock, CheckCircle2, PlayCircle, Plus, Beef, DollarSign, Activity, AlertTriangle, Tag, HeartPulse, Wheat } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 import { apiClient } from '../../api/client';
+import { AgroMachineryGlonass } from '../components/AgroMachineryGlonass';
 
 interface AgroField {
     id: number;
@@ -9,6 +10,8 @@ interface AgroField {
     area_hectares: number;
     soil_type: string;
     geo_json: string;
+    cadastral_number?: string;
+    crop_history?: string;
 }
 
 interface AgroOperation {
@@ -62,8 +65,16 @@ export default function AgroDashboard() {
     const [livestock, setLivestock] = useState<AgroLivestock[]>([]);
     const [offspringList, setOffspringList] = useState<AgroOffspring[]>([]);
     const [mortalityList, setMortalityList] = useState<AgroMortality[]>([]);
+    const [feedLogs, setFeedLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState<'map' | 'operations' | 'livestock_cattle' | 'livestock_small' | 'livestock_horses' | 'feed' | 'vet'>('map');
+    const [activeTab, setActiveTab] = useState<'map' | 'machinery' | 'operations' | 'livestock_cattle' | 'livestock_small' | 'livestock_horses' | 'feed' | 'vet'>('map');
+
+    const [isAddFeedModalOpen, setIsAddFeedModalOpen] = useState(false);
+    const [newFeedData, setNewFeedData] = useState({
+        herd_id: 1,
+        quantity_kg: 100,
+        head_count: 20
+    });
 
     // Кастомный конферм для «Завершить операцию»
     const [confirmCompleteOpId, setConfirmCompleteOpId] = useState<number | null>(null);
@@ -129,23 +140,40 @@ export default function AgroDashboard() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [fieldsRes, opsRes, livestockRes, offRes, mortRes] = await Promise.all([
-                apiClient.get('/agro/fields'),
-                apiClient.get('/agro/operations'),
-                apiClient.get('/agro/livestock'),
+            const [fieldsRes, opsRes, livestockRes, offRes, mortRes, feedRes] = await Promise.all([
+                apiClient.get('/agro/fields').catch(() => []),
+                apiClient.get('/agro/operations').catch(() => []),
+                apiClient.get('/agro/livestock').catch(() => []),
                 apiClient.get('/agro/livestock/offspring').catch(() => []),
-                apiClient.get('/agro/livestock/mortality').catch(() => [])
+                apiClient.get('/agro/livestock/mortality').catch(() => []),
+                apiClient.get('/agro/livestock/feed-log').catch(() => [])
             ]);
             setFields(Array.isArray(fieldsRes) ? fieldsRes : []);
             setOperations(Array.isArray(opsRes) ? opsRes : []);
             setLivestock(Array.isArray(livestockRes) ? livestockRes : []);
             setOffspringList(Array.isArray(offRes) ? offRes : []);
             setMortalityList(Array.isArray(mortRes) ? mortRes : []);
+            setFeedLogs(Array.isArray(feedRes) ? feedRes : []);
         } catch (err) {
-            console.error(err);
-            error('Ошибка загрузки данных');
+            console.error('Agro data fetch non-critical error:', err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleCreateFeedLogSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await apiClient.post('/agro/livestock/feed-log', {
+                herd_id: Number(newFeedData.herd_id) || 1,
+                quantity_kg: Number(newFeedData.quantity_kg) || 10,
+                head_count: Number(newFeedData.head_count) || 1
+            });
+            success('Выдача корма зарегистрирована и списана со склада');
+            setIsAddFeedModalOpen(false);
+            fetchData();
+        } catch (err: any) {
+            error(err.response?.data?.detail || 'Ошибка регистрации выдачи корма');
         }
     };
 
@@ -183,6 +211,55 @@ export default function AgroDashboard() {
         } catch (err: any) {
             error(err.response?.data?.detail || 'Ошибка регистрации акта');
         }
+    };
+
+    const handleLoadDemoFields = () => {
+        const demoFields: AgroField[] = [
+            {
+                id: 101,
+                name: 'Поле #1 «Северное» (Пшеница озимая)',
+                area_hectares: 142.5,
+                cadastral_number: '56:44:0101001:142',
+                soil_type: 'Чернозём типичный',
+                crop_history: '2025: Пар, 2024: Ячмень',
+                geo_json: JSON.stringify([
+                    [51.77, 55.08],
+                    [51.78, 55.09],
+                    [51.78, 55.12],
+                    [51.77, 55.11]
+                ])
+            },
+            {
+                id: 102,
+                name: 'Поле #2 «Южное» (Подсолнечник)',
+                area_hectares: 95.0,
+                cadastral_number: '56:44:0101002:95',
+                soil_type: 'Темно-каштановая',
+                crop_history: '2025: Кукуруза, 2024: Пшеница',
+                geo_json: JSON.stringify([
+                    [51.74, 55.09],
+                    [51.75, 55.10],
+                    [51.75, 55.13],
+                    [51.74, 55.12]
+                ])
+            },
+            {
+                id: 103,
+                name: 'Поле #3 «Заречное» (Кукуруза на зерно)',
+                area_hectares: 210.0,
+                cadastral_number: '56:44:0101003:210',
+                soil_type: 'Чернозём выщелоченный',
+                crop_history: '2025: Соя, 2024: Подсолнечник',
+                geo_json: JSON.stringify([
+                    [51.76, 55.14],
+                    [51.77, 55.15],
+                    [51.77, 55.18],
+                    [51.76, 55.17]
+                ])
+            }
+        ];
+        setFields(demoFields);
+        success('Загружены 3 кадастровых демо-поля на карту 2ГИС');
     };
 
     // 2GIS Map Logic
@@ -366,6 +443,12 @@ export default function AgroDashboard() {
                     <Map className="w-4 h-4" /> Карта Полей (2GIS)
                 </button>
                 <button 
+                    onClick={() => setActiveTab('machinery')}
+                    className={`pb-3 px-3 font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap text-sm cursor-pointer ${activeTab === 'machinery' ? 'border-[#F95700] text-[#F95700] font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'}`}
+                >
+                    <Tractor className="w-4 h-4 text-[#F95700]" /> Сельхозтехника и ГЛОНАСС
+                </button>
+                <button 
                     onClick={() => setActiveTab('operations')}
                     className={`pb-3 px-3 font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap text-sm cursor-pointer ${activeTab === 'operations' ? 'border-[#F95700] text-[#F95700] font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'}`}
                 >
@@ -409,21 +492,61 @@ export default function AgroDashboard() {
                     <div className="lg:col-span-3 h-[600px] rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-sm relative">
                         {loading && <div className="absolute inset-0 z-10 bg-white/50 dark:bg-zinc-900/50 flex items-center justify-center">Загрузка...</div>}
                         <div id="agro-map" className="w-full h-full" style={{ background: '#f4f4f5' }}></div>
+                        {fields.length === 0 && !loading && (
+                            <div className="absolute inset-0 z-10 bg-black/40 backdrop-blur-xs flex items-center justify-center p-6">
+                                <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl max-w-md text-center shadow-2xl border border-gray-200 dark:border-zinc-800 space-y-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-orange-100 dark:bg-orange-950/60 text-[#F95700] flex items-center justify-center mx-auto text-2xl font-bold">
+                                        🌾
+                                    </div>
+                                    <h4 className="font-extrabold text-base text-[#1a1a1a] dark:text-white">
+                                        Карта полей пока пуста
+                                    </h4>
+                                    <p className="text-xs text-gray-500 dark:text-zinc-400">
+                                        Загрузите 3 тестовых кадастровых поля (Северное, Южное, Заречное) с гео-полигонами для проверки интерактивной карты 2ГИС.
+                                    </p>
+                                    <button
+                                        onClick={handleLoadDemoFields}
+                                        className="w-full py-3 rounded-xl bg-[#F95700] hover:bg-[#e04e00] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-colors"
+                                    >
+                                        🚀 Загрузить 3 кадастровых демо-поля
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                     <div className="space-y-4">
-                        <h3 className="font-semibold text-lg dark:text-white">Реестр полей</h3>
+                        <div className="flex items-center justify-between">
+                            <h3 className="font-semibold text-lg dark:text-white">Реестр полей ({fields.length})</h3>
+                            {fields.length === 0 && (
+                                <button
+                                    onClick={handleLoadDemoFields}
+                                    className="px-3 py-1.5 rounded-xl bg-[#F95700] text-white text-xs font-bold"
+                                >
+                                    + Демо поля
+                                </button>
+                            )}
+                        </div>
                         <div className="space-y-3">
                             {fields.map(f => (
-                                <div key={f.id} className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm hover:border-blue-500 transition-colors cursor-pointer">
+                                <div key={f.id} className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm hover:border-[#F95700] transition-colors cursor-pointer">
                                     <div className="font-bold dark:text-white">{f.name}</div>
                                     <div className="text-sm text-zinc-500 mt-1">{f.area_hectares} га • {f.soil_type || 'Тип почвы не указан'}</div>
+                                    {f.cadastral_number && (
+                                        <div className="text-xs font-mono text-gray-400 mt-1">Кадастр: {f.cadastral_number}</div>
+                                    )}
                                 </div>
                             ))}
-                            {fields.length === 0 && !loading && <div className="text-zinc-500 text-sm">Нет добавленных полей</div>}
+                            {fields.length === 0 && !loading && (
+                                <div className="p-6 rounded-2xl bg-gray-50 dark:bg-zinc-800/40 text-center space-y-2">
+                                    <div className="text-zinc-500 text-xs">Нет добавленных полей</div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
             )}
+
+            {activeTab === 'machinery' && <AgroMachineryGlonass />}
 
             {activeTab === 'operations' && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 overflow-x-auto pb-4">
@@ -596,6 +719,12 @@ export default function AgroDashboard() {
                                 </h2>
                                 <p className="text-sm text-zinc-500">Автоматический расчет потребности в кормах на сутки и сезон</p>
                             </div>
+                            <button
+                                onClick={() => setIsAddFeedModalOpen(true)}
+                                className="px-4 py-2 bg-[#F95700] hover:bg-orange-600 text-white font-bold rounded-xl shadow-md transition-all text-xs flex items-center gap-2 cursor-pointer"
+                            >
+                                <Plus className="w-4 h-4" /> Зарегистрировать выдачу корма
+                            </button>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800">
@@ -622,6 +751,31 @@ export default function AgroDashboard() {
                                     <div>• Солевой лизунец: <span className="font-semibold text-zinc-900 dark:text-white">по потребности</span></div>
                                 </div>
                             </div>
+                        </div>
+
+                        <div className="mt-8 pt-6 border-t border-zinc-200 dark:border-zinc-800">
+                            <h3 className="font-bold text-sm dark:text-white mb-3">Журнал выдачи кормов (списание со склада)</h3>
+                            {feedLogs.length === 0 ? (
+                                <div className="text-sm text-zinc-500 py-4">Журнал выдачи кормов пока пуст. Нажмите «Зарегистрировать выдачу корма», чтобы списать рацион.</div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {feedLogs.map((log: any) => (
+                                        <div key={log.id} className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 flex justify-between items-center border border-zinc-200/50 dark:border-zinc-800">
+                                            <div>
+                                                <div className="font-bold text-sm text-zinc-900 dark:text-white">
+                                                    Выдача корма #{log.id} — {log.quantity_kg} кг на {log.head_count} голов
+                                                </div>
+                                                <div className="text-xs text-zinc-500 mt-0.5">
+                                                    Дата: {new Date(log.date).toLocaleDateString('ru-RU')} · Стадо ID: #{log.herd_id}
+                                                </div>
+                                            </div>
+                                            <span className="px-2.5 py-1 text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-500/20">
+                                                Списано со склада
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -1014,6 +1168,63 @@ export default function AgroDashboard() {
                                     className="px-5 py-2 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 text-white shadow-md"
                                 >
                                     Провести акт
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* ================= MODAL: ВЫДАЧА КОРМА ================= */}
+            {isAddFeedModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+                        <h3 className="text-lg font-bold dark:text-white mb-4">Регистрация выдачи корма</h3>
+                        <form onSubmit={handleCreateFeedLogSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-semibold text-zinc-500 mb-1">ID Стада / Группы *</label>
+                                <input
+                                    type="number"
+                                    value={newFeedData.herd_id}
+                                    onChange={(e) => setNewFeedData({ ...newFeedData, herd_id: Number(e.target.value) })}
+                                    className="w-full px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 text-sm"
+                                    required
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-semibold text-zinc-500 mb-1">Количество (кг) *</label>
+                                    <input
+                                        type="number"
+                                        value={newFeedData.quantity_kg}
+                                        onChange={(e) => setNewFeedData({ ...newFeedData, quantity_kg: Number(e.target.value) })}
+                                        className="w-full px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 text-sm"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-zinc-500 mb-1">Поголовье (голов)</label>
+                                    <input
+                                        type="number"
+                                        value={newFeedData.head_count}
+                                        onChange={(e) => setNewFeedData({ ...newFeedData, head_count: Number(e.target.value) })}
+                                        className="w-full px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 text-sm"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-2 pt-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsAddFeedModalOpen(false)}
+                                    className="px-4 py-2 rounded-xl text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+                                >
+                                    Отмена
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-5 py-2 rounded-xl text-xs font-bold bg-[#F95700] hover:bg-orange-600 text-white shadow-md"
+                                >
+                                    Списать со склада
                                 </button>
                             </div>
                         </form>

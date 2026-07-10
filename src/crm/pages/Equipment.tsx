@@ -58,6 +58,7 @@ export const Equipment: React.FC = () => {
   const [statusItem, setStatusItem] = useState<EquipmentItem | null>(null);
   const [newStatus, setNewStatus] = useState('На базе');
   const [newObjectId, setNewObjectId] = useState('');
+  const [statusError, setStatusError] = useState('');
 
   // QR Code States
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
@@ -214,14 +215,16 @@ export const Equipment: React.FC = () => {
     setStatusItem(item);
     setNewStatus(item.status);
     setNewObjectId(item.object_id ? item.object_id.toString() : '');
+    setStatusError('');
     setIsStatusModalOpen(true);
   };
 
   const handleStatusSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setStatusError('');
     if (!statusItem) return;
     if (newStatus === 'На объекте' && !newObjectId) {
-      alert("Выберите объект");
+      setStatusError('Укажите объект, на котором находится оборудование');
       return;
     }
 
@@ -234,7 +237,91 @@ export const Equipment: React.FC = () => {
       fetchEquipment();
     } catch (err) {
       console.error(err);
+      setStatusError('Ошибка при обновлении статуса');
     }
+  };
+
+  const handlePrintAct = (item: EquipmentItem) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    const today = new Date().toLocaleDateString('ru-RU');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Акт выдачи оборудования № АП-EQ-${item.id}</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, sans-serif; padding: 40px; color: #111; line-height: 1.5; }
+            .header { border-bottom: 3px solid #F95700; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; }
+            .header h1 { margin: 0; font-size: 20px; color: #111; text-transform: uppercase; }
+            .badge { background: #fff3ed; color: #F95700; padding: 6px 14px; border-radius: 6px; font-weight: bold; font-size: 13px; }
+            .meta { margin-bottom: 24px; font-size: 14px; }
+            .table { width: 100%; border-collapse: collapse; margin-bottom: 32px; }
+            .table th, .table td { border: 1px solid #ddd; padding: 12px; text-align: left; font-size: 14px; }
+            .table th { background: #f8f9fa; font-weight: bold; }
+            .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 48px; }
+            .sig-block { border-top: 1px solid #444; padding-top: 8px; font-size: 14px; }
+            @media print { body { padding: 20px; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <h1>Акт приёма-передачи оборудования / инструмента</h1>
+              <div style="color: #666; font-size: 13px;">СФЕРА ERP · Строительное управление</div>
+            </div>
+            <div class="badge">№ АП-EQ-${item.id} от ${today}</div>
+          </div>
+
+          <div class="meta">
+            <p><strong>Статус оборудования:</strong> ${item.status}</p>
+            <p><strong>Объект / Назначение:</strong> ${item.object_name || 'Склад / База'}</p>
+            <p><strong>Ответственный инспектор (выдал):</strong> ${item.inspector || 'Главный кладовщик'}</p>
+            <p><strong>Дата последнего ТО:</strong> ${item.last_service ? new Date(item.last_service).toLocaleDateString('ru-RU') : 'Не проводилось'}</p>
+          </div>
+
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Наименование оборудования / Инструмент</th>
+                <th>Штрихкод / QR-идентификатор</th>
+                <th>Текущий статус</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>#EQ-${item.id}</td>
+                <td><strong>${item.name}</strong></td>
+                <td>${item.barcode || `SPHERA-EQ-${item.id}`}</td>
+                <td>${item.status}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="font-size: 13px; color: #444; margin-bottom: 30px;">
+            Настоящим актом подтверждается, что указанное оборудование выдано в технически исправном состоянии, укомплектовано и пригодно для выполнения работ. Материально-ответственное лицо обязуется соблюдать правила эксплуатации и техники безопасности.
+          </div>
+
+          <div class="signatures">
+            <div class="sig-block">
+              <strong>Сдал (Выдал со склада):</strong><br/>
+              Должность: __________________________<br/>
+              Подпись / ФИО: ______________________
+            </div>
+            <div class="sig-block">
+              <strong>Принял (Прораб / Мастер):</strong><br/>
+              Должность: __________________________<br/>
+              Подпись / ФИО: ______________________
+            </div>
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
   };
 
   // ----------------------------------------------------
@@ -744,6 +831,13 @@ export const Equipment: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 text-right space-x-2">
                           <button
+                            onClick={() => handlePrintAct(item)}
+                            className="active:scale-95 transition-all inline-flex items-center p-2 text-gray-400 dark:text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 rounded-lg min-w-[40px] justify-center cursor-pointer"
+                            title="Печать акта выдачи"
+                          >
+                            <Printer className="w-4 h-4" />
+                          </button>
+                          <button
                             onClick={() => handleOpenEditModal(item)}
                             className="active:scale-95 transition-all inline-flex items-center p-2 text-gray-400 dark:text-zinc-500 hover:text-[#F95700] dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/20 rounded-lg min-w-[40px] justify-center cursor-pointer"
                             title="Редактировать"
@@ -1029,6 +1123,12 @@ export const Equipment: React.FC = () => {
               <p className="text-sm text-gray-500 dark:text-zinc-400 mt-1">{statusItem.name}</p>
             </div>
             <form onSubmit={handleStatusSubmit} className="p-6 space-y-4">
+              {statusError && (
+                <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 text-xs font-semibold flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>{statusError}</span>
+                </div>
+              )}
               <div>
                 <label className="block text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5">Новый статус</label>
                 <select

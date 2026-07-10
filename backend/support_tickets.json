@@ -33,6 +33,13 @@
         "text": "Прикреплен файл",
         "time": "16:54",
         "is_support": true
+      },
+      {
+        "sender": "superadmin (Техподдержка)",
+        "text": "Не работает раздел авто",
+        "time": "11:53",
+        "is_support": true,
+        "attachment": null
       }
     ]
   },
