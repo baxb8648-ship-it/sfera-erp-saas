@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Lock, LayoutDashboard, Users, Building2, Wallet, Package, LogOut, FileText, Sun, Moon, ShieldCheck, Gavel, TrendingUp, Menu, X, Mail, CheckSquare, Bell, Crown, LifeBuoy, HelpCircle, HardHat, Globe, Truck, Wrench, Scissors, CalendarDays, Tractor, Hammer, Wheat, Sparkles, Bot, Star, Eye, EyeOff, Settings, ArrowUp, ArrowDown } from 'lucide-react';
+import { Lock, LayoutDashboard, Users, Building2, Wallet, Package, LogOut, FileText, Sun, Moon, ShieldCheck, Gavel, TrendingUp, Menu, X, Mail, CheckSquare, Bell, Crown, LifeBuoy, HelpCircle, HardHat, Globe, Truck, Wrench, Scissors, CalendarDays, Tractor, Hammer, Wheat, Sparkles, Bot, Star, Eye, EyeOff, Settings, ArrowUp, ArrowDown, Landmark } from 'lucide-react';
 import { CommandMenu } from './components/CommandMenu';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useToast } from '../components/ui/Toast';
@@ -261,6 +261,7 @@ export const CRMLayout: React.FC = () => {
 
   const allMenuItems = [
     { name: 'Дашборд', path: '/crm', icon: LayoutDashboard, module: null }, // Всегда доступен (главная)
+    { name: 'Холдинг / Компании', path: '/crm/holding', icon: Landmark, module: null }, // Мульти-компании и Холдинг
     { name: 'Биржа Заказов', path: '/crm/marketplace', icon: Globe, module: null }, // Внутренний SaaS маркетплейс
     { name: 'Задачи', path: '/crm/tasks', icon: CheckSquare, module: 'tasks' },
     { name: 'Техподдержка', path: '/crm/support', icon: LifeBuoy, module: 'support' },

@@ -15,7 +15,9 @@ import {
   ArrowUpRight,
   X,
   PhoneCall,
-  Sparkles
+  Sparkles,
+  Calendar,
+  Activity
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 
@@ -370,6 +372,8 @@ export const FleetChessboard: React.FC = () => {
 
   // Модальные окна
   const [selectedBooking, setSelectedBooking] = useState<BookingItem | null>(null);
+  const [selectedVehicleForCard, setSelectedVehicleForCard] = useState<EquipmentItem | null>(null);
+  const [activeVehicleTab, setActiveVehicleTab] = useState<'passport' | 'rentals' | 'maintenance' | 'finance'>('passport');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [isAddVehicleModalOpen, setIsAddVehicleModalOpen] = useState<boolean>(false);
   const [newVehicleData, setNewVehicleData] = useState({
@@ -933,7 +937,11 @@ export const FleetChessboard: React.FC = () => {
                   >
                     
                     {/* Left Column: Equipment Info */}
-                    <div className="w-72 sm:w-80 shrink-0 p-3.5 bg-white dark:bg-slate-800 sticky left-0 z-10 border-r border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 group-hover:bg-slate-50/90 dark:group-hover:bg-slate-800/90 transition-colors">
+                    <div
+                      onClick={() => { setSelectedVehicleForCard(eq); setActiveVehicleTab('passport'); }}
+                      className="w-72 sm:w-80 shrink-0 p-3.5 bg-white dark:bg-slate-800 sticky left-0 z-10 border-r border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 group-hover:bg-slate-50/90 dark:group-hover:bg-slate-800/90 transition-colors cursor-pointer"
+                      title="Кликните, чтобы открыть Паспорт и историю техники"
+                    >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-black text-white shadow-sm ${
                           eq.category === 'excavator' ? 'bg-amber-600' :
@@ -1512,6 +1520,204 @@ export const FleetChessboard: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: ПАСПОРТ И КАРТОЧКА ТЕХНИКИ (F-06) ================= */}
+      {selectedVehicleForCard && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl max-w-3xl w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setSelectedVehicleForCard(null)}
+              className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* HEADER */}
+            <div className="flex items-center gap-4 border-b border-slate-100 dark:border-slate-700 pb-5">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-amber-500/20 shrink-0">
+                <Truck className="w-7 h-7" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white">
+                    {selectedVehicleForCard.name}
+                  </h3>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-extrabold bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600">
+                    {selectedVehicleForCard.plateNumber}
+                  </span>
+                </div>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1">
+                  Модель: {selectedVehicleForCard.model} • Категория: {
+                    selectedVehicleForCard.category === 'excavator' ? 'Экскаватор' :
+                    selectedVehicleForCard.category === 'crane' ? 'Автокран' :
+                    selectedVehicleForCard.category === 'dump_truck' ? 'Самосвал' : 'Спецтехника'
+                  }
+                </p>
+              </div>
+            </div>
+
+            {/* TABS */}
+            <div className="flex items-center gap-2 mt-5 border-b border-slate-100 dark:border-slate-700 pb-3 overflow-x-auto">
+              <button
+                onClick={() => setActiveVehicleTab('passport')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                  activeVehicleTab === 'passport'
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-md'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <FileText className="w-4 h-4 text-amber-500" />
+                Паспорт и характеристики
+              </button>
+              <button
+                onClick={() => setActiveVehicleTab('rentals')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                  activeVehicleTab === 'rentals'
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-md'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Calendar className="w-4 h-4 text-emerald-500" />
+                История аренды ({bookings.filter(b => b.equipmentId === selectedVehicleForCard.id).length})
+              </button>
+              <button
+                onClick={() => setActiveVehicleTab('maintenance')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                  activeVehicleTab === 'maintenance'
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-md'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Activity className="w-4 h-4 text-blue-500" />
+                Телеметрия и ТО
+              </button>
+              <button
+                onClick={() => setActiveVehicleTab('finance')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                  activeVehicleTab === 'finance'
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-md'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <DollarSign className="w-4 h-4 text-purple-500" />
+                Экономика машины
+              </button>
+            </div>
+
+            {/* TAB 1: PASSPORT */}
+            {activeVehicleTab === 'passport' && (
+              <div className="mt-5 space-y-5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase">VIN / Заводской №</span>
+                    <div className="text-sm font-mono font-bold text-slate-900 dark:text-white mt-1">
+                      X9L445330J0012345
+                    </div>
+                  </div>
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase">Год выпуска</span>
+                    <div className="text-sm font-bold text-slate-900 dark:text-white mt-1">2023 г.в.</div>
+                  </div>
+                  <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Полис ОСАГО/КАСКО</span>
+                    <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-1">До 15.04.2027 (Действует)</div>
+                  </div>
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase">Балансовая стоимость</span>
+                    <div className="text-sm font-mono font-black text-slate-900 dark:text-white mt-1">15 200 000 ₽</div>
+                  </div>
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase">Оператор-машинист</span>
+                    <div className="text-sm font-bold text-slate-900 dark:text-white mt-1">{selectedVehicleForCard.operatorName}</div>
+                  </div>
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase">База приписки</span>
+                    <div className="text-sm font-bold text-slate-900 dark:text-white mt-1">{selectedVehicleForCard.location}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: RENTALS HISTORY */}
+            {activeVehicleTab === 'rentals' && (
+              <div className="mt-5 space-y-3">
+                <h4 className="text-xs font-bold uppercase text-slate-400">Закреплённые бронирования и договоры</h4>
+                {bookings.filter(b => b.equipmentId === selectedVehicleForCard.id).length === 0 ? (
+                  <div className="p-6 text-center text-slate-400 text-sm">
+                    Нет активных или архивных бронирований для этой единицы
+                  </div>
+                ) : (
+                  bookings.filter(b => b.equipmentId === selectedVehicleForCard.id).map(b => (
+                    <div key={b.id} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                      <div>
+                        <div className="font-bold text-sm text-slate-900 dark:text-white">{b.clientName}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">Объект: {b.objectName} • Договор: {b.contractNumber}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs font-mono font-bold text-slate-900 dark:text-white">{b.startDate} — {b.endDate}</div>
+                        <div className="text-xs font-bold text-emerald-600 mt-0.5">{b.totalCost.toLocaleString()} ₽</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* TAB 3: MAINTENANCE & TELEMETRY */}
+            {activeVehicleTab === 'maintenance' && (
+              <div className="mt-5 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
+                    <span className="text-xs font-bold text-slate-400 uppercase">ГЛОНАСС — Уровень топлива</span>
+                    <div className="text-2xl font-black text-slate-900 dark:text-white mt-2">
+                      {selectedVehicleForCard.fuelLevel}%
+                    </div>
+                    <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden mt-2">
+                      <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${selectedVehicleForCard.fuelLevel}%` }} />
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
+                    <span className="text-xs font-bold text-slate-400 uppercase">Наработка моточасов</span>
+                    <div className="text-2xl font-black text-slate-900 dark:text-white mt-2">
+                      {selectedVehicleForCard.engineHours} м/ч
+                    </div>
+                    <div className="text-xs text-amber-600 font-semibold mt-1">До следующего ТО-2: 120 м/ч</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 4: FINANCE */}
+            {activeVehicleTab === 'finance' && (
+              <div className="mt-5 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase">Суточная ставка</span>
+                    <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                      {selectedVehicleForCard.dailyRate.toLocaleString()} ₽ / смена
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
+                    <span className="text-xs font-bold text-slate-400 uppercase">Расчётная выручка в месяц</span>
+                    <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
+                      {(selectedVehicleForCard.dailyRate * 22).toLocaleString()} ₽
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end">
+              <button
+                onClick={() => setSelectedVehicleForCard(null)}
+                className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 font-bold text-xs"
+              >
+                Закрыть паспорт
+              </button>
+            </div>
           </div>
         </div>
       )}

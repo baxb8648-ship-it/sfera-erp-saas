@@ -71,7 +71,10 @@ async def calculate_raskroy(req: FurnitureRaskroyRequest):
 from sqlalchemy.orm import Session
 from fastapi import Depends
 from ..database import get_db
-from ..models import FurnitureProduct, FurnitureBOM, FurnitureOrder, FurnitureOrderOperation, InventoryItem, User
+from ..models import (
+    FurnitureProduct, FurnitureBOM, FurnitureOrder, FurnitureOrderOperation,
+    FurnitureOrderFitting, FurnitureOrderDetail, InventoryItem, User
+)
 from .auth import get_current_user
 from datetime import datetime
 
@@ -102,6 +105,23 @@ class FurnitureBOMBase(BaseModel):
 class FurnitureOrderBase(BaseModel):
     product_id: int
     quantity: int = 1
+
+class FurnitureFittingCreate(BaseModel):
+    fitting_name: str
+    article: Optional[str] = None
+    supplier: Optional[str] = None
+    quantity: int = 1
+    unit_price: float = 0.0
+
+class FurnitureDetailCreate(BaseModel):
+    detail_name: str
+    length_mm: float
+    width_mm: float
+    quantity: int = 1
+    edge_top: str = "none"
+    edge_bottom: str = "none"
+    edge_left: str = "none"
+    edge_right: str = "none"
 
 # ============================
 # Endpoints
@@ -156,12 +176,45 @@ def get_orders(tenant_id: Optional[int] = None, db: Session = Depends(get_db), c
     res = []
     for o in orders:
         ops = db.query(FurnitureOrderOperation).filter(FurnitureOrderOperation.order_id == o.id).all()
+        fittings = db.query(FurnitureOrderFitting).filter(FurnitureOrderFitting.order_id == o.id).all()
+        details = db.query(FurnitureOrderDetail).filter(FurnitureOrderDetail.order_id == o.id).all()
+
+        total_edge_meters = sum(d.calc_linear_meters for d in details)
+        total_fittings_cost = sum((f.quantity * f.unit_price) for f in fittings)
+
         o_dict = {
             "id": o.id,
             "product_name": o.product.name if o.product else "Unknown",
             "quantity": o.quantity,
             "status": o.status,
-            "operations": [{"id": op.id, "name": op.operation_name, "status": op.status} for op in ops]
+            "total_edge_meters": round(total_edge_meters, 2),
+            "total_fittings_cost": round(total_fittings_cost, 2),
+            "operations": [{"id": op.id, "name": op.operation_name, "status": op.status} for op in ops],
+            "fittings": [
+                {
+                    "id": f.id,
+                    "fitting_name": f.fitting_name,
+                    "article": f.article or "",
+                    "supplier": f.supplier or "",
+                    "quantity": f.quantity,
+                    "unit_price": f.unit_price,
+                    "status": f.status
+                } for f in fittings
+            ],
+            "details": [
+                {
+                    "id": d.id,
+                    "detail_name": d.detail_name,
+                    "length_mm": d.length_mm,
+                    "width_mm": d.width_mm,
+                    "quantity": d.quantity,
+                    "edge_top": d.edge_top,
+                    "edge_bottom": d.edge_bottom,
+                    "edge_left": d.edge_left,
+                    "edge_right": d.edge_right,
+                    "calc_linear_meters": round(d.calc_linear_meters, 2)
+                } for d in details
+            ]
         }
         res.append(o_dict)
     return res
@@ -211,3 +264,74 @@ def complete_operation(op_id: int, tenant_id: Optional[int] = None, db: Session 
     db.commit()
     
     return {"message": f"Операция {op.operation_name} завершена. ТМЦ списаны согласно BOM."}
+
+@router.post("/orders/{order_id}/fittings")
+def add_order_fitting(order_id: int, fitting: FurnitureFittingCreate, tenant_id: Optional[int] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    tid = _get_tenant_id(current_user, tenant_id)
+    order = db.query(FurnitureOrder).filter(FurnitureOrder.id == order_id, FurnitureOrder.tenant_id == tid).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Заказ не найден")
+    
+    db_fit = FurnitureOrderFitting(
+        tenant_id=tid,
+        order_id=order_id,
+        fitting_name=fitting.fitting_name,
+        article=fitting.article,
+        supplier=fitting.supplier,
+        quantity=fitting.quantity,
+        unit_price=fitting.unit_price,
+        status="pending"
+    )
+    db.add(db_fit)
+    db.commit()
+    db.refresh(db_fit)
+    return {"message": "Фурнитура добавлена к заказу", "fitting_id": db_fit.id}
+
+@router.patch("/fittings/{fitting_id}/status")
+def update_fitting_status(fitting_id: int, status: str, tenant_id: Optional[int] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    tid = _get_tenant_id(current_user, tenant_id)
+    fit = db.query(FurnitureOrderFitting).filter(FurnitureOrderFitting.id == fitting_id, FurnitureOrderFitting.tenant_id == tid).first()
+    if not fit:
+        raise HTTPException(status_code=404, detail="Позиция фурнитуры не найдена")
+    if status not in ("pending", "ordered", "in_stock", "issued"):
+        raise HTTPException(status_code=400, detail="Недопустимый статус комплектации")
+    fit.status = status
+    db.commit()
+    return {"message": "Статус фурнитуры обновлен", "new_status": status}
+
+@router.post("/orders/{order_id}/details")
+def add_order_detail(order_id: int, detail: FurnitureDetailCreate, tenant_id: Optional[int] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    tid = _get_tenant_id(current_user, tenant_id)
+    order = db.query(FurnitureOrder).filter(FurnitureOrder.id == order_id, FurnitureOrder.tenant_id == tid).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Заказ не найден")
+
+    # Авторасчет погонных метров кромки
+    top_m = (detail.length_mm / 1000.0) if detail.edge_top != "none" else 0.0
+    bottom_m = (detail.length_mm / 1000.0) if detail.edge_bottom != "none" else 0.0
+    left_m = (detail.width_mm / 1000.0) if detail.edge_left != "none" else 0.0
+    right_m = (detail.width_mm / 1000.0) if detail.edge_right != "none" else 0.0
+    calc_meters = round((top_m + bottom_m + left_m + right_m) * detail.quantity, 3)
+
+    db_det = FurnitureOrderDetail(
+        tenant_id=tid,
+        order_id=order_id,
+        detail_name=detail.detail_name,
+        length_mm=detail.length_mm,
+        width_mm=detail.width_mm,
+        quantity=detail.quantity,
+        edge_top=detail.edge_top,
+        edge_bottom=detail.edge_bottom,
+        edge_left=detail.edge_left,
+        edge_right=detail.edge_right,
+        calc_linear_meters=calc_meters
+    )
+    db.add(db_det)
+    db.commit()
+    db.refresh(db_det)
+    return {
+        "message": "Деталь и расчёт кромки добавлены",
+        "detail_id": db_det.id,
+        "calc_linear_meters": calc_meters
+    }
+

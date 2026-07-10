@@ -1249,6 +1249,8 @@ class FurnitureOrder(Base):
     completed_at = Column(DateTime, nullable=True)
 
     product = relationship("FurnitureProduct")
+    fittings = relationship("FurnitureOrderFitting", back_populates="order", cascade="all, delete-orphan")
+    details = relationship("FurnitureOrderDetail", back_populates="order", cascade="all, delete-orphan")
 
 class FurnitureOrderOperation(Base):
     __tablename__ = "furniture_order_operations"
@@ -1262,6 +1264,43 @@ class FurnitureOrderOperation(Base):
 
     order = relationship("FurnitureOrder")
     operator = relationship("User")
+
+class FurnitureOrderFitting(Base):
+    """
+    Индивидуальный список фурнитуры для конкретного заказа (петли, направляющие, ручки, крепеж).
+    """
+    __tablename__ = "furniture_order_fittings"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, nullable=False, index=True)
+    order_id = Column(Integer, ForeignKey("furniture_orders.id"))
+    fitting_name = Column(String, nullable=False)
+    article = Column(String, nullable=True)
+    supplier = Column(String, nullable=True)
+    quantity = Column(Integer, default=1)
+    unit_price = Column(Float, default=0.0)
+    status = Column(String, default="pending") # pending (Не заказана), ordered (Заказана), in_stock (На складе), issued (Выдана в цех)
+
+    order = relationship("FurnitureOrder", back_populates="fittings")
+
+class FurnitureOrderDetail(Base):
+    """
+    Детали изделия в заказе и расчёт погонных метров кромления по 4 сторонам.
+    """
+    __tablename__ = "furniture_order_details"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, nullable=False, index=True)
+    order_id = Column(Integer, ForeignKey("furniture_orders.id"))
+    detail_name = Column(String, nullable=False)
+    length_mm = Column(Float, default=0.0)
+    width_mm = Column(Float, default=0.0)
+    quantity = Column(Integer, default=1)
+    edge_top = Column(String, default="none")    # none | pvc_04 | pvc_20 | abs
+    edge_bottom = Column(String, default="none") # none | pvc_04 | pvc_20 | abs
+    edge_left = Column(String, default="none")   # none | pvc_04 | pvc_20 | abs
+    edge_right = Column(String, default="none")  # none | pvc_04 | pvc_20 | abs
+    calc_linear_meters = Column(Float, default=0.0)
+
+    order = relationship("FurnitureOrder", back_populates="details")
 
 
 # ═══════════════════════════════════════════════════════
@@ -1402,3 +1441,66 @@ class FleetBooking(Base):
 
     tenant = relationship("Tenant")
     vehicle = relationship("FleetVehicle", back_populates="bookings")
+
+
+# ═══════════════════════════════════════════════════════
+# ФАЗА 2: ХОЛДИНГ / УПРАВЛЕНИЕ ГРУППОЙ КОМПАНИЙ (ENTERPRISE HOLDING)
+# ═══════════════════════════════════════════════════════
+
+class HoldingGroup(Base):
+    """
+    Холдинг (Группа компаний), объединяющий несколько юрлиц (Tenant).
+    """
+    __tablename__ = "holding_groups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False, index=True)
+    owner_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    description = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    owner = relationship("User")
+    members = relationship("HoldingMember", back_populates="holding", cascade="all, delete-orphan")
+    transfers = relationship("HoldingTransfer", back_populates="holding", cascade="all, delete-orphan")
+
+
+class HoldingMember(Base):
+    """
+    Юрлицо / Дочерняя компания в составе Холдинга.
+    """
+    __tablename__ = "holding_members"
+
+    id = Column(Integer, primary_key=True, index=True)
+    holding_id = Column(Integer, ForeignKey("holding_groups.id"), nullable=False, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
+    company_name = Column(String, nullable=False)
+    inn = Column(String, nullable=True)
+    role = Column(String, default="subsidiary")                 # parent | subsidiary | branch
+    share_percent = Column(Float, default=100.0)                # Доля владения (%)
+    revenue_ytd = Column(Float, default=0.0)                    # Выручка юрлица с начала года
+    net_profit_ytd = Column(Float, default=0.0)                 # Чистая прибыль с начала года
+    employees_count = Column(Integer, default=0)                # Штат сотрудников
+    is_active = Column(Boolean, default=True)
+
+    holding = relationship("HoldingGroup", back_populates="members")
+    tenant = relationship("Tenant")
+
+
+class HoldingTransfer(Base):
+    """
+    Внутригрупповые операции (трансфер денежных средств / ТМЦ между юрлицами).
+    """
+    __tablename__ = "holding_transfers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    holding_id = Column(Integer, ForeignKey("holding_groups.id"), nullable=False, index=True)
+    from_company = Column(String, nullable=False)
+    to_company = Column(String, nullable=False)
+    amount = Column(Float, default=0.0)
+    transfer_type = Column(String, default="loan")              # loan | dividend | asset_transfer | service
+    description = Column(String, nullable=True)
+    status = Column(String, default="completed")                # completed | pending
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    holding = relationship("HoldingGroup", back_populates="transfers")
+

@@ -76,6 +76,7 @@ const AIAgentsPage = React.lazy(() => import('./crm/pages/AIAgentsPage').then(m 
 const KnowledgeBase = React.lazy(() => import('./crm/pages/KnowledgeBase'));
 const SetupWizard = React.lazy(() => import('./crm/pages/SetupWizard').then(m => ({ default: m.SetupWizard })));
 const LeadsPage = React.lazy(() => import('./crm/pages/LeadsPage').then(m => ({ default: m.LeadsPage })));
+const HoldingDashboard = React.lazy(() => import('./crm/pages/HoldingDashboard'));
 
 // Premium Skeleton Loader Fallback
 const PageSkeleton: React.FC = () => {
@@ -162,6 +163,7 @@ const App: React.FC = () => {
                   <Route path="furniture" element={<FurnitureDashboard />} />
                   <Route path="agro" element={<AgroDashboard />} />
                   <Route path="fleet" element={<FleetDashboard />} />
+                  <Route path="holding" element={<HoldingDashboard />} />
                   <Route path="beauty" element={<BeautyDashboard />} />
                   <Route path="doc-templates" element={<Templates />} />
                   <Route path="templates" element={<TemplatesAndContent />} />
