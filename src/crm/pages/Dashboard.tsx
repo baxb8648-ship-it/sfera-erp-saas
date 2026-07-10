@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { BarChart3, TrendingUp, Users, Building2, Mail, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { 
+  BarChart3, TrendingUp, Users, Building2, Mail, ArrowRight, CheckCircle2,
+  CheckSquare, Square, Plus
+} from 'lucide-react';
 import { apiClient } from '../../api/client';
 import { Helmet } from 'react-helmet-async';
 import { useQuery } from '@tanstack/react-query';
@@ -78,8 +81,44 @@ const QuickStartWidget: React.FC = () => {
   );
 };
 
+interface TodayTaskItem {
+  id: number;
+  title: string;
+  category: string;
+  priority: 'urgent' | 'high' | 'normal';
+  time: string;
+  completed: boolean;
+}
+
 export const Dashboard: React.FC = () => {
   const [cashRegister, setCashRegister] = useState<string>('');
+  const [todayTasks, setTodayTasks] = useState<TodayTaskItem[]>([
+    { id: 1, title: 'Проверить консолидированный отчёт ОПиУ за Q2', category: 'Холдинг', priority: 'high', time: 'до 14:00', completed: false },
+    { id: 2, title: 'Подготовить КП на торги АО «Газпром» № EA-8472910', category: 'Тендеры', priority: 'urgent', time: 'до 16:30', completed: false },
+    { id: 3, title: 'Подтвердить оплату счета № 1489 ООО «ПолимерКор»', category: 'Финансы', priority: 'normal', time: 'до 18:00', completed: true },
+    { id: 4, title: 'Согласовать регламент ТО автовышки АГП-22', category: 'Спецтехника', priority: 'normal', time: 'сегодня', completed: false }
+  ]);
+  const [taskFilter, setTaskFilter] = useState<'all' | 'pending' | 'urgent'>('all');
+  const [newTaskText, setNewTaskText] = useState('');
+
+  const handleToggleTask = (id: number) => {
+    setTodayTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+  };
+
+  const handleAddTask = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTaskText.trim()) return;
+    const newTask: TodayTaskItem = {
+      id: Date.now(),
+      title: newTaskText.trim(),
+      category: 'Оперативно',
+      priority: 'high',
+      time: 'сегодня',
+      completed: false
+    };
+    setTodayTasks(prev => [newTask, ...prev]);
+    setNewTaskText('');
+  };
 
   const { data: stats, isLoading } = useQuery<StatsData>({
     queryKey: ['dashboardStats', cashRegister],
@@ -658,7 +697,123 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Row 4: Upcoming Deadlines (lg:col-span-2) + Activity Feed (lg:col-span-1) + Quick Actions (lg:col-span-1) */}
+        {/* Row 4: Задачи сегодня (D-01) (lg:col-span-2) + Дедлайны (lg:col-span-1) + Лента активности (lg:col-span-1) */}
+        {/* D-01: Интерактивный Чеклист «Задачи сегодня» */}
+        <div className="glass-panel rounded-2xl p-5 md:col-span-2 lg:col-span-2 space-y-4 shadow-[0_8px_30px_rgba(0,0,0,0.015)] hover:shadow-[0_20px_40px_rgba(249,87,0,0.03)] hover:border-[#F95700]/20 transition-all duration-300 flex flex-col">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <div>
+              <h3 className="text-base font-bold font-['Montserrat'] text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                <CheckSquare className="w-5 h-5 text-[#F95700]" />
+                Задачи сегодня и приоритетные поручения (D-01)
+              </h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                Оперативный чеклист дел руководителя на сегодня • Выполнено: {todayTasks.filter(t => t.completed).length} из {todayTasks.length} ({todayTasks.length ? Math.round((todayTasks.filter(t => t.completed).length / todayTasks.length) * 100) : 0}%)
+              </p>
+            </div>
+            <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-xl text-xs font-bold">
+              {[
+                { id: 'all', label: 'Все' },
+                { id: 'pending', label: 'В процессе' },
+                { id: 'urgent', label: 'Срочные' }
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setTaskFilter(f.id as any)}
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    taskFilter === f.id
+                      ? 'bg-white dark:bg-zinc-900 text-[#F95700] shadow-sm'
+                      : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick Add Form */}
+          <form onSubmit={handleAddTask} className="flex gap-2">
+            <input
+              type="text"
+              placeholder="+ Добавить срочную задачу на сегодня (Enter)..."
+              value={newTaskText}
+              onChange={(e) => setNewTaskText(e.target.value)}
+              className="flex-1 bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 rounded-xl px-3.5 py-2 text-xs font-medium text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-[#F95700]"
+            />
+            <button
+              type="submit"
+              className="bg-[#F95700] hover:bg-orange-600 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Добавить
+            </button>
+          </form>
+
+          {/* Task list */}
+          <div className="space-y-2 flex-1 max-h-[260px] overflow-y-auto pr-1 custom-scrollbar">
+            {todayTasks
+              .filter(t => {
+                if (taskFilter === 'pending') return !t.completed;
+                if (taskFilter === 'urgent') return t.priority === 'urgent' || t.priority === 'high';
+                return true;
+              })
+              .map((task) => (
+                <div
+                  key={task.id}
+                  onClick={() => handleToggleTask(task.id)}
+                  className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer group select-none ${
+                    task.completed
+                      ? 'bg-zinc-50/50 dark:bg-zinc-900/30 border-zinc-200/40 dark:border-zinc-800/40 opacity-70'
+                      : 'bg-white dark:bg-zinc-900/70 border-zinc-200/80 dark:border-zinc-800 hover:border-[#F95700]/40 shadow-sm'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1 pr-3">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleToggleTask(task.id); }}
+                      className="text-[#F95700] shrink-0"
+                    >
+                      {task.completed ? (
+                        <CheckSquare className="w-5 h-5 text-emerald-500" />
+                      ) : (
+                        <Square className="w-5 h-5 text-zinc-400 group-hover:text-[#F95700]" />
+                      )}
+                    </button>
+                    <div className="min-w-0">
+                      <p className={`text-xs font-bold truncate ${task.completed ? 'line-through text-zinc-400 dark:text-zinc-500' : 'text-zinc-800 dark:text-zinc-100'}`}>
+                        {task.title}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5 text-[10px] font-semibold text-zinc-400">
+                        <span className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-600 dark:text-zinc-300">
+                          {task.category}
+                        </span>
+                        <span>⏰ {task.time}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="shrink-0">
+                    {task.priority === 'urgent' && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                        ⚡ Срочно
+                      </span>
+                    )}
+                    {task.priority === 'high' && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-orange-500/10 text-[#F95700] dark:text-orange-400 border border-orange-500/20">
+                        🔥 Высокий
+                      </span>
+                    )}
+                    {task.priority === 'normal' && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-zinc-100 dark:bg-zinc-800 text-zinc-500">
+                        📌 Планово
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+
         {/* Upcoming Deadlines Widget */}
         <div className="glass-panel rounded-2xl p-5 md:col-span-2 lg:col-span-2 space-y-4 shadow-[0_8px_30px_rgba(0,0,0,0.015)] hover:shadow-[0_20px_40px_rgba(249,87,0,0.03)] hover:border-[#F95700]/20 hover:-translate-y-0.5 hover:scale-[1.01] transition-all duration-300">
           <div>
