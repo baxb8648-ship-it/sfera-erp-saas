@@ -5,6 +5,7 @@ import { Helmet } from 'react-helmet-async';
 import QRCode from 'qrcode';
 import { jsPDF } from 'jspdf';
 import { Templates as DocxTemplates } from './Templates';
+import { PresentationDeck } from './PresentationDeck';
 
 interface SettingsData {
   company_name: string;
@@ -101,7 +102,7 @@ const downloadDocumentFile = async (docId: number, docName: string) => {
 };
 
 export const TemplatesAndContent: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'details' | 'docx_templates' | 'business_card' | 'documents' | 'email_templates'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'docx_templates' | 'business_card' | 'documents' | 'email_templates' | 'pitch_deck'>('details');
   const [settings, setSettings] = useState<SettingsData>({
     company_name: '',
     company_subtitle: '',
@@ -657,6 +658,21 @@ export const TemplatesAndContent: React.FC = () => {
     }
   };
 
+  const handleGenerateDefaultTemplates = async () => {
+    const orgName = settings.company_name || 'Ваша Компания';
+    const director = settings.company_director || 'Генеральный директор';
+    const generatedTemplates: Partial<SettingsData> = {
+      email_template_contract: `Здравствуйте, {{client_contact}}!\n\nНаправляем вам договор по объекту "{{object_name}}".\nПросьба ознакомиться, подписать и направить ответным письмом скан-копию.\n\nС уважением,\n${orgName}\nТел.: {{company_phone}}`,
+      email_template_act: `Здравствуйте, {{client_contact}}!\n\nНаправляем вам Акт выполненных работ "{{doc_name}}" по объекту "{{object_name}}".\nПросьба подписать и вернуть наш экземпляр.\n\nС уважением,\n${orgName}\nТел.: {{company_phone}}`,
+      email_template_kp: `Уважаемый(ая) {{client_contact}}!\n\nБлагодарим за обращение. Направляем коммерческое предложение "{{doc_name}}" от компании ${orgName}.\nГотовы ответить на любые вопросы по расчёту и срокам.\n\nС уважением,\n${director}\n${orgName}`,
+      email_template_invoice: `Здравствуйте, {{client_contact}}!\n\nВо вложении счёт на оплату "{{doc_name}}" по объекту "{{object_name}}".\nПросьба сообщить после совершения платежа для оперативной отгрузки.\n\nРеквизиты организации: ${orgName}, ИНН ${settings.company_inn || ''}\nТел.: {{company_phone}}`,
+      email_template_other: `Здравствуйте, {{client_contact}}!\n\nНаправляем вам документ "{{doc_name}}" по объекту "{{object_name}}".\n\nС уважением,\n${orgName}`
+    };
+    await handleSaveSettings(generatedTemplates);
+    setMessage('✨ Персональный стартовый пакет шаблонов организации успешно сгенерирован!');
+    setTimeout(() => setMessage(''), 4000);
+  };
+
   // QR Code generation for Business Card (offline)
   useEffect(() => {
     const generateQrCode = async () => {
@@ -1042,17 +1058,35 @@ export const TemplatesAndContent: React.FC = () => {
   });
 
   return (
-    <div className="space-y-6 h-full flex flex-col font-['Inter']">
+    <div className="flex flex-col font-['Inter'] space-y-6">
       <Helmet>
         <title>Настройки и Шаблоны | СФЕРА</title>
       </Helmet>
-      <div>
-        <h1 className="text-2xl font-bold font-['Montserrat'] text-[#1a1a1a] dark:text-zinc-100">Шаблоны и Контент</h1>
-        <p className="text-gray-500 dark:text-zinc-400">Управление реквизитами, шаблонами документов и генератором визиток</p>
+      <div className="print:hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
+        <div>
+          <h1 className="text-2xl font-bold font-['Montserrat'] text-[#1a1a1a] dark:text-zinc-100">Шаблоны и Контент</h1>
+          <p className="text-gray-500 dark:text-zinc-400">Управление реквизитами, шаблонами документов и генератором визиток</p>
+        </div>
+        <button
+          onClick={handleGenerateDefaultTemplates}
+          className="px-4 py-2.5 bg-gradient-to-r from-[#F95700] to-[#ff7a33] hover:from-[#e04e00] hover:to-[#f95700] text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer select-none"
+        >
+          ✨ Сгенерировать стартовый пакет шаблонов компании
+        </button>
       </div>
 
+      {/* SaaS Мультитенантная архитектура шаблонов (Уведомление для новых компаний) */}
+      <div className="print:hidden bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 flex items-start gap-3 shrink-0">
+        <span className="text-lg">👑</span>
+        <div className="text-xs leading-relaxed text-amber-900 dark:text-amber-200">
+          <strong className="font-bold uppercase tracking-wider block mb-0.5">SaaS Изоляция Шаблонов (RLS):</strong>
+          Эталонные презентации и мастер-шаблоны зарезервированы за платформой СФЕРА (Супер-Админом). Каждая зарегистрированная компания создаёт собственные шаблоны или может в 1 клик сгенерировать стартовый персональный пакет документов под свои реквизиты.
+        </div>
+      </div>
+
+
       {/* Tabs */}
-      <div className="flex space-x-1 bg-white dark:bg-zinc-900 p-1 rounded-lg border border-gray-200 dark:border-zinc-800 w-full sm:w-fit overflow-x-auto custom-scrollbar scrollbar-none">
+      <div className="print:hidden flex flex-wrap gap-1.5 bg-white dark:bg-zinc-900 p-1.5 rounded-xl border border-gray-200 dark:border-zinc-800 w-full">
         <button
           onClick={() => setActiveTab('details')}
           className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'details' ? 'bg-[#F95700] text-white' : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800'}`}
@@ -1083,7 +1117,14 @@ export const TemplatesAndContent: React.FC = () => {
         >
           <Mail className="w-4 h-4" /> Шаблоны писем
         </button>
+        <button
+          onClick={() => setActiveTab('pitch_deck')}
+          className={`shrink-0 px-4 py-2 rounded-md text-sm font-semibold transition-all select-none cursor-pointer flex items-center gap-1.5 ${activeTab === 'pitch_deck' ? 'bg-[#F95700] text-white' : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800'}`}
+        >
+          <FileText className="w-4 h-4" /> Презентации (Pitch Deck)
+        </button>
       </div>
+
 
       {/* Message feedback */}
       {message && (
@@ -1093,7 +1134,7 @@ export const TemplatesAndContent: React.FC = () => {
       )}
 
       {/* Tab Contents */}
-      <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6 flex-1 overflow-auto">
+      <div className={activeTab === 'pitch_deck' ? "w-full print:w-full print:p-0 print:m-0" : "bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6 sm:p-8"}>
         
         {/* Tab 1: Details & Header settings */}
         {activeTab === 'details' && (
@@ -2152,7 +2193,15 @@ export const TemplatesAndContent: React.FC = () => {
           </div>
         )}
 
+        {/* Tab 6: Презентации (Pitch Deck) */}
+        {activeTab === 'pitch_deck' && (
+          <div className="w-full">
+            <PresentationDeck />
+          </div>
+        )}
+
       </div>
+
 
       {/* Upload Document Modal */}
       {isUploadModalOpen && (
