@@ -51,13 +51,29 @@ def apply_tenant_filter(query: Query) -> Query:
     
     # Если в текущем контексте задан ID тенанта, изолируем выборку
     if tenant_id is not None:
-        for ent in query.column_descriptions:
-            entity = ent.get("entity")
-            if entity is not None and hasattr(entity, "tenant_id"):
-                # Применяем фильтрацию к сущности
-                # Проверяем, чтобы фильтр по tenant_id не дублировался в query
-                # (SQLAlchemy Query.filter() безопасен, но явное добавление RLS предотвращает утечку)
-                query = query.filter(entity.tenant_id == tenant_id)
+        has_limit_or_offset = query._limit_clause is not None or query._offset_clause is not None
+        
+        if has_limit_or_offset:
+            # SQLAlchemy не разрешает вызывать .filter() на запросах с LIMIT/OFFSET.
+            # Временно сбрасываем их, применяем фильтрацию RLS и восстанавливаем.
+            limit = query._limit_clause
+            offset = query._offset_clause
+            query = query.limit(None).offset(None)
+            
+            for ent in query.column_descriptions:
+                entity = ent.get("entity")
+                if entity is not None and hasattr(entity, "tenant_id"):
+                    query = query.filter(entity.tenant_id == tenant_id)
+                    
+            if limit is not None:
+                query = query.limit(limit)
+            if offset is not None:
+                query = query.offset(offset)
+        else:
+            for ent in query.column_descriptions:
+                entity = ent.get("entity")
+                if entity is not None and hasattr(entity, "tenant_id"):
+                    query = query.filter(entity.tenant_id == tenant_id)
                 
     return query
 

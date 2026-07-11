@@ -276,13 +276,13 @@ async def add_security_headers(request: Request, call_next):
     # ВАЖНО: кириллические домены в HTTP-заголовках недопустимы — использовать только punycode!
     response.headers["Content-Security-Policy"] = (
         f"default-src 'self' http://localhost:* http://127.0.0.1:* "
-        f"https://api.xn--56-6kctpmeri.xn--p1ai; "
+        f"https://api.xn--56-6kctpmeri.xn--p1ai https://api.sferum.space; "
         f"{script_src} "
         f"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; "
         f"font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; "
         f"img-src 'self' data: blob: http://localhost:* http://127.0.0.1:* https://fastapi.tiangolo.com https://cdn.jsdelivr.net; "
         f"connect-src 'self' http://localhost:* http://127.0.0.1:* "
-        f"https://api.xn--56-6kctpmeri.xn--p1ai wss://api.xn--56-6kctpmeri.xn--p1ai;"
+        f"https://api.xn--56-6kctpmeri.xn--p1ai wss://api.xn--56-6kctpmeri.xn--p1ai https://api.sferum.space wss://api.sferum.space;"
     )
     return response
 
@@ -308,7 +308,11 @@ ALLOWED_ORIGINS = [
     "http://crm.xn--56-6kctpmeri.xn--p1ai",
     "https://crm.xn--56-6kctpmeri.xn--p1ai",
     "http://crm.леоника56.рф",
-    "https://crm.леоника56.рф"
+    "https://crm.леоника56.рф",
+    "http://sferum.space",
+    "https://sferum.space",
+    "http://api.sferum.space",
+    "https://api.sferum.space"
 ]
 
 app.add_middleware(

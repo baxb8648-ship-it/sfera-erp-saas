@@ -4,9 +4,9 @@ import sys
 import time
 
 HOST = "rufree53.hostiman.ru"
-USER = "deploy"
-PASS = "deploy31279."
-REMOTE_DIR = "www/xn--56-6kctpmeri.xn--p1ai"
+USER = "s277085"
+PASS = "PfBa9jXfzWUyMGzb"
+REMOTE_DIR = "www/sferum.space"
 LOCAL_DIR = "dist"
 
 def connect_ftp():

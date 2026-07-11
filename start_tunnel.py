@@ -10,7 +10,7 @@ VPS_IP = "194.226.163.67"
 VPS_USER = "root"
 REMOTE_PORT = 8000      # Port on the VPS Nginx proxies to (127.0.0.1:8000)
 LOCAL_HOST = "127.0.0.1"
-LOCAL_PORT = 8000       # Port of our local FastAPI server
+LOCAL_PORT = 8001       # Port of our local FastAPI server
 
 def log(msg):
     print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {msg}")

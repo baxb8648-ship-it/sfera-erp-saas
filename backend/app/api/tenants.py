@@ -79,19 +79,19 @@ def parse_company_details(fns_response: dict, inn: str) -> dict:
     # 1. Проверяем, ЮЛ это или ИП
     if "ЮЛ" in company:
         ul = company["ЮЛ"]
-        name = ul.get("НаимСокр", ul.get("НаимПолн", f"ООО ИНН {inn}"))
-        full_name = ul.get("НаимПолн", name)
+        name = ul.get("НаимСокрЮЛ", ul.get("НаимПолнЮЛ", f"ООО ИНН {inn}"))
+        full_name = ul.get("НаимПолнЮЛ", name)
         kpp = ul.get("КПП", "")
         ogrn = ul.get("ОГРН", "")
-        address = ul.get("Адрес", {}).get("АдрПолн", "Не указан")
+        address = ul.get("Адрес", {}).get("АдресПолн", "Не указан")
         
         # Получаем директора
         director_info = ul.get("Руководитель", {})
         director = "Не указан"
         if isinstance(director_info, list) and len(director_info) > 0:
-            director = director_info[0].get("ФИО", "Не указан")
+            director = director_info[0].get("ФИОПолн", "Не указан")
         elif isinstance(director_info, dict):
-            director = director_info.get("ФИО", "Не указан")
+            director = director_info.get("ФИОПолн", "Не указан")
             
         return {
             "name": name,

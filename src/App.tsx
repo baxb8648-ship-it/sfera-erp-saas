@@ -52,6 +52,7 @@ const Inventory = React.lazy(() => import('./crm/pages/Inventory').then(m => ({ 
 const Equipment = React.lazy(() => import('./crm/pages/Equipment').then(m => ({ default: m.Equipment })));
 const Templates = React.lazy(() => import('./crm/pages/Templates').then(m => ({ default: m.Templates })));
 const TemplatesAndContent = React.lazy(() => import('./crm/pages/TemplatesAndContent').then(m => ({ default: m.TemplatesAndContent })));
+const PresentationDeck = React.lazy(() => import('./crm/pages/PresentationDeck').then(m => ({ default: m.PresentationDeck })));
 const AdminSettings = React.lazy(() => import('./crm/pages/AdminSettings').then(m => ({ default: m.AdminSettings })));
 const Tenders = React.lazy(() => import('./crm/pages/Tenders').then(m => ({ default: m.Tenders })));
 const Analytics = React.lazy(() => import('./crm/pages/Analytics').then(m => ({ default: m.Analytics })));
@@ -167,6 +168,7 @@ const App: React.FC = () => {
                   <Route path="beauty" element={<BeautyDashboard />} />
                   <Route path="doc-templates" element={<Templates />} />
                   <Route path="templates" element={<TemplatesAndContent />} />
+                  <Route path="presentation-deck" element={<PresentationDeck />} />
                   <Route path="admin" element={<AdminSettings />} />
                   <Route path="tenders" element={<Tenders />} />
                   <Route path="leads" element={<LeadsPage />} />

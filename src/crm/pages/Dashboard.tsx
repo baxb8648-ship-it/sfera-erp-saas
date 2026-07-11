@@ -42,7 +42,7 @@ const QuickStartWidget: React.FC = () => {
   if (closed) return null;
   
   return (
-    <div className="bg-gradient-to-r from-orange-500/10 via-[#F95700]/5 to-transparent border border-[#F95700]/20 rounded-2xl p-5 mb-5 relative overflow-hidden group">
+    <div className="bg-gradient-to-r from-orange-500/10 via-[#F95700]/5 to-transparent border border-[#F95700]/20 rounded-2xl p-5 mb-5 relative overflow-hidden group shrink-0">
       <div className="absolute top-0 right-0 p-4">
         <button onClick={() => setClosed(true)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
           ✕

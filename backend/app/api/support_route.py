@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import time
+import urllib.request
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -15,6 +16,70 @@ logger = logging.getLogger("uvicorn.error")
 router = APIRouter(prefix="/support", tags=["SaaS Helpdesk & Support"])
 
 DATA_FILE = "support_tickets.json"
+
+def send_telegram_support_notification(text: str, buttons: list = None, attachment: Optional[Dict[str, Any]] = None):
+    token = os.getenv("OBLAKO_CRM_BOT_TOKEN", "8842262640:AAH7WYTqklaq0wEL-KQw-GxIg2x1FLtXqxI")
+    chat_id = os.getenv("TELEGRAM_SUPPORT_CHAT_ID", "-10022334455")
+    
+    if not token or not chat_id:
+        logger.warning("[TelegramSupport] Token or Chat ID not configured. Skipping notification.")
+        return None
+
+    file_url = None
+    if attachment and attachment.get("url"):
+        file_url = attachment["url"]
+        if not (file_url.startswith("http://") or file_url.startswith("https://")):
+            file_url = "https://api.sferum.space" + ("" if file_url.startswith("/") else "/") + file_url
+            
+        att_type = attachment.get("type", "document")
+        if att_type == "image":
+            url = f"https://api.telegram.org/bot{token}/sendPhoto"
+            payload = {
+                "chat_id": chat_id,
+                "photo": file_url,
+                "caption": text[:1024],
+                "parse_mode": "HTML"
+            }
+        else:
+            url = f"https://api.telegram.org/bot{token}/sendDocument"
+            payload = {
+                "chat_id": chat_id,
+                "document": file_url,
+                "caption": text[:1024],
+                "parse_mode": "HTML"
+            }
+    else:
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        payload = {
+            "chat_id": chat_id,
+            "text": text,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True
+        }
+    
+    if buttons:
+        payload["reply_markup"] = {
+            "inline_keyboard": buttons
+        }
+        
+    try:
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            url,
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=10) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except Exception as e:
+        logger.error(f"[TelegramSupport] Failed to send support message (type={attachment.get('type') if attachment else 'text'}): {e}")
+        if attachment and file_url:
+            logger.info("[TelegramSupport] Falling back to text message...")
+            fallback_text = text + f"\n\n📎 <b>Вложение:</b> <a href='{file_url}'>{attachment.get('name', 'Файл')}</a>"
+            return send_telegram_support_notification(fallback_text, buttons, attachment=None)
+        return None
+
 
 def get_default_tickets() -> List[Dict[str, Any]]:
     return [
@@ -184,6 +249,34 @@ def create_ticket(payload: TicketCreate, current_user: User = Depends(get_curren
     
     tickets.insert(0, new_ticket)
     save_tickets(tickets)
+    
+    # Отправляем уведомление в Telegram-чат техподдержки
+    emoji = "🔴" if payload.priority.lower() == "high" else "🟡" if payload.priority.lower() == "medium" else "🟢"
+    tg_text = (
+        f"🎫 <b>Новое обращение: #{new_id}</b>\n\n"
+        f"🏢 <b>Компания:</b> Компания #{user_tenant_id}\n"
+        f"👤 <b>Отправитель:</b> {current_user.username}\n"
+        f"🏷 <b>Категория:</b> {payload.category}\n"
+        f"📌 <b>Тема:</b> {payload.topic}\n"
+        f"💬 <b>Сообщение:</b> {payload.initial_message}\n\n"
+        f"{emoji} <b>Приоритет:</b> <code>{payload.priority.upper()}</code>\n"
+        f"⚙️ <b>Статус:</b> <code>open</code>"
+    )
+    
+    buttons = [
+        [
+            {"text": "📥 Взять в работу", "callback_data": f"take_ticket_{new_id}"},
+            {"text": "✅ Решено", "callback_data": f"resolve_ticket_{new_id}"}
+        ],
+        [
+            {"text": "💬 Ответ: Проверяем 🔧", "callback_data": f"quick_{new_id}_checking"},
+            {"text": "💬 Ответ: Детали 📝", "callback_data": f"quick_{new_id}_details"},
+            {"text": "💬 Ответ: Готово ✅", "callback_data": f"quick_{new_id}_done"}
+        ]
+    ]
+    
+    send_telegram_support_notification(tg_text, buttons, payload.attachment)
+    
     return {"status": "success", "ticket": new_ticket}
 
 @router.post("/tickets/{ticket_id}/messages")
@@ -214,7 +307,17 @@ def add_message(ticket_id: str, payload: MessageCreate, current_user: User = Dep
         target_ticket["status"] = "in_progress"
         
     save_tickets(tickets)
+    
+    # Если написал клиент, дублируем в Telegram-чат поддержки
+    if not is_support:
+        tg_text = (
+            f"💬 <b>Новое сообщение по тикету #{ticket_id}</b> от клиента <b>{current_user.username}</b>:\n\n"
+            f"<i>{payload.text}</i>"
+        )
+        send_telegram_support_notification(tg_text, None, payload.attachment)
+        
     return {"status": "success", "messages": target_ticket["messages"]}
+
 
 @router.patch("/tickets/{ticket_id}/status")
 def update_ticket_status(ticket_id: str, payload: StatusUpdate, current_user: User = Depends(get_current_user)):
