@@ -205,6 +205,62 @@ export const AIAgentsPage: React.FC = () => {
   const [closerPostingChannels, setCloserPostingChannels] = useState<string[]>(['Telegram']);
   const [closerPostingFreq, setCloserPostingFreq] = useState('3_times_week');
 
+  // TTS States for Closer-AI
+  const [closerVoice, setCloserVoice] = useState('female_warm'); // 'female_warm' | 'female_business' | 'male_negotiator' | 'male_deep'
+  const [ttsText, setTtsText] = useState('Привет! Я твой персональный ИИ-ассистент по продажам. Я готов закрывать сделки за 3 секунды!');
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const handleSpeak = (textToSpeak: string) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      
+      if (isSpeaking) {
+        setIsSpeaking(false);
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.lang = 'ru-RU';
+      
+      const voices = window.speechSynthesis.getVoices();
+      
+      if (closerVoice === 'female_warm') {
+        utterance.pitch = 1.25;
+        utterance.rate = 1.0;
+        const femaleVoice = voices.find(v => v.lang.startsWith('ru') && (v.name.toLowerCase().includes('google') || v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('irina') || v.name.toLowerCase().includes('microsoft') || v.name.toLowerCase().includes('zira')));
+        if (femaleVoice) utterance.voice = femaleVoice;
+      } else if (closerVoice === 'female_business') {
+        utterance.pitch = 1.05;
+        utterance.rate = 1.15;
+        const femaleVoice = voices.find(v => v.lang.startsWith('ru') && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('irina') || v.name.toLowerCase().includes('zira')));
+        if (femaleVoice) utterance.voice = femaleVoice;
+      } else if (closerVoice === 'male_negotiator') {
+        utterance.pitch = 0.95;
+        utterance.rate = 1.05;
+        const maleVoice = voices.find(v => v.lang.startsWith('ru') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('pavel') || v.name.toLowerCase().includes('alexander') || v.name.toLowerCase().includes('yury') || v.name.toLowerCase().includes('david')));
+        if (maleVoice) utterance.voice = maleVoice;
+      } else if (closerVoice === 'male_deep') {
+        utterance.pitch = 0.75;
+        utterance.rate = 0.9;
+        const maleVoice = voices.find(v => v.lang.startsWith('ru') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('pavel') || v.name.toLowerCase().includes('yury') || v.name.toLowerCase().includes('david')));
+        if (maleVoice) utterance.voice = maleVoice;
+      }
+
+      utterance.onend = () => {
+        setIsSpeaking(false);
+      };
+      
+      utterance.onerror = () => {
+        setIsSpeaking(false);
+      };
+
+      setIsSpeaking(true);
+      window.speechSynthesis.speak(utterance);
+    } else {
+      toast?.showToast('Синтез речи не поддерживается вашим браузером', 'error');
+    }
+  };
+
   const fetchConnectedBots = async () => {
     try {
       const res = await apiClient.get<any[]>('/telegram-bots');
@@ -881,6 +937,81 @@ export const AIAgentsPage: React.FC = () => {
                             onChange={(e) => setCloserEmojis(Number(e.target.value))}
                             className="w-full accent-orange-500 cursor-pointer h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none"
                           />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Раздел: 🎙️ ИИ-Голос & Синтез Речи (TTS) */}
+                  <div className="border-t border-zinc-200 dark:border-zinc-800/80 pt-4">
+                    <h4 className="text-xs font-black text-zinc-900 dark:text-white uppercase tracking-wider mb-3">
+                      🎙️ ИИ-Голос & Синтез Речи (TTS)
+                    </h4>
+                    <div className="space-y-4">
+                      {/* Выбор голоса */}
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-black text-zinc-500 dark:text-zinc-400">Выберите тембр и характер голоса</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { id: 'female_warm', label: '👩 Алиса (Женский, теплый)', desc: 'Для доверительных продаж' },
+                            { id: 'female_business', label: '👩 Мария (Женский, бизнес)', desc: 'Для B2B и крупных сделок' },
+                            { id: 'male_negotiator', label: '👨 Александр (Мужской, харизма)', desc: 'Активный дожим' },
+                            { id: 'male_deep', label: '👨 Максим (Мужской, бас)', desc: 'Глубокий экспертный тон' }
+                          ].map(voice => (
+                            <button
+                              type="button"
+                              key={voice.id}
+                              onClick={() => {
+                                setCloserVoice(voice.id);
+                                if (isSpeaking) {
+                                  window.speechSynthesis.cancel();
+                                  setIsSpeaking(false);
+                                }
+                              }}
+                              className={`p-2.5 rounded-xl border text-left transition hover:scale-[1.01] cursor-pointer select-none ${
+                                closerVoice === voice.id
+                                  ? 'bg-orange-500/10 border-orange-500/30 text-[#F95700]'
+                                  : 'bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-850 text-zinc-700 dark:text-zinc-300'
+                              }`}
+                            >
+                              <div className="text-[11px] font-black">{voice.label}</div>
+                              <div className="text-[9px] text-zinc-500 mt-0.5 font-bold">{voice.desc}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Тестирование генерации */}
+                      <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 space-y-2">
+                        <label className="text-[10px] font-black text-zinc-500 dark:text-zinc-400 block">💬 Тест генерации голосового сообщения</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={ttsText}
+                            onChange={(e) => setTtsText(e.target.value)}
+                            placeholder="Введите текст для озвучки..."
+                            className="flex-1 px-3 py-1.5 rounded-lg border border-zinc-250 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-[11px] font-semibold focus:outline-none focus:ring-1 focus:ring-orange-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleSpeak(ttsText)}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition cursor-pointer select-none flex items-center gap-1.5 ${
+                              isSpeaking
+                                ? 'bg-rose-500 text-white hover:bg-rose-600 animate-pulse'
+                                : 'bg-orange-500 hover:bg-orange-600 text-white shadow-md shadow-orange-500/20'
+                            }`}
+                          >
+                            {isSpeaking ? (
+                              <>
+                                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                                <span>Стоп</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>🎙️ Тест</span>
+                              </>
+                            )}
+                          </button>
                         </div>
                       </div>
                     </div>
