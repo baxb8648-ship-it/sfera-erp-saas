@@ -1,8 +1,9 @@
 import logging
 import io
 import edge_tts
+from gtts import gTTS
 from fastapi import APIRouter, Query, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -40,17 +41,31 @@ async def generate_tts(
         rate = "-5%"
         pitch = "-5Hz"
 
+    # Попытка 1: Использование высококачественного Edge TTS
     try:
         communicate = edge_tts.Communicate(text, ms_voice, rate=rate, pitch=pitch)
-        
         audio_data = io.BytesIO()
+        
         async for chunk in communicate.stream():
             if chunk["type"] == "audio":
                 audio_data.write(chunk["data"])
                 
         audio_data.seek(0)
-        return StreamingResponse(audio_data, media_type="audio/mpeg")
+        return Response(content=audio_data.getvalue(), media_type="audio/mpeg")
         
-    except Exception as e:
-        logger.error(f"TTS generation error: {e}")
-        raise HTTPException(status_code=500, detail=f"Ошибка генерации голоса: {str(e)}")
+    except Exception as edge_err:
+        logger.warning(f"Edge TTS failed ({edge_err}). Falling back to Google gTTS...")
+        
+        # Попытка 2: Отказоустойчивый gTTS (Google Translate API)
+        try:
+            # gTTS обращается к Google Translate TTS, который стабильно работает из РФ
+            tts = gTTS(text=text, lang='ru', slow=False)
+            audio_data = io.BytesIO()
+            tts.write_to_fp(audio_data)
+            audio_data.seek(0)
+            
+            return Response(content=audio_data.getvalue(), media_type="audio/mpeg")
+            
+        except Exception as google_err:
+            logger.error(f"Fallback gTTS also failed: {google_err}")
+            raise HTTPException(status_code=500, detail=f"Ошибка генерации голоса: {str(google_err)}")
