@@ -91,22 +91,7 @@ def ai_summarize_tender(text: str) -> str:
 def ai_extract_task_entities(text: str) -> dict:
     """
     Фаза 1 AI-Roadmap: Извлечение структурированных сущностей из расшифровки голосового сообщения.
-    
-    Отправляет промпт в Ollama и ожидает ответ в формате JSON.
-    
-    Args:
-        text: Текст расшифрованного голосового сообщения
-    
-    Returns:
-        dict с полями:
-          - client_name: str | None
-          - contact_person: str | None
-          - contact_phone: str | None
-          - service_type: str | None   (пескоструй, АКЗ, огнезащита и т.д.)
-          - area: str | None           (объем работ, напр. "1000 м²")
-          - deadline_desc: str | None  (текстовое описание срока, напр. "до пятницы")
-          - task_title: str            (краткое название задачи — всегда присутствует)
-          - task_description: str | None
+    Добавлено извлечение бюджета сделки.
     """
     prompt = f"""Ты — помощник менеджера компании по антикоррозийной защите (АКЗ), огнезащите и пескоструйной очистке.
 Тебе дан расшифрованный текст голосового сообщения менеджера после встречи или переговоров.
@@ -119,6 +104,7 @@ def ai_extract_task_entities(text: str) -> dict:
 - "service_type": вид работ (пескоструй, АКЗ, огнезащита, покраска и т.п.) (или null)
 - "area": объем работ (площадь, метры, единицы) (или null)
 - "deadline_desc": срок/дедлайн в виде текста (или null)
+- "budget": бюджет сделки в виде числа (например, 500000 или null)
 - "task_title": краткое название задачи на русском (обязательно, максимум 60 символов)
 - "task_description": полное описание задачи — всё важное из сообщения
 
@@ -129,18 +115,46 @@ def ai_extract_task_entities(text: str) -> dict:
 
     response = ask_ollama(prompt)
     
+    default_res = {
+        "client_name": None,
+        "contact_person": None,
+        "contact_phone": None,
+        "service_type": None,
+        "area": None,
+        "deadline_desc": None,
+        "budget": None,
+        "task_title": text[:60] if text else "Задача из голосового сообщения",
+        "task_description": text,
+    }
+    
     if not response:
-        # Если Ollama недоступна, возвращаем заготовку с полным текстом
-        return {
-            "client_name": None,
-            "contact_person": None,
-            "contact_phone": None,
-            "service_type": None,
-            "area": None,
-            "deadline_desc": None,
-            "task_title": text[:60] if text else "Задача из голосового сообщения",
-            "task_description": text,
-        }
+        return default_res
+    
+    import json
+    import re
+    
+    clean = re.sub(r'```(?:json)?\s*', '', response).strip()
+    clean = clean.rstrip('`').strip()
+    
+    match = re.search(r'\{.*\}', clean, re.DOTALL)
+    if match:
+        clean = match.group(0)
+    
+    try:
+        data = json.loads(clean)
+        if not data.get("task_title"):
+            data["task_title"] = text[:60] if text else "Задача из голосового сообщения"
+        
+        # Интегрируем бюджет в описание задачи, если он найден
+        budget = data.get("budget")
+        if budget:
+            desc = data.get("task_description") or ""
+            data["task_description"] = f"Бюджет: {budget} руб.\n" + desc
+            
+        return data
+    except Exception as e:
+        logger.warning(f"ai_extract_task_entities error: {e}")
+        return default_res
     
     # Пробуем распарсить ответ как JSON
     import json
@@ -384,3 +398,67 @@ def ai_extract_pto_material_consumption(text: str) -> dict:
 
 
 
+
+
+
+def ai_classify_intent(text: str) -> str:
+    """
+    Классифицирует намерение пользователя на основе его текстового запроса.
+    """
+    prompt = f"""Ты — ИИ-аналитик CRM-системы СФЕРА. Твоя задача — классифицировать намерение пользователя по его тексту.
+Доступные намерения:
+- get_tasks (показать мои задачи, список дел, планы, назначенные на меня дела)
+- get_tenders (показать тендеры, новые закупки, тендерную ленту, площадки)
+- get_balance (показать баланс, выручку, расходы, остатки на счетах, финансовое состояние, сколько денег)
+- create_task (создать новую задачу, напомнить мне сделать что-то, записать дело)
+- rag_qa (любые другие вопросы о компании, технологиях АКЗ, пескоструйной очистке, или просто разговор)
+
+Верни строго одно слово из списка выше в качестве ответа. Без кавычек, без точек, без лишних пояснений.
+
+Текст пользователя: \"{text}\"
+
+Намерение (одно слово из get_tasks, get_tenders, get_balance, create_task, rag_qa):"""
+    
+    response = ask_ollama(prompt).strip().lower()
+    for intent in ["get_tasks", "get_tenders", "get_balance", "create_task", "rag_qa"]:
+        if intent in response:
+            return intent
+    return "rag_qa"
+
+
+def ai_extract_quick_task_params(text: str) -> dict:
+    """
+    Быстро извлекает параметры задачи (название и срок) для автоматического создания.
+    """
+    from datetime import datetime
+    today = datetime.now().strftime("%Y-%m-%d")
+    
+    prompt = f"""Тебе дана фраза пользователя с просьбой создать задачу.
+Извлеки название задачи и срок выполнения.
+Верни ТОЛЬКО валидный JSON-объект с полями:
+- "title": название задачи на русском (например, "Купить краску")
+- "deadline": дата выполнения в формате YYYY-MM-DD (или null, если срок не указан). Сегодняшняя дата: {today}. Если пользователь говорит "завтра", вычисли дату от сегодняшней.
+
+Текст пользователя: \"{text}\"
+
+Ответ (только JSON):"""
+    
+    response = ask_ollama(prompt)
+    default_res = {"title": text[:60] if text else "Новая задача", "deadline": None}
+    
+    if not response:
+        return default_res
+        
+    import json
+    import re
+    clean = re.sub(r'```(?:json)?\s*', '', response).strip()
+    clean = clean.split('```')[0].strip()
+    
+    try:
+        data = json.loads(clean)
+        if not data.get("title"):
+            data["title"] = default_res["title"]
+        return data
+    except Exception as e:
+        logger.error(f"[AIEngine] Failed to parse quick task JSON: {e}. Raw response: {response}")
+        return default_res

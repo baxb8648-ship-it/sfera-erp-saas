@@ -377,8 +377,19 @@ def process_telegram_update_internal(update: dict, db: Session, token: str):
                 message_id
             )
 
+        # ---- ГОЛОСОВЫЕ ЗАДАЧИ: Подтвердить (сделка/лид) ----
+        elif data.startswith("confirm_voice_deal_"):
+            try:
+                temp_id = int(data.split("_")[-1])
+            except ValueError:
+                return
+            run_in_background(
+                handle_confirm_voice_deal,
+                token, chat_id, message_id, temp_id
+            )
+
         # ---- ГОЛОСОВЫЕ ЗАДАЧИ: Подтвердить (только задача) ----
-        elif data.startswith("confirm_voice_") and not data.startswith("confirm_voice_with_client_"):
+        elif data.startswith("confirm_voice_") and not data.startswith("confirm_voice_with_client_") and not data.startswith("confirm_voice_deal_"):
             try:
                 temp_id = int(data.split("_")[-1])
             except ValueError:
@@ -938,7 +949,8 @@ def process_telegram_update_internal(update: dict, db: Session, token: str):
                         chat_id,
                         text,
                         message.get("message_id"),
-                        message.get("message_thread_id")
+                        message.get("message_thread_id"),
+                        str(from_user.get("id", ""))
                     )
 
 def send_chat_action(token: str, chat_id: int, action: str, thread_id: int = None):
@@ -986,56 +998,174 @@ def send_telegram_reply_message(token: str, chat_id: int, text: str, reply_to_me
     except Exception as e:
         logger.error(f"Failed to send telegram reply message: {e}")
 
-def handle_telegram_ai_query(token: str, chat_id: int, text: str, reply_to_message_id: int, thread_id: int = None):
+def handle_telegram_ai_query(token: str, chat_id: int, text: str, reply_to_message_id: int, thread_id: int = None, telegram_user_id: str = None):
     from ..database import SessionLocal
-    from ..models import User
-    from ..utils.ai_engine import generate_rag_answer
+    from ..models import User, Tender, FinanceTransaction, Task
+    from ..utils.ai_engine import generate_rag_answer, ai_classify_intent, ai_extract_quick_task_params, ask_ollama
     from ..services.pinecone_rag import search_similar_by_text
+    from sqlalchemy import func
+    from datetime import datetime
     
-    # Send typing action
     send_chat_action(token, chat_id, "typing", thread_id)
     
-    # Clean query
     clean_query = text
     for trigger in ["@ai", "/ai", "@ollama", "/ollama", "@sphera56_bot"]:
         clean_query = clean_query.replace(trigger, "")
     clean_query = clean_query.strip()
     
+    # 1. Запуск классификатора намерений ИИ
+    intent = ai_classify_intent(clean_query)
+    logger.info(f"[Telegram AI] Classified intent: {intent} for query: {clean_query}")
+    
     db = SessionLocal()
-    tenant_id = 1
     try:
-        user = db.query(User).filter(User.telegram_chat_id == str(chat_id)).first()
-        if user and user.tenant_id:
-            tenant_id = user.tenant_id
+        # Пытаемся найти пользователя
+        user_tg_id = telegram_user_id or str(chat_id)
+        user = db.query(User).filter(User.telegram_chat_id == user_tg_id).first()
+        tenant_id = user.tenant_id if user else 1
+        
+        # 2. Выполнение действий в зависимости от Intent
+        if intent == "get_tasks":
+            if not user:
+                send_telegram_reply_message(
+                    token, chat_id,
+                    "👤 <b>Пользователь не привязан</b>\nВаш Telegram ID не привязан к сотруднику в CRM.",
+                    reply_to_message_id, thread_id
+                )
+                return
+                
+            active_tasks = db.query(Task).filter(
+                Task.assigned_to_id == user.id,
+                Task.status != "Выполнена",
+                Task.status != "Отменена"
+            ).order_by(Task.priority.desc(), Task.due_date.asc()).all()
+            
+            if not active_tasks:
+                send_telegram_reply_message(
+                    token, chat_id,
+                    f"🎉 <b>У вас нет активных задач, {user.username}!</b>",
+                    reply_to_message_id, thread_id
+                )
+            else:
+                lines = [f"📌 <b>Задачи сотрудника: {user.username}</b>\n━━━━━━━━━━━━━━━━━━━━"]
+                for t in active_tasks:
+                    prio_icon = "🟢" if t.priority != "Высокий" else "🔴"
+                    due_str = t.due_date.strftime("%d.%m.%Y") if t.due_date else "без срока"
+                    lines.append(f"{prio_icon} <b>#{t.id} {t.title}</b>\n   Срок: <code>{due_str}</code> | Статус: <i>{t.status}</i>")
+                lines.append("━━━━━━━━━━━━━━━━━━━━\n<i>Завершить задачу можно в CRM.</i>")
+                send_telegram_reply_message(token, chat_id, "\n".join(lines), reply_to_message_id, thread_id)
+            return
+
+        elif intent == "get_tenders":
+            recent_tenders = db.query(Tender).order_by(Tender.created_at.desc()).limit(5).all()
+            if not recent_tenders:
+                send_telegram_reply_message(token, chat_id, "📭 <b>Тендеров пока нет в базе данных.</b>", reply_to_message_id, thread_id)
+            else:
+                lines = ["🎯 <b>Последние 5 тендеров в CRM:</b>\n━━━━━━━━━━━━━━━━━━━━"]
+                for t in recent_tenders:
+                    lines.append(f"🆕 <b>{t.title[:50]}...</b>\n   Заказчик: {t.customer_name or '—'}\n   Бюджет: <code>{t.price:,.2f} руб.</code>")
+                lines.append("━━━━━━━━━━━━━━━━━━━━\n<a href='https://срм.леоника56.рф/#/tenders'>Перейти в Тендеры →</a>")
+                send_telegram_reply_message(token, chat_id, "\n".join(lines), reply_to_message_id, thread_id)
+            return
+
+        elif intent == "get_balance":
+            if not user or user.role not in ["admin", "superadmin"]:
+                send_telegram_reply_message(
+                    token, chat_id,
+                    "⚠️ <b>Доступ ограничен</b>\nФинансовая сводка доступна только руководителям компании.",
+                    reply_to_message_id, thread_id
+                )
+                return
+                
+            income = db.query(func.sum(FinanceTransaction.amount)).filter(FinanceTransaction.tenant_id == tenant_id, FinanceTransaction.transaction_type == "income").scalar() or 0.0
+            expense = db.query(func.sum(FinanceTransaction.amount)).filter(FinanceTransaction.tenant_id == tenant_id, FinanceTransaction.transaction_type == "expense").scalar() or 0.0
+            balance = income - expense
+            
+            msg = (
+                f"💰 <b>Финансовый баланс компании</b>\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n"
+                f"🟢 <b>Общий приход:</b> <code>{income:,.2f} руб.</code>\n"
+                f"🔴 <b>Общий расход:</b> <code>{expense:,.2f} руб.</code>\n"
+                f"💳 <b>Свободный баланс:</b> <b>{balance:,.2f} руб.</b>\n"
+                f"━━━━━━━━━━━━━━━━━━━━"
+            )
+            send_telegram_reply_message(token, chat_id, msg, reply_to_message_id, thread_id)
+            return
+
+        elif intent == "create_task":
+            if not user:
+                send_telegram_reply_message(
+                    token, chat_id,
+                    "👤 <b>Пользователь не привязан</b>\nПривяжите ваш Telegram ID в карточке сотрудника в CRM.",
+                    reply_to_message_id, thread_id
+                )
+                return
+                
+            task_params = ai_extract_quick_task_params(clean_query)
+            due_dt = None
+            if task_params.get("deadline"):
+                try:
+                    due_dt = datetime.strptime(task_params["deadline"], "%Y-%m-%d")
+                except:
+                    pass
+                    
+            new_task = Task(
+                tenant_id=tenant_id,
+                title=task_params.get("title") or "Задача от ассистента",
+                description=f"Создано голосовой командой: {clean_query}",
+                status="Новая",
+                priority="Средний",
+                created_by_id=user.id,
+                assigned_to_id=user.id,
+                due_date=due_dt
+            )
+            db.add(new_task)
+            db.commit()
+            db.refresh(new_task)
+            
+            due_str = due_dt.strftime("%d.%m.%Y") if due_dt else "без срока"
+            send_telegram_reply_message(
+                token, chat_id,
+                f"✅ <b>Задача #{new_task.id} успешно создана!</b>\n\n"
+                f"📌 <b>Название:</b> {new_task.title}\n"
+                f"📅 <b>Срок:</b> <code>{due_str}</code>\n"
+                f"👤 <b>Исполнитель:</b> {user.username}\n\n"
+                f"<a href='https://срм.леоника56.рф/#/tasks'>Перейти к задачам →</a>",
+                reply_to_message_id, thread_id
+            )
+            return
+
+        # 3. Fallback to RAG QA
+        try:
+            matches = search_similar_by_text(tenant_id=tenant_id, query_text=clean_query, top_k=3)
+        except Exception as e:
+            logger.warning(f"[RAG Telegram] Не удалось выполнить поиск в Pinecone для тенанта {tenant_id}: {e}")
+            matches = []
+            
+        ai_response = generate_rag_answer(clean_query, matches)
+        
+        if matches:
+            sources_list = []
+            for m in matches:
+                src = m.get("source") or m.get("metadata", {}).get("source_file") or m.get("metadata", {}).get("title") or "База знаний"
+                score_pct = round(m.get("score", 0) * 100, 1)
+                sources_list.append(f"• [{score_pct}%] {src}")
+            if sources_list:
+                ai_response += "\n\n📚 <b>Источники из базы знаний:</b>\n" + "\n".join(sorted(set(sources_list), reverse=True))
+
+        if not ai_response:
+            ai_response = (
+                "Извините, локальный сервер ИИ (Ollama) временно недоступен или модель не загружена. "
+                "Убедитесь, что на сервере запущена служба Ollama и скачана модель qwen2:7b."
+            )
+            
+        send_telegram_reply_message(token, chat_id, ai_response, reply_to_message_id, thread_id)
+
     except Exception as e:
-        logger.warning(f"[RAG Telegram] Ошибка определения тенанта для chat_id {chat_id}: {e}")
+        logger.error(f"[Telegram AI Query] Exception: {e}")
+        send_telegram_reply_message(token, chat_id, f"❌ Произошла техническая ошибка: {e}", reply_to_message_id, thread_id)
     finally:
         db.close()
-        
-    try:
-        matches = search_similar_by_text(tenant_id=tenant_id, query_text=clean_query, top_k=3)
-    except Exception as e:
-        logger.warning(f"[RAG Telegram] Не удалось выполнить поиск в Pinecone для тенанта {tenant_id}: {e}")
-        matches = []
-        
-    ai_response = generate_rag_answer(clean_query, matches)
-    
-    if matches:
-        sources_list = []
-        for m in matches:
-            src = m.get("source") or m.get("metadata", {}).get("source_file") or m.get("metadata", {}).get("title") or "База знаний"
-            score_pct = round(m.get("score", 0) * 100, 1)
-            sources_list.append(f"• [{score_pct}%] {src}")
-        if sources_list:
-            ai_response += "\n\n📚 <b>Источники из базы знаний:</b>\n" + "\n".join(sorted(set(sources_list), reverse=True))
-
-    if not ai_response:
-        ai_response = (
-            "Извините, локальный сервер ИИ (Ollama) временно недоступен или модель не загружена. "
-            "Убедитесь, что на сервере запущена служба Ollama и скачана модель qwen2:7b."
-        )
-        
-    send_telegram_reply_message(token, chat_id, ai_response, reply_to_message_id, thread_id)
 
 
 def handle_telegram_tender_ai_analysis(token: str, chat_id: int, tender_id: int, reply_to_message_id: int):
@@ -1187,6 +1317,10 @@ def handle_voice_message(token: str, chat_id: int, file_id: str, telegram_user_i
         }])
 
     keyboard.append([{
+        "text": "💼 Создать сделку / лида",
+        "callback_data": f"confirm_voice_deal_{temp_id}"
+    }])
+    keyboard.append([{
         "text": "📌 Создать задачу" + (" (без клиента)" if entities.get("client_name") and not client_in_crm else ""),
         "callback_data": f"confirm_voice_{temp_id}"
     }])
@@ -1209,6 +1343,94 @@ def handle_voice_message(token: str, chat_id: int, file_id: str, telegram_user_i
         thread_id=thread_id,
         reply_markup={"inline_keyboard": keyboard}
     )
+
+
+def handle_confirm_voice_deal(token: str, chat_id: int, message_id: int, temp_id: int):
+    """
+    Создаёт клиента/сделку в CRM со статусом 'negotiation' (Переговоры)
+    по данным из TempVoiceTask.
+    """
+    from ..database import SessionLocal
+    from ..models import Client, User, Task, ClientStatusEnum
+    import re
+    
+    db = SessionLocal()
+    try:
+        temp = db.query(TempVoiceTask).filter(TempVoiceTask.id == temp_id).first()
+        if not temp:
+            edit_message_text(token, chat_id, message_id,
+                              "❌ Сессия устарела. Пожалуйста, пришлите голосовое ещё раз.")
+            return
+
+        crm_user = db.query(User).filter(
+            User.telegram_chat_id == temp.telegram_user_id
+        ).first()
+        creator_id = crm_user.id if crm_user else 1
+
+        client_name = temp.client_name or f"Сделка из голосового ({temp.created_at.strftime('%d.%m %H:%M') if temp.created_at else ''})"
+        
+        # Пытаемся найти существующего клиента
+        existing = db.query(Client).filter(Client.name.ilike(f"%{client_name}%")).first()
+        
+        budget_val = 0.0
+        if temp.task_description and "Бюджет: " in temp.task_description:
+            b_match = re.search(r'Бюджет:\s*([\d\s]+)\s*руб', temp.task_description)
+            if b_match:
+                try:
+                    budget_val = float(b_match.group(1).replace(" ", ""))
+                except:
+                    pass
+
+        if existing:
+            new_client = existing
+            new_client.status = ClientStatusEnum.negotiation
+            if budget_val > 0:
+                new_client.acquisition_cost = budget_val
+            new_client.notes = f"Обновлено через голосовое. {temp.task_description}\n" + (new_client.notes or "")
+        else:
+            new_client = Client(
+                tenant_id=crm_user.tenant_id if crm_user else 1,
+                name=client_name,
+                contact_person=temp.contact_person,
+                phone=temp.contact_phone,
+                status=ClientStatusEnum.negotiation,
+                acquisition_cost=budget_val,
+                notes=f"Создан автоматически из голосового сообщения.\n{temp.task_description or ''}",
+                owner_id=creator_id
+            )
+            db.add(new_client)
+            db.flush()
+
+        # Создаём задачу "Провести переговоры"
+        new_task = Task(
+            tenant_id=crm_user.tenant_id if crm_user else 1,
+            title=f"Переговоры по сделке: {new_client.name}",
+            description=f"Подготовить КП и провести встречу.\nДетали из ИИ: {temp.task_description}",
+            status="Новая",
+            priority="Средний",
+            created_by_id=creator_id,
+            assigned_to_id=creator_id,
+        )
+        db.add(new_task)
+        db.flush()
+
+        db.delete(temp)
+        db.commit()
+
+        parts = ["🟢 <b>Сделка & Задача успешно созданы!</b>\n"]
+        parts.append(f"<b>💼 Лид/Сделка:</b> <code>{new_client.name}</code>")
+        if budget_val > 0:
+            parts.append(f"<b>💰 Бюджет:</b> <code>{budget_val:,.2f} руб.</code>")
+        parts.append(f"<b>📌 Задача:</b> {new_task.title}")
+        parts.append(f"\n<a href='https://срм.леоника56.рф/#/clients'>Открыть Сделки в CRM →</a>")
+
+        edit_message_text(token, chat_id, message_id, "\n".join(parts))
+
+    except Exception as e:
+        logger.error(f"handle_confirm_voice_deal error: {e}")
+        edit_message_text(token, chat_id, message_id, f"❌ Ошибка при создании сделки: {e}")
+    finally:
+        db.close()
 
 
 def handle_confirm_voice_task(token: str, chat_id: int, message_id: int,
