@@ -41,6 +41,7 @@ const MaterialPage = React.lazy(() => import('./pages/MaterialPage').then(m => (
 const StandardPage = React.lazy(() => import('./pages/StandardPage').then(m => ({ default: m.StandardPage })));
 const ContactLanding = React.lazy(() => import('./pages/ContactLanding').then(m => ({ default: m.ContactLanding })));
 const PublicMarketplace = React.lazy(() => import('./pages/PublicMarketplace').then(m => ({ default: m.PublicMarketplace })));
+const PublicBookingWidget = React.lazy(() => import('./pages/PublicBookingWidget').then(m => ({ default: m.PublicBookingWidget })));
 
 // Lazy load CRM pages
 const Login = React.lazy(() => import('./crm/pages/Login').then(m => ({ default: m.Login })));
@@ -135,6 +136,7 @@ const App: React.FC = () => {
                 <Route path="/materials/:id" element={<MaterialPage />} />
                 <Route path="/standards/:id" element={<StandardPage />} />
                 <Route path="/marketplace-preview" element={<PublicMarketplace />} />
+              <Route path="/public-booking" element={<PublicBookingWidget />} />
               </Route>
 
               {/* Standalone Public Mobile vCard Route */}

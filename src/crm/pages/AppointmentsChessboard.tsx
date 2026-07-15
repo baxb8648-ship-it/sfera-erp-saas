@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, CheckCircle2, Info } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckCircle2, Info, User as UserIcon, Phone, Clock, Trash2, Check, X, ShieldAlert } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 import { apiClient } from '../../api/client';
 import { GodTierModal } from '../components/GodTierModal';
@@ -49,6 +49,94 @@ export default function AppointmentsChessboard() {
         client_phone: '',
         service_id: ''
     });
+
+    // Manage Modal state
+    const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+    const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+    const [manageFormData, setManageFormData] = useState({
+        master_id: 0,
+        service_id: 0,
+        datetime_start: '',
+        datetime_end: '',
+        client_name: '',
+        client_phone: '',
+        notes: '',
+        status: ''
+    });
+
+    const handleAppointmentClick = (app: Appointment) => {
+        setSelectedAppointment(app);
+        setManageFormData({
+            master_id: app.master_id,
+            service_id: app.service_id,
+            datetime_start: app.datetime_start.split('.')[0], // clean ISO
+            datetime_end: app.datetime_end.split('.')[0],
+            client_name: app.client_name,
+            client_phone: app.client_phone || '',
+            notes: app.notes || '',
+            status: app.status
+        });
+        setIsManageModalOpen(true);
+    };
+
+    const handleUpdateAppointment = async () => {
+        if (!selectedAppointment) return;
+        try {
+            await apiClient.put(`/booking/appointments/${selectedAppointment.id}`, {
+                master_id: Number(manageFormData.master_id),
+                service_id: Number(manageFormData.service_id),
+                client_name: manageFormData.client_name,
+                client_phone: manageFormData.client_phone,
+                datetime_start: new Date(manageFormData.datetime_start).toISOString(),
+                datetime_end: new Date(manageFormData.datetime_end).toISOString(),
+                notes: manageFormData.notes,
+                status: manageFormData.status
+            });
+            success('Запись успешно обновлена');
+            setIsManageModalOpen(false);
+            fetchData();
+        } catch (err) {
+            console.error(err);
+            error('Не удалось обновить запись');
+        }
+    };
+
+    const handleConfirmAppointment = async (appId: number) => {
+        try {
+            await apiClient.post(`/booking/appointments/${appId}/confirm`);
+            success('Запись подтверждена');
+            setIsManageModalOpen(false);
+            fetchData();
+        } catch (err) {
+            console.error(err);
+            error('Не удалось подтвердить запись');
+        }
+    };
+
+    const handleCancelAppointment = async (appId: number) => {
+        try {
+            await apiClient.post(`/booking/appointments/${appId}/cancel`);
+            success('Запись отменена');
+            setIsManageModalOpen(false);
+            fetchData();
+        } catch (err) {
+            console.error(err);
+            error('Не удалось отменить запись');
+        }
+    };
+
+    const handleDeleteAppointment = async (appId: number) => {
+        if (!window.confirm('Вы уверены, что хотите удалить эту запись безвозвратно?')) return;
+        try {
+            await apiClient.delete(`/booking/appointments/${appId}`);
+            success('Запись успешно удалена');
+            setIsManageModalOpen(false);
+            fetchData();
+        } catch (err) {
+            console.error(err);
+            error('Не удалось удалить запись');
+        }
+    };
 
     useEffect(() => {
         fetchData();
@@ -244,9 +332,14 @@ export default function AppointmentsChessboard() {
                                             return (
                                                 <div 
                                                     key={app.id}
-                                                    className={`absolute top-1 bottom-1 rounded-lg p-2 shadow-sm border overflow-hidden transition-all ${
+                                                    onClick={() => handleAppointmentClick(app)}
+                                                    className={`absolute top-1 bottom-1 rounded-lg p-2 shadow-sm border overflow-hidden transition-all cursor-pointer ${
                                                         isCompleted 
                                                         ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 opacity-70' 
+                                                        : app.status === 'confirmed'
+                                                        ? 'bg-[#F95700] dark:bg-orange-600 border-orange-600 dark:border-orange-500 text-white hover:shadow-md hover:z-10'
+                                                        : app.status === 'cancelled'
+                                                        ? 'bg-zinc-150 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:shadow-md hover:z-10 line-through'
                                                         : 'bg-blue-500 dark:bg-blue-600 border-blue-600 dark:border-blue-500 text-white hover:shadow-md hover:z-10'
                                                     }`}
                                                     style={{ 
@@ -346,6 +439,164 @@ export default function AppointmentsChessboard() {
                         </button>
                     </div>
                 </div>
+            </GodTierModal>
+
+            {/* Модальное окно управления записью */}
+            <GodTierModal
+                isOpen={isManageModalOpen}
+                onClose={() => setIsManageModalOpen(false)}
+                title="Управление записью клиента"
+            >
+                {selectedAppointment && (
+                    <div className="space-y-6">
+                        {/* Статусные плашки */}
+                        <div className="flex gap-2">
+                            <span className={`px-3 py-1 rounded-full text-xs font-black uppercase ${
+                                selectedAppointment.status === 'completed'
+                                ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400'
+                                : selectedAppointment.status === 'confirmed'
+                                ? 'bg-orange-100 dark:bg-orange-950 text-orange-600 dark:text-[#F95700]'
+                                : selectedAppointment.status === 'cancelled'
+                                ? 'bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-400'
+                                : 'bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400'
+                            }`}>
+                                {selectedAppointment.status === 'new' && 'Новая запись'}
+                                {selectedAppointment.status === 'confirmed' && 'Подтверждена'}
+                                {selectedAppointment.status === 'completed' && 'Завершена'}
+                                {selectedAppointment.status === 'cancelled' && 'Отменена'}
+                            </span>
+                        </div>
+
+                        {/* Кнопки быстрых действий со статусом */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 border-b border-zinc-100 dark:border-zinc-800 pb-4">
+                            {selectedAppointment.status !== 'confirmed' && selectedAppointment.status !== 'completed' && (
+                                <button
+                                    onClick={() => handleConfirmAppointment(selectedAppointment.id)}
+                                    className="flex items-center justify-center gap-1 bg-orange-500 hover:bg-orange-600 text-white rounded-xl py-2 text-xs font-bold transition shadow-sm shadow-orange-500/10 cursor-pointer"
+                                >
+                                    <Check className="w-3.5 h-3.5" /> Подтвердить
+                                </button>
+                            )}
+                            {selectedAppointment.status !== 'completed' && (
+                                <button
+                                    onClick={() => handleComplete(selectedAppointment.id)}
+                                    className="flex items-center justify-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-2 text-xs font-bold transition shadow-sm shadow-emerald-600/10 cursor-pointer"
+                                >
+                                    <CheckCircle2 className="w-3.5 h-3.5" /> Завершить
+                                </button>
+                            )}
+                            {selectedAppointment.status !== 'cancelled' && selectedAppointment.status !== 'completed' && (
+                                <button
+                                    onClick={() => handleCancelAppointment(selectedAppointment.id)}
+                                    className="flex items-center justify-center gap-1 bg-zinc-250 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-xl py-2 text-xs font-bold transition cursor-pointer"
+                                >
+                                    <X className="w-3.5 h-3.5" /> Отменить
+                                </button>
+                            )}
+                            <button
+                                onClick={() => handleDeleteAppointment(selectedAppointment.id)}
+                                className="flex items-center justify-center gap-1 bg-rose-600 hover:bg-rose-700 text-white rounded-xl py-2 text-xs font-bold transition shadow-sm shadow-rose-600/10 cursor-pointer"
+                            >
+                                <Trash2 className="w-3.5 h-3.5" /> Удалить
+                            </button>
+                        </div>
+
+                        {/* Форма редактирования/переноса */}
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-black text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                                        <UserIcon className="w-3.5 h-3.5 text-zinc-400" /> Клиент
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                                        value={manageFormData.client_name}
+                                        onChange={(e) => setManageFormData({...manageFormData, client_name: e.target.value})}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-black text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                                        <Phone className="w-3.5 h-3.5 text-zinc-400" /> Телефон
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                                        value={manageFormData.client_phone}
+                                        onChange={(e) => setManageFormData({...manageFormData, client_phone: e.target.value})}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-black text-zinc-700 dark:text-zinc-300">Специалист</label>
+                                    <select
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                                        value={manageFormData.master_id}
+                                        onChange={(e) => setManageFormData({...manageFormData, master_id: Number(e.target.value)})}
+                                    >
+                                        {masters.map(m => (
+                                            <option key={m.id} value={m.id}>{m.username}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-black text-zinc-700 dark:text-zinc-300">Услуга</label>
+                                    <select
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                                        value={manageFormData.service_id}
+                                        onChange={(e) => setManageFormData({...manageFormData, service_id: Number(e.target.value)})}
+                                    >
+                                        {services.map(s => (
+                                            <option key={s.id} value={s.id}>{s.name} ({s.duration_minutes} мин)</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-black text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                                        <Clock className="w-3.5 h-3.5 text-zinc-400" /> Время начала
+                                    </label>
+                                    <input
+                                        type="datetime-local"
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none"
+                                        value={manageFormData.datetime_start}
+                                        onChange={(e) => setManageFormData({...manageFormData, datetime_start: e.target.value})}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-black text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                                        <Clock className="w-3.5 h-3.5 text-zinc-400" /> Время окончания
+                                    </label>
+                                    <input
+                                        type="datetime-local"
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none"
+                                        value={manageFormData.datetime_end}
+                                        onChange={(e) => setManageFormData({...manageFormData, datetime_end: e.target.value})}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="pt-4 flex justify-end gap-3 border-t border-zinc-100 dark:border-zinc-850">
+                            <button
+                                onClick={() => setIsManageModalOpen(false)}
+                                className="px-5 py-2.5 rounded-xl font-bold text-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+                            >
+                                Отмена
+                            </button>
+                            <button
+                                onClick={handleUpdateAppointment}
+                                className="px-5 py-2.5 rounded-xl font-bold text-xs bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 transition"
+                            >
+                                Сохранить изменения
+                            </button>
+                        </div>
+                    </div>
+                )}
             </GodTierModal>
         </div>
     );
