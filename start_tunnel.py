@@ -51,7 +51,9 @@ def reverse_forward_loop(server_port, local_host, local_port, transport):
     log(f"Requesting reverse port forward for VPS port {server_port}...")
     transport.request_port_forward("", server_port)
     while True:
-        chan = transport.accept(1000)
+        if not transport.is_active():
+            raise paramiko.SSHException("SSH transport is no longer active")
+        chan = transport.accept(1)
         if chan is None:
             continue
         thr = threading.Thread(target=handler, args=(chan, local_host, local_port))
