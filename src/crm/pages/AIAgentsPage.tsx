@@ -61,6 +61,18 @@ const PRESET_EMPLOYEES: DigitalEmployee[] = [
     priceMonthly: 0
   },
   {
+    id: 'sales-closer-bot',
+    name: 'ИИ-Ассистент по продажам «Sales Closer-AI»',
+    role: 'Социальная инженерия и нативный контент',
+    description: 'Ведет глубокие персонализированные переговоры, подстраивая пол и психологический портрет под клиента (девушка для мужчин, парень для женщин-руководителей). Ведет контент в соцсетях и нативно рекламирует продукцию.',
+    category: 'sales',
+    icon: '🎭',
+    status: 'paused',
+    tasksCompleted: 0,
+    channels: ['Telegram', 'WhatsApp', 'Email', 'VC.ru'],
+    priceMonthly: 5990
+  },
+  {
     id: 'finance-bot',
     name: 'ИИ-Аналитик «Казначей»',
     role: 'Прогноз кассовых разрывов',
@@ -185,6 +197,14 @@ export const AIAgentsPage: React.FC = () => {
   const [botNameInput, setBotNameInput] = useState('');
   const [isConnectingBot, setIsConnectingBot] = useState(false);
 
+  // States for closer bot customization
+  const [closerSocialEngineering, setCloserSocialEngineering] = useState(true);
+  const [closerArchetype, setCloserArchetype] = useState('negotiator');
+  const [closerRigidness, setCloserRigidness] = useState(50);
+  const [closerEmojis, setCloserEmojis] = useState(30);
+  const [closerPostingChannels, setCloserPostingChannels] = useState<string[]>(['Telegram']);
+  const [closerPostingFreq, setCloserPostingFreq] = useState('3_times_week');
+
   const fetchConnectedBots = async () => {
     try {
       const res = await apiClient.get<any[]>('/telegram-bots');
@@ -203,6 +223,7 @@ export const AIAgentsPage: React.FC = () => {
   const mapEmpIdToRole = (id: string): string => {
     switch (id) {
       case 'sales-bot': return 'external_sales';
+      case 'sales-closer-bot': return 'external_sales';
       case 'support-bot': return 'external_support';
       case 'estimate-bot': return 'internal_pto';
       case 'supply-bot': return 'internal_supply';
@@ -664,9 +685,10 @@ export const AIAgentsPage: React.FC = () => {
       {isBotModalOpen && selectedEmployee && (() => {
         const role = mapEmpIdToRole(selectedEmployee.id);
         const existingBot = connectedBots.find(b => b.role === role);
+        const isCloser = selectedEmployee.id === 'sales-closer-bot';
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-            <div className="relative w-full max-w-lg rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8 shadow-2xl transition-colors">
+            <div className={`relative w-full ${isCloser ? 'max-w-4xl' : 'max-w-lg'} rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8 shadow-2xl transition-all max-h-[90vh] overflow-y-auto`}>
               <button
                 onClick={() => setIsBotModalOpen(false)}
                 className="absolute top-4 right-4 p-2 rounded-full text-zinc-400 hover:text-zinc-700 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
@@ -680,13 +702,19 @@ export const AIAgentsPage: React.FC = () => {
                 </span>
                 <div>
                   <h3 className="text-lg font-black text-zinc-900 dark:text-white">
-                    Настройка Telegram-бота
+                    Настройка ИИ-Сотрудника
                   </h3>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 font-bold">
-                    для ИИ-Сотрудника: {selectedEmployee.name}
+                    и Telegram-бота для: {selectedEmployee.name}
                   </p>
                 </div>
               </div>
+
+              <div className={`grid grid-cols-1 ${isCloser ? 'md:grid-cols-2' : ''} gap-6`}>
+                <div className="space-y-5">
+                  <h4 className="text-xs font-black text-zinc-900 dark:text-white uppercase tracking-wider mb-2">
+                    🤖 Связь с Telegram API
+                  </h4>
 
               {existingBot ? (
                 <div className="space-y-6">
@@ -786,6 +814,148 @@ export const AIAgentsPage: React.FC = () => {
                   </div>
                 </div>
               )}
+              </div>
+
+              {/* Правая колонка: Кастомизация личности (только для Closer-AI) */}
+              {isCloser && (
+                <div className="border-t md:border-t-0 md:border-l border-zinc-200 dark:border-zinc-800/80 pt-6 md:pt-0 md:pl-6 space-y-5">
+                  <div>
+                    <h4 className="text-xs font-black text-zinc-900 dark:text-white uppercase tracking-wider mb-3">
+                      🧬 Личность & Социальная Инженерия
+                    </h4>
+                    <div className="space-y-4">
+                      {/* Адаптивный пол */}
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850">
+                        <div className="pr-4">
+                          <span className="text-xs font-bold text-zinc-900 dark:text-white block">Адаптивный пол бота</span>
+                          <span className="text-[10px] text-zinc-500 block mt-0.5">Девушка для мужчин / Парень для женщин-руководителей</span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={closerSocialEngineering}
+                          onChange={(e) => setCloserSocialEngineering(e.target.checked)}
+                          className="rounded text-[#F95700] focus:ring-[#F95700] cursor-pointer"
+                        />
+                      </div>
+
+                      {/* Архетип общения */}
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-black text-zinc-500 dark:text-zinc-400">Психологический архетип</label>
+                        <select
+                          value={closerArchetype}
+                          onChange={(e) => setCloserArchetype(e.target.value)}
+                          className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 rounded-xl px-3 py-2.5 text-xs font-bold text-zinc-900 dark:text-white focus:outline-none"
+                        >
+                          <option value="negotiator">🎭 Харизматичный переговорщик (Дожим и закрытие)</option>
+                          <option value="expert">🤵 Строгий деловой эксперт (B2B сегмент)</option>
+                          <option value="friend">🤝 Дружелюбный консультант (Выстраивание отношений)</option>
+                        </select>
+                      </div>
+
+                      {/* ToV Ползунки */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between text-[10px] font-bold text-zinc-500">
+                            <span>Деловая строгость</span>
+                            <span>{closerRigidness}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={closerRigidness}
+                            onChange={(e) => setCloserRigidness(Number(e.target.value))}
+                            className="w-full accent-orange-500 cursor-pointer h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between text-[10px] font-bold text-zinc-500">
+                            <span>Смайлы и эмоции</span>
+                            <span>{closerEmojis}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={closerEmojis}
+                            onChange={(e) => setCloserEmojis(Number(e.target.value))}
+                            className="w-full accent-orange-500 cursor-pointer h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-xs font-black text-zinc-900 dark:text-white uppercase tracking-wider mb-3">
+                      ✍️ Автопостинг & Реклама в соцсетях
+                    </h4>
+                    <div className="space-y-3.5">
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-black text-zinc-500 dark:text-zinc-400">Каналы ведения контента</label>
+                        <div className="flex gap-2 flex-wrap">
+                          {['Telegram-канал', 'VKонтакте', 'VC.ru'].map(ch => {
+                            const selected = closerPostingChannels.includes(ch);
+                            return (
+                              <button
+                                type="button"
+                                key={ch}
+                                onClick={() => {
+                                  if (selected) {
+                                    setCloserPostingChannels(prev => prev.filter(c => c !== ch));
+                                  } else {
+                                    setCloserPostingChannels(prev => [...prev, ch]);
+                                  }
+                                }}
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-extrabold border transition cursor-pointer select-none ${
+                                  selected
+                                    ? 'bg-orange-500/10 border-orange-500/30 text-[#F95700]'
+                                    : 'bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-850 text-zinc-650 dark:text-zinc-400'
+                                }`}
+                              >
+                                {ch}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-black text-zinc-500 dark:text-zinc-400">Периодичность публикаций</label>
+                        <select
+                          value={closerPostingFreq}
+                          onChange={(e) => setCloserPostingFreq(e.target.value)}
+                          className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 rounded-xl px-3 py-2 text-xs font-bold text-zinc-900 dark:text-white focus:outline-none"
+                        >
+                          <option value="daily">🔥 Каждый день (Активные продажи и нативная реклама)</option>
+                          <option value="3_times_week">📅 3 раза в неделю (Полезные кейсы и статьи)</option>
+                          <option value="1_time_week">📰 1 раз в неделю (Итоговые дайджесты)</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-orange-500/10 to-amber-500/5 border border-orange-500/20 text-zinc-800 dark:text-zinc-200 space-y-1.5">
+                    <div className="text-xs font-black text-[#F95700] uppercase tracking-wider flex items-center gap-1.5">
+                      👑 VIP-Внедрение «Под ключ»
+                    </div>
+                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-relaxed font-semibold">
+                      Наши ИИ-инженеры создадут уникальный характер агента, проработают Tone of Voice, напишут системный промпт (до 50 страниц правил) и обучат RAG на вашей базе кейсов.
+                    </p>
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-xs font-black text-zinc-900 dark:text-white">49 900 ₽ разово</span>
+                      <button
+                        type="button"
+                        onClick={() => toast?.showToast('Заявка на VIP-внедрение отправлена. Менеджер свяжется с вами.', 'success')}
+                        className="px-3 py-1.5 bg-[#F95700] hover:bg-orange-600 text-white text-[10px] font-black rounded-lg transition cursor-pointer select-none"
+                      >
+                        Заказать ➔
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              </div>
             </div>
           </div>
         );
