@@ -214,7 +214,7 @@ async def lifespan(app: FastAPI):
         pass
 
 
-from .api import (clients, auth, objects, finance, documents, inventory, equipment, dashboard, settings, users, tenders, tender_integrations, templates, backup, analytics, websocket_route, tasks, export, audit, telegram_webhook, biurs_route, special_tasks_route, leads_route, ops_route, decision_log_route, devbrain_route, oblakocrm_bot, tenants, billing_route, ai_rag_route, support_route,
+from .api import (tts_route, clients, auth, objects, finance, documents, inventory, equipment, dashboard, settings, users, tenders, tender_integrations, templates, backup, analytics, websocket_route, tasks, export, audit, telegram_webhook, biurs_route, special_tasks_route, leads_route, ops_route, decision_log_route, devbrain_route, oblakocrm_bot, tenants, billing_route, ai_rag_route, support_route,
     permissions_route,
     field_templates_route,
     construction_route,
@@ -369,6 +369,7 @@ app.include_router(agro_route.router) # Фаза 10 - Агро
 app.include_router(fleet_route.router) # Фаза 1 — Аренда спецтехники
 app.include_router(holding_route.router) # Фаза 2 — Холдинг / Управление компаниями
 app.include_router(agents_route.router)  # Монетизация: Каталог ИИ-агентов + Usage Limits
+app.include_router(tts_route.router)
 
 
 
