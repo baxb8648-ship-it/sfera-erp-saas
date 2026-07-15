@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Calendar as CalendarIcon, Clock, User as UserIcon, CheckCircle2, ChevronRight, Sparkles, Phone, Tag } from 'lucide-react';
+import { Clock, User as UserIcon, CheckCircle2, ChevronRight, Sparkles, Phone, Tag } from 'lucide-react';
 import { apiClient } from '../api/client';
 
 interface BookingService {
@@ -32,7 +32,6 @@ export function PublicBookingWidget() {
     const [busyAppointments, setBusyAppointments] = useState<BusySlot[]>([]);
     const [loading, setLoading] = useState(true);
     const [successState, setSuccessState] = useState(false);
-    const [createdAppId, setCreatedAppId] = useState<number | null>(null);
 
     // Form states
     const [step, setStep] = useState(1);
@@ -114,7 +113,7 @@ export function PublicBookingWidget() {
         const endDt = new Date(startDt.getTime() + duration * 60000);
 
         try {
-            const res = await apiClient.post('/booking/public/appointments', {
+            await apiClient.post('/booking/public/appointments', {
                 tenant_id: tenantId,
                 service_id: selectedService?.id,
                 master_id: selectedMaster?.id,
@@ -125,7 +124,6 @@ export function PublicBookingWidget() {
                 notes: clientNotes
             });
             
-            setCreatedAppId(res.id);
             setSuccessState(true);
         } catch (err) {
             console.error(err);

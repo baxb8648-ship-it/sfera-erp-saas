@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, CheckCircle2, Info, User as UserIcon, Phone, Clock, Trash2, Check, X, ShieldAlert } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckCircle2, Info, User as UserIcon, Phone, Clock, Trash2, Check, X } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 import { apiClient } from '../../api/client';
 import { GodTierModal } from '../components/GodTierModal';
@@ -15,6 +15,7 @@ interface Appointment {
     status: string;
     service_name?: string;
     master_name?: string;
+    notes?: string;
 }
 
 interface BookingService {
