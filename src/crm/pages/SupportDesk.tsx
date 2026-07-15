@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   LifeBuoy, MessageSquare, Plus, CheckCircle2, Clock, AlertCircle, ShieldAlert, 
-  Send, Search, Server, Activity, Database, Cpu, Wifi, X, 
+  Send, Search, Server, Activity, Database, Cpu, Wifi, X, HelpCircle,
   RefreshCw, Check, Sparkles, Terminal, ShieldCheck,
   Paperclip, FileText, Download, Eye
 } from 'lucide-react';
@@ -76,6 +76,23 @@ export default function SupportDesk() {
   const [replyText, setReplyText] = useState('');
   const [replyAttachment, setReplyAttachment] = useState<{ name: string; url: string; type: 'image' | 'document' } | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+
+  const handleAiSuggest = async () => {
+    if (!selectedTicketId) return;
+    setIsAiLoading(true);
+    try {
+      const res = await apiClient.get<{ suggestion: string }>(`/support/tickets/${selectedTicketId}/ai-suggest`);
+      if (res && res.suggestion) {
+        setReplyText(res.suggestion);
+      }
+    } catch (err: any) {
+      console.error('Failed to generate AI suggestion:', err);
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, setAtt: (val: any) => void) => {
     const file = e.target.files?.[0];
@@ -240,6 +257,16 @@ export default function SupportDesk() {
         </div>
 
         <div className="flex items-center gap-3">
+          {isSupportStaff && (
+            <button
+              onClick={() => setIsHelpModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 rounded-xl text-sm font-medium border border-indigo-200/50 dark:border-indigo-800/40 transition-all shadow-sm"
+              title="Инструкция по работе с Telegram-ботом"
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span>Справка по боту</span>
+            </button>
+          )}
           {isSupportStaff && (
             <div className="flex bg-gray-100 dark:bg-zinc-800/80 p-1 rounded-xl border border-gray-200 dark:border-zinc-700/60">
               <button
@@ -613,6 +640,17 @@ export default function SupportDesk() {
                         accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
                       />
                     </label>
+                    {isSupportStaff && (
+                      <button
+                        type="button"
+                        onClick={handleAiSuggest}
+                        disabled={isAiLoading}
+                        className={`p-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-xl transition-colors flex items-center justify-center shrink-0 ${isAiLoading ? 'animate-pulse' : ''}`}
+                        title="Сгенерировать черновик ответа ИИ"
+                      >
+                        <Sparkles className={`w-4 h-4 ${isAiLoading ? 'animate-spin' : ''}`} />
+                      </button>
+                    )}
                     <input
                       type="text"
                       placeholder={selectedTicket.status === 'resolved' ? 'Обращение решено. Напишите, чтобы открыть снова...' : 'Введите ответ или сообщение для техподдержки...'}
@@ -769,6 +807,84 @@ export default function SupportDesk() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Telegram Bot Guide Modal */}
+      {isHelpModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-2xl rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-2xl p-6 flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-gray-200 dark:border-zinc-800 pb-4 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                  <Terminal className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Инструкция по работе с Telegram-ботом</h3>
+                  <p className="text-xs text-gray-500 dark:text-zinc-400">Синхронизация CRM и Telegram-группы поддержки</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsHelpModalOpen(false)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-500 rounded-xl transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto pr-2 space-y-5 text-sm text-gray-600 dark:text-zinc-300">
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                  <span>🎫</span> Обработка обращений клиентов
+                </h4>
+                <p className="mb-2">Все новые тикеты от клиентов мгновенно приходят в Telegram-группу поддержки с информацией о компании, теме и приоритете.</p>
+                <ul className="list-disc list-inside pl-2 space-y-1.5 text-xs text-gray-500 dark:text-zinc-400">
+                  <li><b className="text-gray-700 dark:text-zinc-300">Взять в работу:</b> Нажмите кнопку <code>📥 Взять в работу</code> под сообщением тикета. Статус изменится на <code>in_progress</code>.</li>
+                  <li><b className="text-gray-700 dark:text-zinc-300">Решить проблему:</b> Нажмите кнопку <code>✅ Решено</code>, чтобы закрыть тикет.</li>
+                  <li><b className="text-gray-700 dark:text-zinc-300">Авто-ответ ИИ:</b> Нажмите <code>🪄 Отправить ИИ-ответ</code>. Черновик ответа, сгенерированный Llama 3.3 на основе обращения, сразу отправится клиенту.</li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                  <span>💬</span> Общение с клиентом через Telegram
+                </h4>
+                <p className="mb-2">Вы можете вести диалог с клиентом прямо из Telegram-группы. Для этого:</p>
+                <div className="p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-xl border border-gray-100 dark:border-zinc-800/80 space-y-2 text-xs">
+                  <p>1. Сделайте <b className="text-gray-900 dark:text-white">Reply (Ответ)</b> в Telegram на нужное сообщение тикета.</p>
+                  <p>2. Отправьте ответ. Бот автоматически перешлет его клиенту в чат CRM.</p>
+                  <p>3. Вы можете отправлять:</p>
+                  <ul className="list-disc list-inside pl-3 space-y-1 text-gray-500 dark:text-zinc-400">
+                    <li>Обычный текст.</li>
+                    <li><b className="text-indigo-600 dark:text-indigo-400">Скриншоты и изображения</b> — они сконвертируются в base64 и добавятся как вложения.</li>
+                    <li><b className="text-indigo-600 dark:text-indigo-400">Файлы и документы</b> (PDF, DOCX, TXT и др.).</li>
+                    <li><b className="text-indigo-600 dark:text-indigo-400">Голосовые сообщения</b> — бот автоматически расшифрует их через Whisper STT и отправит клиенту расшифрованный текст.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                  <span>🤖</span> Управление разработкой через личные сообщения
+                </h4>
+                <p className="mb-2">При отправке команд или голосовых в ЛС боту <code>oblakocrmbot</code> (не в группу):</p>
+                <ul className="list-disc list-inside pl-2 space-y-1 text-xs text-gray-500 dark:text-zinc-400">
+                  <li>Голосовые сообщения автоматически классифицируются в базу задач <b>DevBrain</b> (как баги, идеи или ADR).</li>
+                  <li>Команда <code>/status</code> показывает текущую телеметрию разработки.</li>
+                  <li>Команды <code>/bug</code>, <code>/idea</code>, <code>/decision</code> позволяют регистрировать задачи текстом.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-gray-200 dark:border-zinc-800 flex justify-end">
+              <button
+                onClick={() => setIsHelpModalOpen(false)}
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl shadow-lg shadow-blue-500/25 transition-all text-sm"
+              >
+                Понятно
+              </button>
+            </div>
           </div>
         </div>
       )}

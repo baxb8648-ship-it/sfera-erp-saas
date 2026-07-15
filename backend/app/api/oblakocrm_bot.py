@@ -25,6 +25,25 @@ def run_in_background(func, *args, **kwargs):
     t.daemon = True
     t.start()
 
+def set_bot_menu_button():
+    try:
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/setChatMenuButton"
+        payload = {
+            "menu_button": {
+                "type": "web_app",
+                "text": "СФЕРА ERP",
+                "web_app": {
+                    "url": "https://sferum.space/#/crm"
+                }
+            }
+        }
+        resp = requests.post(url, json=payload, timeout=10)
+        logger.info(f"[OblakoCRM Bot] Set menu button result: {resp.status_code} {resp.text}")
+    except Exception as e:
+        logger.error(f"[OblakoCRM Bot] Failed to set menu button on startup: {e}")
+
+run_in_background(set_bot_menu_button)
+
 def generate_ai_support_suggestion(topic: str, message: str) -> str:
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
@@ -32,7 +51,7 @@ def generate_ai_support_suggestion(topic: str, message: str) -> str:
         
     url = "https://api.groq.com/openai/v1/chat/completions"
     payload = {
-        "model": "llama-3.1-70b-versatile",
+        "model": "llama-3.3-70b-versatile",
         "messages": [
             {
                 "role": "system",
@@ -127,7 +146,7 @@ def process_voice_transcription(text: str, chat_id: int, message_id: int, db: Se
     )
     
     payload = {
-        "model": "llama-3.1-70b-versatile",
+        "model": "llama-3.3-70b-versatile",
         "messages": [
             {"role": "system", "content": prompt},
             {"role": "user", "content": text}
@@ -343,13 +362,6 @@ def process_update_internal(update: dict, db: Session):
                 ticket_id = parts[1]
                 action = parts[2]
                 
-                quick_responses = {
-                    "checking": "Здравствуйте! Приняли в работу, уже проверяем. 🔧",
-                    "details": "Здравствуйте! Пришлите, пожалуйста, скриншот или подробности. 📝",
-                    "done": "Здравствуйте! Задача решена, проверяйте результат. ✅"
-                }
-                response_text = quick_responses.get(action, "Проверяем.")
-                
                 from .support_route import load_tickets, save_tickets
                 tickets = load_tickets()
                 target = None
@@ -358,6 +370,19 @@ def process_update_internal(update: dict, db: Session):
                         target = t
                         break
                         
+                quick_responses = {
+                    "checking": "Здравствуйте! Приняли в работу, уже проверяем. 🔧",
+                    "details": "Здравствуйте! Пришлите, пожалуйста, скриншот или подробности. 📝",
+                    "done": "Здравствуйте! Задача решена, проверяйте результат. ✅"
+                }
+                
+                response_text = quick_responses.get(action)
+                if not response_text:
+                    if action == "ai" and target:
+                        response_text = target.get("ai_suggestion", "Здравствуйте! Ваше обращение принято, ИИ готовит ответ.")
+                    else:
+                        response_text = "Проверяем."
+                
                 if target:
                     new_msg = {
                         "sender": f"{username} (Техподдержка)",
@@ -367,7 +392,7 @@ def process_update_internal(update: dict, db: Session):
                     }
                     target["messages"].append(new_msg)
                     
-                    if target["status"] == "open" and action == "checking":
+                    if target["status"] == "open" and action in ["checking", "ai"]:
                         target["status"] = "in_progress"
                     elif action == "done":
                         target["status"] = "resolved"
@@ -401,10 +426,9 @@ def process_update_internal(update: dict, db: Session):
                         edit_payload["reply_markup"] = {
                             "inline_keyboard": [
                                 [{"text": "✅ Решено", "callback_data": f"resolve_ticket_{ticket_id}"}],
-                                [
-                                    {"text": "💬 Ответ: Детали 📝", "callback_data": f"quick_{ticket_id}_details"},
-                                    {"text": "💬 Ответ: Готово ✅", "callback_data": f"quick_{ticket_id}_done"}
-                                ]
+                                [{"text": "🪄 Отправить ИИ-ответ", "callback_data": f"quick_{ticket_id}_ai"}],
+                                [{"text": "📝 Ответ: Нужны скриншоты/детали", "callback_data": f"quick_{ticket_id}_details"}],
+                                [{"text": "✅ Ответ: Готово, проверяйте", "callback_data": f"quick_{ticket_id}_done"}]
                             ]
                         }
                     else:
@@ -415,11 +439,10 @@ def process_update_internal(update: dict, db: Session):
                                     {"text": "📥 Взять в работу", "callback_data": f"take_ticket_{ticket_id}"},
                                     {"text": "✅ Решено", "callback_data": f"resolve_ticket_{ticket_id}"}
                                 ],
-                                [
-                                    {"text": "💬 Ответ: Проверяем 🔧", "callback_data": f"quick_{ticket_id}_checking"},
-                                    {"text": "💬 Ответ: Детали 📝", "callback_data": f"quick_{ticket_id}_details"},
-                                    {"text": "💬 Ответ: Готово ✅", "callback_data": f"quick_{ticket_id}_done"}
-                                ]
+                                [{"text": "🪄 Отправить ИИ-ответ", "callback_data": f"quick_{ticket_id}_ai"}],
+                                [{"text": "🔧 Ответ: Приняли, проверяем", "callback_data": f"quick_{ticket_id}_checking"}],
+                                [{"text": "📝 Ответ: Нужны скриншоты/детали", "callback_data": f"quick_{ticket_id}_details"}],
+                                [{"text": "✅ Ответ: Готово, проверяйте", "callback_data": f"quick_{ticket_id}_done"}]
                             ]
                         }
                         
@@ -438,7 +461,8 @@ def process_update_internal(update: dict, db: Session):
                         BOT_TOKEN, 
                         chat_id, 
                         f"💬 <b>Отправлен быстрый ответ по #{ticket_id}:</b>\n<i>«{response_text}»</i>", 
-                        reply_to_message_id=message_id
+                        reply_to_message_id=message_id,
+                        thread_id=message.get("message_thread_id")
                     )
         return
 
@@ -453,16 +477,86 @@ def process_update_internal(update: dict, db: Session):
     message_id = message.get("message_id")
     reply_to = message.get("reply_to_message")
     
-    # ─── 1. ОБРАБОТКА REPLY-ОТВЕТА НА ТИКЕТ ТЕХПОДДЕРЖКИ ───
-    if reply_to and text:
-        reply_text = reply_to.get("text", "")
+    # ─── 1. ОПРЕДЕЛЕНИЕ ТИКЕТА (ПО ФОРУМНОМУ ТОПИКУ ИЛИ REPLY) ───
+    ticket_id = None
+    message_thread_id = message.get("message_thread_id")
+    
+    if message_thread_id:
+        from .support_route import load_tickets
+        tickets = load_tickets()
+        for t in tickets:
+            if t.get("telegram_thread_id") == message_thread_id:
+                ticket_id = t["id"]
+                break
+                
+    if not ticket_id and reply_to:
+        reply_text = reply_to.get("text", "") or reply_to.get("caption", "")
         # Ищем ID тикета (SUP-XXX) в исходном сообщении
         match = re.search(r"SUP-\d+", reply_text)
         if match:
             ticket_id = match.group(0)
-            from_user = message.get("from", {})
-            username = from_user.get("username", "admin")
             
+    if ticket_id:
+        from_user = message.get("from", {})
+        username = from_user.get("username", "admin")
+        
+        # Проверяем, есть ли вложение (фото или документ)
+        photo = message.get("photo")
+        document = message.get("document")
+        attachment = None
+        
+        file_id = None
+        file_name = "attachment"
+        mime_type = "application/octet-stream"
+        attachment_type = "document"
+        
+        if photo:
+            # Берем фото лучшего качества
+            file_id = photo[-1]["file_id"]
+            file_name = f"photo_{int(time.time())}.jpg"
+            mime_type = "image/jpeg"
+            attachment_type = "image"
+        elif document:
+            file_id = document["file_id"]
+            file_name = document.get("file_name", "document")
+            mime_type = document.get("mime_type", "application/octet-stream")
+            attachment_type = "image" if mime_type.startswith("image/") else "document"
+            
+        # Если нашли вложение, скачиваем и кодируем в Base64
+        if file_id:
+            get_file_url = f"https://api.telegram.org/bot{BOT_TOKEN}/getFile?file_id={file_id}"
+            try:
+                import base64
+                req = urllib.request.Request(get_file_url, method="GET")
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    res = json.loads(resp.read().decode("utf-8"))
+                    if res.get("ok"):
+                        file_path = res["result"]["file_path"]
+                        download_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
+                        
+                        req_dl = urllib.request.Request(download_url, method="GET")
+                        with urllib.request.urlopen(req_dl, timeout=30) as dl_resp:
+                            file_bytes = dl_resp.read()
+                            b64_data = base64.b64encode(file_bytes).decode("utf-8")
+                            attachment = {
+                                "name": file_name,
+                                "url": f"data:{mime_type};base64,{b64_data}",
+                                "type": attachment_type
+                            }
+            except Exception as ex:
+                logger.error(f"[OblakoCRM Bot] Failed to download reply attachment: {ex}")
+        
+        # Текст ответа: приоритет у обычного текста, затем caption, иначе пустая строка или имя файла
+        msg_text = text or message.get("caption", "")
+        if not msg_text and attachment:
+            msg_text = f"Отправлен файл: {file_name}"
+        elif not msg_text:
+            msg_text = ""
+            
+        # Если нет ни текста, ни вложения, и это не голосовое сообщение
+        if not msg_text and not attachment and not message.get("voice"):
+            pass
+        elif not message.get("voice"):  # Если это не голосовое (голосовое обрабатывается в шаге 2 ниже)
             from .support_route import load_tickets, save_tickets
             tickets = load_tickets()
             target = None
@@ -474,10 +568,13 @@ def process_update_internal(update: dict, db: Session):
             if target:
                 new_msg = {
                     "sender": f"{username} (Техподдержка)",
-                    "text": text,
+                    "text": msg_text,
                     "time": datetime.now().strftime("%H:%M"),
                     "is_support": True
                 }
+                if attachment:
+                    new_msg["attachment"] = attachment
+                    
                 target["messages"].append(new_msg)
                 
                 # Если тикет был open, переводим в in_progress
@@ -486,12 +583,14 @@ def process_update_internal(update: dict, db: Session):
                     
                 save_tickets(tickets)
                 
+                ok_label = " (с вложением)" if attachment else ""
                 # Отвечаем админу в Telegram
                 send_telegram_reply_message(
                     BOT_TOKEN, 
                     chat_id, 
-                    f"✅ <b>Ответ по тикету #{ticket_id} доставлен клиенту!</b>", 
-                    reply_to_message_id=message_id
+                    f"✅ <b>Ответ по тикету #{ticket_id} доставлен клиенту!{ok_label}</b>", 
+                    reply_to_message_id=message_id,
+                    thread_id=message_thread_id
                 )
                 return
 
@@ -525,7 +624,64 @@ def process_update_internal(update: dict, db: Session):
                         os.remove(local_filename)
                         
                     if transcription:
-                        process_voice_transcription(transcription, chat_id, message_id, db)
+                        # Проверяем, является ли голосовое сообщение ответом на тикет (по топику или по Reply)
+                        message_thread_id = message.get("message_thread_id")
+                        ticket_id = None
+                        
+                        if message_thread_id:
+                            from .support_route import load_tickets
+                            tickets = load_tickets()
+                            for t in tickets:
+                                if t.get("telegram_thread_id") == message_thread_id:
+                                    ticket_id = t["id"]
+                                    break
+                                    
+                        if not ticket_id and reply_to:
+                            reply_text = reply_to.get("text", "") or reply_to.get("caption", "")
+                            match = re.search(r"SUP-\d+", reply_text)
+                            if match:
+                                ticket_id = match.group(0)
+
+                        if ticket_id:
+                            # Это ответ на тикет техподдержки!
+                            from_user = message.get("from", {})
+                            username = from_user.get("username", "admin")
+                            
+                            from .support_route import load_tickets, save_tickets
+                            tickets = load_tickets()
+                            target = None
+                            for t in tickets:
+                                if t["id"] == ticket_id:
+                                    target = t
+                                    break
+                                    
+                            if target:
+                                new_msg = {
+                                    "sender": f"{username} (Техподдержка)",
+                                    "text": transcription,
+                                    "time": datetime.now().strftime("%H:%M"),
+                                    "is_support": True
+                                }
+                                target["messages"].append(new_msg)
+                                if target["status"] == "open":
+                                    target["status"] = "in_progress"
+                                    
+                                save_tickets(tickets)
+                                
+                                ok_msg = (
+                                    f"🎙 <b>Голос распознан:</b> <i>«{transcription}»</i>\n\n"
+                                    f"✅ <b>Ответ по тикету #{ticket_id} доставлен клиенту!</b>"
+                                )
+                                send_telegram_reply_message(
+                                    BOT_TOKEN, 
+                                    chat_id, 
+                                    ok_msg, 
+                                    reply_to_message_id=message_id,
+                                    thread_id=message_thread_id
+                                )
+                        else:
+                            # Обычное голосовое сообщение (создаем задачу в DevBrain)
+                            process_voice_transcription(transcription, chat_id, message_id, db)
                     else:
                         send_telegram_reply_message(
                             BOT_TOKEN, 
@@ -581,16 +737,20 @@ def process_update_internal(update: dict, db: Session):
     elif cmd_base in ["/help", "/помощь", "/команды"]:
         help_text = (
             "🤖 <b>Глобальный пульт управления СФЕРА-ЕРП</b>\n\n"
-            "<b>Форматы отправки багов и идей:</b>\n\n"
-            "🐞 <b>Сообщить о баге:</b>\n"
-            "<code>/bug Карточка зависает | При переносе на Kanban-доске карточка зависает | High</code>\n"
-            "<i>(Приоритеты: Low, Medium, High, Critical)</i>\n\n"
-            "💡 <b>Предложить фичу/идею:</b>\n"
-            "<code>/idea Бот-Снабженец | Автоматический парсинг цен у поставщиков</code>\n\n"
-            "📋 <b>Добавить архитектурное решение (ADR):</b>\n"
-            "<code>/decision Название | Решение | Обоснование | [Альтернативы]</code>\n\n"
-            "📊 <b>Посмотреть статус разработки:</b>\n"
-            "Используй /status для получения сводки открытых багов и планируемых фич."
+            "<b>🎫 Работа с тикетами техподдержки:</b>\n"
+            "• <b>Быстрый ответ ИИ</b>: Нажмите кнопку <code>🪄 Отправить ИИ-ответ</code> под сообщением тикета для моментальной отправки сгенерированного ИИ-черновика.\n"
+            "• <b>Текстовый ответ</b>: Сделайте <b>Reply (Ответ)</b> на сообщение тикета и введите ваш текст.\n"
+            "• <b>Голосовой ответ (STT)</b>: Сделайте <b>Reply (Ответ)</b> на сообщение тикета и отправьте голосовое сообщение — Whisper распознает его и доставит текст клиенту в CRM.\n"
+            "• <b>Отправка скриншотов/файлов</b>: Сделайте <b>Reply (Ответ)</b> на сообщение тикета и прикрепите изображение или документ — они сохранятся как вложения в чате CRM.\n\n"
+            "<b>📊 Управление задачами (DevBrain):</b>\n"
+            "• <b>Голосовая регистрация</b>: Отправьте голосовое сообщение в ЛС боту. Оно автоматически распознается, классифицируется и создаст баг/идею/ADR в DevBrain.\n"
+            "• 🐞 <b>Сообщить о баге:</b>\n"
+            "<code>/bug Название | Описание | Приоритет</code>\n"
+            "• 💡 <b>Предложить фичу/идею:</b>\n"
+            "<code>/idea Название | Описание</code>\n"
+            "• 📋 <b>Добавить решение (ADR):</b>\n"
+            "<code>/decision Название | Решение | Обоснование</code>\n"
+            "• 📊 <b>Сводка разработки</b>: Используй <code>/status</code> для получения сводки открытых багов."
         )
         send_telegram_reply_message(BOT_TOKEN, chat_id, help_text, reply_to_message_id=message_id)
         return

@@ -46,7 +46,7 @@ def add_bot(payload: BotCreate, request: Request, db: Session = Depends(get_db),
     if current_user.role not in ["admin", "superadmin"]:
         raise HTTPException(status_code=403, detail="Только админ может управлять ботами.")
         
-    if payload.role not in ["internal_copilot", "external_sales"]:
+    if payload.role not in ["internal_copilot", "external_sales", "external_support", "internal_pto", "internal_supply", "internal_finance", "internal_legal"]:
         raise HTTPException(status_code=400, detail="Неверная роль бота")
         
     bot_count = db.query(TelegramBot).filter(TelegramBot.tenant_id == current_user.tenant_id).count()
@@ -64,7 +64,29 @@ def add_bot(payload: BotCreate, request: Request, db: Session = Depends(get_db),
         res = requests.get(tg_url)
         data = res.json()
         if not data.get("ok"):
-            raise HTTPException(status_code=400, detail=f"Ошибка Telegram API: {data.get('description')}")
+            raise HTTPException(status_code=400, detail=f"Ошибка Telegram API (webhook): {data.get('description')}")
+            
+        # Настройка кнопки Menu Button (СФЕРА ERP) для бота
+        frontend_host = "https://sferum.space"
+        if "localhost" in WEBHOOK_HOST or "127.0.0.1" in WEBHOOK_HOST:
+            frontend_host = "http://localhost:5173"
+        elif "срм.леоника56.рф" in WEBHOOK_HOST:
+            frontend_host = "https://срм.леоника56.рф"
+            
+        menu_url = f"{frontend_host}/#/crm"
+        menu_button_url = f"https://api.telegram.org/bot{payload.bot_token}/setChatMenuButton"
+        menu_payload = {
+            "menu_button": {
+                "type": "web_app",
+                "text": "СФЕРА ERP",
+                "web_app": {
+                    "url": menu_url
+                }
+            }
+        }
+        requests.post(menu_button_url, json=menu_payload, timeout=5)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Не удалось подключиться к Telegram API: {str(e)}")
         

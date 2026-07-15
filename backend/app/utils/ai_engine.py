@@ -330,3 +330,57 @@ def generate_rag_answer(query: str, context_chunks: List[dict], model_name: Opti
     return answer
 
 
+def ai_extract_pto_material_consumption(text: str) -> dict:
+    """
+    Извлекает данные для списания материалов прорабом с объекта.
+    Возвращает JSON с полями:
+      - material_name: str | None (например, "цемент", "кирпич")
+      - quantity: float | None (число списания)
+      - unit: str | None (например, "мешок", "шт")
+      - object_name: str | None (название объекта, например, "ЖК Гагаринский")
+    """
+    prompt = f"""Ты — ИИ-ассистент инженера ПТО строительной компании.
+Тебе дана текстовая расшифровка сообщения от прораба со стройки о списании материалов.
+Извлеки из него структурированные данные о списании и верни ТОЛЬКО валидный JSON-объект — без пояснений, без markdown-тегов, только чистый JSON.
+
+Поля JSON:
+- "material_name": наименование материала (или null)
+- "quantity": количество списания в виде числа с плавающей точкой (или null)
+- "unit": единица измерения (например, "мешок", "кг", "шт", "литр") (или null)
+- "object_name": название строительного объекта/площадки (или null)
+
+Текст сообщения:
+"{text}"
+
+Ответ (только JSON):"""
+
+    response = ask_ollama(prompt)
+    if not response:
+        return {
+            "material_name": None,
+            "quantity": None,
+            "unit": None,
+            "object_name": None
+        }
+
+    import re
+    import json
+    clean = re.sub(r'```(?:json)?\s*', '', response).strip()
+    clean = clean.split('```')[0].strip()
+    try:
+        return json.loads(clean)
+    except Exception as e:
+        logger.error(f"[AIEngine] Failed to parse pto extraction JSON: {e}. Raw response: {response}")
+        mat = re.search(r'"material_name"\s*:\s*(?:"([^"]+)"|null)', clean)
+        qty = re.search(r'"quantity"\s*:\s*([\d\.]+)', clean)
+        unt = re.search(r'"unit"\s*:\s*(?:"([^"]+)"|null)', clean)
+        obj = re.search(r'"object_name"\s*:\s*(?:"([^"]+)"|null)', clean)
+        return {
+            "material_name": mat.group(1) if mat else None,
+            "quantity": float(qty.group(1)) if qty else None,
+            "unit": unt.group(1) if unt else None,
+            "object_name": obj.group(1) if obj else None
+        }
+
+
+

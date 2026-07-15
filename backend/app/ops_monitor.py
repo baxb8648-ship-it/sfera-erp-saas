@@ -35,7 +35,7 @@ logger = logging.getLogger("uvicorn.error")
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Punycode-адрес API-туннеля (кириллические домены нельзя в urllib)
-TUNNEL_API_URL = "https://api.xn--56-6kctpmeri.xn--p1ai/"
+TUNNEL_API_URL = "https://api.sferum.space/"
 
 OLLAMA_URL = "http://localhost:11434/api/tags"
 

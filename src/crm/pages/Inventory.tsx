@@ -733,6 +733,32 @@ export const Inventory: React.FC = () => {
         </div>
       </div>
 
+      {/* Панель быстрого подключения ИИ-бота ПТО */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-zinc-900 to-zinc-950 border border-orange-500/20 p-5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-white">
+        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-orange-500/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="flex items-center gap-3.5 relative z-10">
+          <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-[#F95700] shrink-0">
+            <Volume2 className="w-5 h-5 animate-pulse" />
+          </div>
+          <div>
+            <h4 className="font-extrabold text-sm text-white flex items-center gap-2">
+              Голосовое списание материалов через Telegram
+            </h4>
+            <p className="text-xs text-zinc-400 mt-0.5 max-w-2xl leading-relaxed">
+              Ваши прорабы могут наговаривать списание материалов голосом прямо со стройплощадки в личный Telegram-бот. ИИ автоматически распознает позицию, количество, объект и скорректирует остатки на складе.
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            window.location.hash = '#/crm/ai-agents';
+          }}
+          className="px-4.5 py-2.5 bg-gradient-to-r from-[#F95700] to-orange-500 hover:shadow-lg hover:shadow-orange-500/20 text-white rounded-xl text-xs font-black transition cursor-pointer select-none shrink-0"
+        >
+          Настроить бота ПТО ➔
+        </button>
+      </div>
+
       {/* Control bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-zinc-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800">
         <div className="flex flex-1 items-center space-x-3 bg-gray-50 dark:bg-zinc-800 px-3 py-2 rounded-lg border border-gray-200 dark:border-zinc-700 focus-within:ring-2 focus-within:ring-[#F95700]/20 focus-within:border-[#F95700] transition-all">

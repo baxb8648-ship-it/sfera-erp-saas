@@ -441,31 +441,39 @@ def process_telegram_update_internal(update: dict, db: Session, token: str):
         voice = message.get("voice")  # Голосовое сообщение
         from_user = message.get("from", {})
         
-        # Блокировка внутренних команд для внешних ботов
-        if role == "external_sales":
-            if text:
-                send_telegram_reply_message(token, chat_id, "Здравствуйте! Я ИИ-ассистент компании. Внешний бот пока работает в режиме чтения.", reply_to_message_id=message.get("message_id"))
-            return
-        
         # ---- ОБРАБОТКА ГОЛОСОВЫХ СООБЩЕНИЙ ----
         if token and chat_id and voice:
+            if role not in ["internal_copilot", "internal_pto"]:
+                # Внешние боты не должны обрабатывать голосовые сообщения здесь
+                return
             telegram_user_id = str(from_user.get("id", ""))
             file_id = voice.get("file_id")
             msg_id = message.get("message_id")
             thread_id = message.get("message_thread_id")
             
             if file_id:
-                # Сообщаем пользователю что начали обработку
-                send_telegram_reply_message(
-                    token, chat_id,
-                    "🎙 <b>Голосовое получено!</b> Распознаю речь...",
-                    reply_to_message_id=msg_id,
-                    thread_id=thread_id
-                )
-                run_in_background(
-                    handle_voice_message,
-                    token, chat_id, file_id, telegram_user_id, msg_id, thread_id, db
-                )
+                if role == "internal_pto":
+                    send_telegram_reply_message(
+                        token, chat_id,
+                        "🎙 <b>Голосовое от прораба получено!</b> Анализирую списание...",
+                        reply_to_message_id=msg_id,
+                        thread_id=thread_id
+                    )
+                    run_in_background(
+                        handle_pto_voice_message,
+                        token, chat_id, file_id, telegram_user_id, msg_id, thread_id, db
+                    )
+                else:
+                    send_telegram_reply_message(
+                        token, chat_id,
+                        "🎙 <b>Голосовое получено!</b> Распознаю речь...",
+                        reply_to_message_id=msg_id,
+                        thread_id=thread_id
+                    )
+                    run_in_background(
+                        handle_voice_message,
+                        token, chat_id, file_id, telegram_user_id, msg_id, thread_id, db
+                    )
             return
         
         if token and chat_id and text:
@@ -473,24 +481,45 @@ def process_telegram_update_internal(update: dict, db: Session, token: str):
             if text.strip().startswith("/"):
                 cmd = text.strip().split()[0].lower()
                 cmd_base = cmd.split("@")[0]
+                
+                # ── БЛОКИРОВКА IT-КОМАНД ДЛЯ ВНЕШНИХ БОТОВ ──
+                if cmd_base in ["/bug", "/баг", "/bag", "/idea", "/идея", "/epic", "/эпик", "/decision", "/решение", "/decisions", "/решения", "/dev_status", "/разработка"]:
+                    if role != "internal_copilot":
+                        send_telegram_reply_message(
+                            token, chat_id,
+                            "⚠️ <b>Доступ ограничен</b>\nЭта команда предназначена только для внутренних разработчиков платформы СФЕРА.",
+                            reply_to_message_id=message.get("message_id"),
+                            thread_id=message.get("message_thread_id")
+                        )
+                        return
+
                 # ── HELP COMMAND ─────────────────────────────────────────────
-                if cmd_base in ["/help", "/команды", "/справка"]:
-                    help_msg = (
-                        "📖 <b>Справка по командам СФЕРА</b>\n\n"
-                        "👤 <b>Пользовательские команды:</b>\n"
-                        "• /start, /crm — открыть Mini App\n"
-                        "• /мои_задачи — список ваших активных задач\n"
-                        "• <code>@ai [вопрос]</code> — задать вопрос ИИ-копилоту\n"
-                        "• <i>Голосовое</i> — запишите аудио для автопостановки задачи\n\n"
-                        "📊 <b>Аналитика:</b>\n"
-                        "• /status (или /статус) — сводный дашборд по проектам\n\n"
-                        "🧠 <b>Разработка (DevBrain):</b>\n"
-                        "• /dev_status (или /разработка) — дашборд разработки\n"
-                        "• /idea <code>Название | Описание | Приоритет</code>\n"
-                        "• /bug <code>Заголовок | Шаги | Компонент | Важность</code>\n"
-                        "• /decision <code>Название | Что решили | Почему</code>\n"
-                        "• /decisions (или /решения) — 10 последних арх. решений"
-                    )
+                if cmd_base in ["/help", "/команны", "/справка", "/команды"]:
+                    if role == "internal_copilot":
+                        help_msg = (
+                            "📖 <b>Справка по командам СФЕРА</b>\n\n"
+                            "👤 <b>Пользовательские команды:</b>\n"
+                            "• /start, /crm — открыть Mini App\n"
+                            "• /мои_задачи — список ваших активных задач\n"
+                            "• <code>@ai [вопрос]</code> — задать вопрос ИИ-копилоту\n"
+                            "• <i>Голосовое</i> — запишите аудио для автопостановки задачи\n\n"
+                            "📊 <b>Аналитика:</b>\n"
+                            "• /status (или /статус) — сводный дашборд по проектам\n\n"
+                            "🧠 <b>Разработка (DevBrain):</b>\n"
+                            "• /dev_status (или /разработка) — дашборд разработки\n"
+                            "• /idea <code>Название | Описание | Приоритет</code>\n"
+                            "• /bug <code>Заголовок | Шаги | Компонент | Важность</code>\n"
+                            "• /decision <code>Название | Что решили | Почему</code>\n"
+                            "• /decisions (или /решения) — 10 последних арх. решений"
+                        )
+                    else:
+                        help_msg = (
+                            "📖 <b>Справка по командам ЛЕОНИКА АКЗ</b>\n\n"
+                            "👤 <b>Доступные команды:</b>\n"
+                            "• /start, /crm — открыть Mini App с Kanban-доской тендеров\n"
+                            "• /мои_задачи — список ваших активных задач по тендерам\n"
+                            "• /status (или /статус) — дашборд по проектам и объектам"
+                        )
                     
                     markup = {
                         "inline_keyboard": [
@@ -892,14 +921,25 @@ def process_telegram_update_internal(update: dict, db: Session, token: str):
                 should_trigger = True
                 
             if should_trigger:
-                run_in_background(
-                    handle_telegram_ai_query,
-                    token,
-                    chat_id,
-                    text,
-                    message.get("message_id"),
-                    message.get("message_thread_id")
-                )
+                if role == "internal_pto":
+                    run_in_background(
+                        handle_pto_text_message,
+                        token,
+                        chat_id,
+                        text,
+                        message.get("message_id"),
+                        message.get("message_thread_id"),
+                        db
+                    )
+                else:
+                    run_in_background(
+                        handle_telegram_ai_query,
+                        token,
+                        chat_id,
+                        text,
+                        message.get("message_id"),
+                        message.get("message_thread_id")
+                    )
 
 def send_chat_action(token: str, chat_id: int, action: str, thread_id: int = None):
     url = f"https://api.telegram.org/bot{token}/sendChatAction"
@@ -1395,3 +1435,120 @@ def edit_message_text(token: str, chat_id: int, message_id: int, text: str):
         urllib.request.urlopen(req, timeout=5)
     except Exception as e:
         logger.error(f"edit_message_text error: {e}")
+
+
+def handle_pto_text_message(token: str, chat_id: int, text: str, reply_to_message_id: int, thread_id: int = None, parent_db=None):
+    from ..utils.ai_engine import ai_extract_pto_material_consumption
+    from ..models import InventoryItem, Object, AuditLog
+    from ..database import SessionLocal
+    
+    send_chat_action(token, chat_id, "typing", thread_id)
+    entities = ai_extract_pto_material_consumption(text)
+    
+    if not entities.get("material_name"):
+        send_telegram_reply_message(
+            token, chat_id,
+            "❌ <b>Ошибка списания:</b> ИИ не смог распознать название материала в вашем сообщении.\n"
+            "Пожалуйста, сформулируйте понятнее, например: <i>«Списал 10 мешков цемента на ЖК Гагаринский»</i>.",
+            reply_to_message_id=reply_to_message_id,
+            thread_id=thread_id
+        )
+        return
+
+    qty = entities.get("quantity")
+    if qty is None:
+        send_telegram_reply_message(
+            token, chat_id,
+            f"❌ <b>Ошибка списания:</b> Для материала <code>{entities['material_name']}</code> не указано или не распознано количество.\n"
+            "Пожалуйста, укажите число (например, <i>5 шт</i>, <i>10 кг</i>).",
+            reply_to_message_id=reply_to_message_id,
+            thread_id=thread_id
+        )
+        return
+
+    db = SessionLocal()
+    try:
+        # Ищем товар по имени (похожее название)
+        item = db.query(InventoryItem).filter(
+            InventoryItem.name.ilike(f"%{entities['material_name']}%")
+        ).first()
+
+        if not item:
+            send_telegram_reply_message(
+                token, chat_id,
+                f"❌ <b>Материал не найден:</b> В справочнике склада не найден материал <code>{entities['material_name']}</code>.\n"
+                "Пожалуйста, добавьте ТМЦ в CRM в разделе Склад или проверьте правильность названия.",
+                reply_to_message_id=reply_to_message_id,
+                thread_id=thread_id
+            )
+            return
+
+        # Ищем объект по имени
+        obj = None
+        if entities.get("object_name"):
+            obj = db.query(Object).filter(
+                Object.name.ilike(f"%{entities['object_name']}%")
+            ).first()
+
+        # Выполняем списание
+        old_qty = item.quantity or 0.0
+        new_qty = old_qty - float(qty)
+        item.quantity = new_qty
+        
+        # Логируем действие в AuditLog
+        log_entry = AuditLog(
+            action="Списание ТМЦ через Telegram-бот ПТО",
+            details=f"Списано {qty} {entities.get('unit') or item.unit} ТМЦ '{item.name}' (ID: {item.id}). Объект: {obj.name if obj else 'не указан'}. Прежний остаток: {old_qty}, новый: {new_qty}."
+        )
+        db.add(log_entry)
+        db.commit()
+
+        success_msg = (
+            f"📦 <b>Списание материала выполнено успешно!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
+            f"🛠 <b>Материал:</b> <code>{item.name}</code>\n"
+            f"📉 <b>Списано:</b> <code>{qty} {entities.get('unit') or item.unit}</code>\n"
+            f"🏢 <b>Строительный объект:</b> <code>{obj.name if obj else 'Не указан'}</code>\n"
+            f"📊 <b>Остаток на складе:</b> <code>{new_qty} {item.unit}</code>"
+        )
+        send_telegram_reply_message(token, chat_id, success_msg, reply_to_message_id, thread_id)
+        
+    except Exception as e:
+        logger.error(f"[PTO Bot] Error in handle_pto_text_message: {e}")
+        send_telegram_reply_message(
+            token, chat_id,
+            f"❌ <b>Техническая ошибка при списании:</b> {str(e)}",
+            reply_to_message_id=reply_to_message_id,
+            thread_id=thread_id
+        )
+    finally:
+        db.close()
+
+
+def handle_pto_voice_message(token: str, chat_id: int, file_id: str, telegram_user_id: str,
+                             reply_to_message_id: int, thread_id: int = None, parent_db=None):
+    from ..services.voice_service import transcribe_voice_message
+    
+    # 1. Транскрипция Whisper
+    send_chat_action(token, chat_id, "typing", thread_id)
+    transcript = transcribe_voice_message(token, file_id)
+
+    if not transcript:
+        send_telegram_reply_message(
+            token, chat_id,
+            "❌ <b>Не удалось распознать голосовое сообщение прораба.</b>\n"
+            "Пожалуйста, запишите сообщение четче или напишите текстом.",
+            reply_to_message_id=reply_to_message_id,
+            thread_id=thread_id
+        )
+        return
+
+    # Отправляем распознанный текст
+    send_telegram_reply_message(
+        token, chat_id,
+        f"🎙 <b>Голосовое распознано:</b>\n<i>«{transcript}»</i>\n\nВыполняю списание...",
+        reply_to_message_id=reply_to_message_id,
+        thread_id=thread_id
+    )
+
+    # 2. Вызываем обработчик текста
+    handle_pto_text_message(token, chat_id, transcript, reply_to_message_id, thread_id, parent_db)

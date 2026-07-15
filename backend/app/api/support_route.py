@@ -3,6 +3,9 @@ import json
 import logging
 import time
 import urllib.request
+import httpx
+import base64
+import re
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -17,7 +20,7 @@ router = APIRouter(prefix="/support", tags=["SaaS Helpdesk & Support"])
 
 DATA_FILE = "support_tickets.json"
 
-def send_telegram_support_notification(text: str, buttons: list = None, attachment: Optional[Dict[str, Any]] = None):
+def send_telegram_support_notification(text: str, buttons: list = None, attachment: Optional[Dict[str, Any]] = None, thread_id: Optional[int] = None):
     token = os.getenv("OBLAKO_CRM_BOT_TOKEN", "8842262640:AAH7WYTqklaq0wEL-KQw-GxIg2x1FLtXqxI")
     chat_id = os.getenv("TELEGRAM_SUPPORT_CHAT_ID", "-10022334455")
     
@@ -25,30 +28,87 @@ def send_telegram_support_notification(text: str, buttons: list = None, attachme
         logger.warning("[TelegramSupport] Token or Chat ID not configured. Skipping notification.")
         return None
 
+    # Helper to parse base64 Data URL
+    def parse_base64_attachment(url_str: str):
+        if url_str and url_str.startswith("data:"):
+            try:
+                match = re.match(r"^data:(?P<mime>[^;]+);base64,(?P<data>.+)$", url_str)
+                if match:
+                    mime_type = match.group("mime")
+                    base64_data = match.group("data")
+                    # Remove whitespace if any
+                    base64_data = re.sub(r"\s+", "", base64_data)
+                    file_bytes = base64.b64decode(base64_data)
+                    return file_bytes, mime_type
+            except Exception as e:
+                logger.error(f"[TelegramSupport] Error parsing base64 attachment: {e}")
+        return None, None
+
     file_url = None
     if attachment and attachment.get("url"):
         file_url = attachment["url"]
-        if not (file_url.startswith("http://") or file_url.startswith("https://")):
-            file_url = "https://api.sferum.space" + ("" if file_url.startswith("/") else "/") + file_url
-            
         att_type = attachment.get("type", "document")
-        if att_type == "image":
-            url = f"https://api.telegram.org/bot{token}/sendPhoto"
-            payload = {
+        filename = attachment.get("name", "file")
+        
+        file_bytes, mime_type = parse_base64_attachment(file_url)
+        
+        if file_bytes:
+            # Send file directly as multipart/form-data
+            method = "sendPhoto" if att_type == "image" else "sendDocument"
+            url = f"https://api.telegram.org/bot{token}/{method}"
+            
+            data = {
                 "chat_id": chat_id,
-                "photo": file_url,
                 "caption": text[:1024],
                 "parse_mode": "HTML"
             }
+            if thread_id:
+                data["message_thread_id"] = thread_id
+            if buttons:
+                data["reply_markup"] = json.dumps({"inline_keyboard": buttons})
+                
+            files = {
+                "photo" if att_type == "image" else "document": (filename, file_bytes, mime_type)
+            }
+            
+            try:
+                r = httpx.post(url, data=data, files=files, timeout=20)
+                r.raise_for_status()
+                return r.json()
+            except Exception as e:
+                logger.error(f"[TelegramSupport] Failed to upload and send attachment in telegram: {e}")
+                # Fallback to plain text message
+                fallback_text = text + f"\n\n📎 <i>[Ошибка отправки файла {filename}]</i>"
+                return send_telegram_support_notification(fallback_text, buttons, attachment=None, thread_id=thread_id)
         else:
-            url = f"https://api.telegram.org/bot{token}/sendDocument"
+            # External URL or fallback
+            if not (file_url.startswith("http://") or file_url.startswith("https://") or file_url.startswith("data:")):
+                file_url = "https://api.sferum.space" + ("" if file_url.startswith("/") else "/") + file_url
+                
+            method = "sendPhoto" if att_type == "image" else "sendDocument"
+            url = f"https://api.telegram.org/bot{token}/{method}"
+            
             payload = {
                 "chat_id": chat_id,
-                "document": file_url,
+                "photo" if att_type == "image" else "document": file_url,
                 "caption": text[:1024],
                 "parse_mode": "HTML"
             }
+            if thread_id:
+                payload["message_thread_id"] = thread_id
+            if buttons:
+                payload["reply_markup"] = {"inline_keyboard": buttons}
+                
+            try:
+                r = httpx.post(url, json=payload, timeout=20)
+                r.raise_for_status()
+                return r.json()
+            except Exception as e:
+                logger.error(f"[TelegramSupport] Failed to send attachment URL to telegram: {e}")
+                fallback_text = text + f"\n\n📎 <b>Вложение:</b> <a href='{file_url}'>{filename}</a>"
+                return send_telegram_support_notification(fallback_text, buttons, attachment=None, thread_id=thread_id)
     else:
+        # Standard text message
         url = f"https://api.telegram.org/bot{token}/sendMessage"
         payload = {
             "chat_id": chat_id,
@@ -56,29 +116,44 @@ def send_telegram_support_notification(text: str, buttons: list = None, attachme
             "parse_mode": "HTML",
             "disable_web_page_preview": True
         }
+        if thread_id:
+            payload["message_thread_id"] = thread_id
+        if buttons:
+            payload["reply_markup"] = {"inline_keyboard": buttons}
+            
+        try:
+            r = httpx.post(url, json=payload, timeout=20)
+            r.raise_for_status()
+            return r.json()
+        except Exception as e:
+            logger.error(f"[TelegramSupport] Failed to send support message: {e}")
+            return None
+
+def create_telegram_forum_topic(subject: str) -> Optional[int]:
+    token = os.getenv("OBLAKO_CRM_BOT_TOKEN", "8842262640:AAH7WYTqklaq0wEL-KQw-GxIg2x1FLtXqxI")
+    chat_id = os.getenv("TELEGRAM_SUPPORT_CHAT_ID", "-10022334455")
     
-    if buttons:
-        payload["reply_markup"] = {
-            "inline_keyboard": buttons
-        }
-        
-    try:
-        data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(
-            url,
-            data=data,
-            headers={"Content-Type": "application/json"},
-            method="POST"
-        )
-        with urllib.request.urlopen(req, timeout=10) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except Exception as e:
-        logger.error(f"[TelegramSupport] Failed to send support message (type={attachment.get('type') if attachment else 'text'}): {e}")
-        if attachment and file_url:
-            logger.info("[TelegramSupport] Falling back to text message...")
-            fallback_text = text + f"\n\n📎 <b>Вложение:</b> <a href='{file_url}'>{attachment.get('name', 'Файл')}</a>"
-            return send_telegram_support_notification(fallback_text, buttons, attachment=None)
+    if not token or not chat_id:
+        logger.warning("[TelegramSupport] Token or Chat ID not configured. Skipping topic creation.")
         return None
+        
+    url = f"https://api.telegram.org/bot{token}/createForumTopic"
+    payload = {
+        "chat_id": chat_id,
+        "name": subject[:128]
+    }
+    
+    try:
+        r = httpx.post(url, json=payload, timeout=15)
+        r.raise_for_status()
+        res = r.json()
+        if res.get("ok"):
+            thread_id = res["result"]["message_thread_id"]
+            logger.info(f"[TelegramSupport] Created forum topic: {subject} with thread_id {thread_id}")
+            return thread_id
+    except Exception as e:
+        logger.error(f"[TelegramSupport] Failed to create forum topic: {e}")
+    return None
 
 
 def get_default_tickets() -> List[Dict[str, Any]]:
@@ -226,6 +301,23 @@ def create_ticket(payload: TicketCreate, current_user: User = Depends(get_curren
     
     user_tenant_id = current_tenant_id.get() or current_user.tenant_id or 1
     
+    # Пытаемся заранее сгенерировать ИИ-подсказку для этого тикета
+    ai_suggestion = "Не удалось сгенерировать подсказку ИИ."
+    try:
+        from .oblakocrm_bot import generate_ai_support_suggestion
+        ai_suggestion = generate_ai_support_suggestion(payload.topic, payload.initial_message)
+    except Exception as ex:
+        logger.error(f"[SupportRoute] Error invoking AI Co-Pilot: {ex}")
+        ai_suggestion = f"Ошибка ИИ: {ex}"
+
+    # Создаем тему на форуме в Telegram
+    thread_id = None
+    try:
+        topic_name = f"{new_id} | {payload.topic[:50]} ({current_user.username})"
+        thread_id = create_telegram_forum_topic(topic_name)
+    except Exception as ex:
+        logger.error(f"[SupportRoute] Failed to create forum topic: {ex}")
+
     new_ticket = {
         "id": new_id,
         "tenant_id": user_tenant_id,
@@ -236,6 +328,8 @@ def create_ticket(payload: TicketCreate, current_user: User = Depends(get_curren
         "priority": payload.priority,
         "status": "open",
         "created_at": now_str,
+        "ai_suggestion": ai_suggestion,
+        "telegram_thread_id": thread_id,
         "messages": [
             {
                 "sender": f"{current_user.username} (Клиент)",
@@ -259,6 +353,7 @@ def create_ticket(payload: TicketCreate, current_user: User = Depends(get_curren
         f"🏷 <b>Категория:</b> {payload.category}\n"
         f"📌 <b>Тема:</b> {payload.topic}\n"
         f"💬 <b>Сообщение:</b> {payload.initial_message}\n\n"
+        f"🤖 <b>ИИ-Черновик ответа:</b>\n<i>{ai_suggestion}</i>\n\n"
         f"{emoji} <b>Приоритет:</b> <code>{payload.priority.upper()}</code>\n"
         f"⚙️ <b>Статус:</b> <code>open</code>"
     )
@@ -269,15 +364,64 @@ def create_ticket(payload: TicketCreate, current_user: User = Depends(get_curren
             {"text": "✅ Решено", "callback_data": f"resolve_ticket_{new_id}"}
         ],
         [
-            {"text": "💬 Ответ: Проверяем 🔧", "callback_data": f"quick_{new_id}_checking"},
-            {"text": "💬 Ответ: Детали 📝", "callback_data": f"quick_{new_id}_details"},
-            {"text": "💬 Ответ: Готово ✅", "callback_data": f"quick_{new_id}_done"}
+            {"text": "🪄 Отправить ИИ-ответ", "callback_data": f"quick_{new_id}_ai"}
+        ],
+        [
+            {"text": "🔧 Ответ: Приняли, проверяем", "callback_data": f"quick_{new_id}_checking"}
+        ],
+        [
+            {"text": "📝 Ответ: Нужны скриншоты/детали", "callback_data": f"quick_{new_id}_details"}
+        ],
+        [
+            {"text": "✅ Ответ: Готово, проверяйте", "callback_data": f"quick_{new_id}_done"}
         ]
     ]
     
-    send_telegram_support_notification(tg_text, buttons, payload.attachment)
+    send_telegram_support_notification(tg_text, buttons, payload.attachment, thread_id=thread_id)
     
     return {"status": "success", "ticket": new_ticket}
+
+
+@router.get("/tickets/{ticket_id}/ai-suggest")
+def get_ai_suggest(ticket_id: str, current_user: User = Depends(get_current_user)):
+    if current_user.role not in ["superadmin", "support_agent", "admin"]:
+        raise HTTPException(status_code=403, detail="Недостаточно прав для использования ИИ-помощника")
+        
+    tickets = load_tickets()
+    target_ticket = None
+    for t in tickets:
+        if t["id"] == ticket_id:
+            target_ticket = t
+            break
+            
+    if not target_ticket:
+        raise HTTPException(status_code=404, detail="Обращение не найдено")
+        
+    # Если в тикете уже есть готовый сохраненный ИИ-черновик, возвращаем его
+    if target_ticket.get("ai_suggestion"):
+        return {"status": "success", "suggestion": target_ticket["ai_suggestion"]}
+        
+    # Берем тему и последнее сообщение клиента (не техподдержки)
+    topic = target_ticket.get("topic", "Без темы")
+    
+    # Ищем последнее сообщение клиента
+    client_msg = ""
+    for msg in reversed(target_ticket.get("messages", [])):
+        if not msg.get("is_support"):
+            client_msg = msg.get("text", "")
+            break
+            
+    if not client_msg:
+        client_msg = "Клиент не оставил сообщения."
+        
+    try:
+        from .oblakocrm_bot import generate_ai_support_suggestion
+        suggestion = generate_ai_support_suggestion(topic, client_msg)
+        return {"status": "success", "suggestion": suggestion}
+    except Exception as e:
+        logger.error(f"[SupportRoute] Error in get_ai_suggest: {e}")
+        raise HTTPException(status_code=500, detail=f"Ошибка генерации подсказки: {e}")
+
 
 @router.post("/tickets/{ticket_id}/messages")
 def add_message(ticket_id: str, payload: MessageCreate, current_user: User = Depends(get_current_user)):
@@ -314,7 +458,8 @@ def add_message(ticket_id: str, payload: MessageCreate, current_user: User = Dep
             f"💬 <b>Новое сообщение по тикету #{ticket_id}</b> от клиента <b>{current_user.username}</b>:\n\n"
             f"<i>{payload.text}</i>"
         )
-        send_telegram_support_notification(tg_text, None, payload.attachment)
+        thread_id = target_ticket.get("telegram_thread_id")
+        send_telegram_support_notification(tg_text, None, payload.attachment, thread_id=thread_id)
         
     return {"status": "success", "messages": target_ticket["messages"]}
 

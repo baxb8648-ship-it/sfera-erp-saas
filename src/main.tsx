@@ -4,6 +4,19 @@ import { HelmetProvider } from 'react-helmet-async'
 import './index.css'
 import App from './App.tsx'
 
+// Инициализация Telegram WebApp SDK (Режим 10)
+if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
+  try {
+    const tg = (window as any).Telegram.WebApp;
+    tg.ready();
+    tg.expand(); // Разворачивает приложение на весь экран в Telegram
+    console.log('Telegram WebApp SDK initialized successfully:', tg.platform);
+  } catch (err) {
+    console.error('Failed to initialize Telegram WebApp SDK:', err);
+  }
+}
+
+
 // Global Fetch interceptor for CSRF and credentials (HttpOnly cookies) (Режим 10)
 function getCookie(name: string): string | null {
   const value = `; ${document.cookie}`;

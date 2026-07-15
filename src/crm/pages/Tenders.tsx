@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { 
   Plus, Search, Trash2, X, Check, RefreshCw, 
   Briefcase, Calendar, Play, Upload, ExternalLink, FileText,
-  Loader2, Download, Bot, Sparkles, TrendingUp
+  Loader2, Download, Bot, Sparkles, TrendingUp, Settings, Edit2
 } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 import { apiClient } from '../../api/client';
@@ -68,21 +68,143 @@ export const Tenders: React.FC = () => {
     submission_deadline: ''
   });
 
+  // Tender Platforms API States
+  const [isPlatformModalOpen, setIsPlatformModalOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [platforms, setPlatforms] = useState<any[]>([]);
+  const [settings, setSettings] = useState<any>({});
+  const [, setIsSavingSettings] = useState(false);
+  const [platformFormData, setPlatformFormData] = useState({
+    id: 0,
+    name: '',
+    api_url: '',
+    api_key: '',
+    is_active: 1,
+    keywords: '',
+    exclude_keywords: '',
+    regions: '',
+    min_price: '',
+    max_price: ''
+  });
+
   useEffect(() => {
     fetchTenders();
     fetchUsers();
     fetchTemplates();
     fetchSettings();
+    fetchPlatforms();
   }, []);
 
   const fetchSettings = async () => {
     try {
       const data = await apiClient.get<any>('/settings/');
-      if (data && data.tender_sync_mode) {
-        setSyncMode(data.tender_sync_mode);
+      if (data) {
+        setSettings(data);
+        if (data.tender_sync_mode) {
+          setSyncMode(data.tender_sync_mode);
+        }
       }
     } catch (e) {
       console.error("Failed to fetch settings", e);
+    }
+  };
+
+  const fetchPlatforms = async () => {
+    try {
+      const data = await apiClient.get<any[]>('/tenders/platforms');
+      if (data) setPlatforms(data);
+    } catch (e) {
+      console.error('Error fetching platforms:', e);
+    }
+  };
+
+  const handleSaveSettings = async (updates: any = {}) => {
+    const finalSettings = { ...settings, ...updates };
+    setIsSavingSettings(true);
+    try {
+      const data = await apiClient.post('/settings/', finalSettings);
+      setSettings(data);
+      if (updates.tender_sync_mode) {
+        setSyncMode(updates.tender_sync_mode);
+      }
+      toast?.showToast('Настройки сохранены', 'success');
+    } catch (e: any) {
+      console.error('Error saving settings:', e);
+      toast?.showToast('Ошибка при сохранении настроек: ' + (e.message || e), 'error');
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  const handleOpenPlatformCreate = () => {
+    setPlatformFormData({
+      id: 0,
+      name: '',
+      api_url: 'https://api.zakupki.gov.ru/api/v1/tenders',
+      api_key: '',
+      is_active: 1,
+      keywords: 'антикоррозийная защита, пескоструйная очистка',
+      exclude_keywords: '',
+      regions: 'Оренбургская область',
+      min_price: '',
+      max_price: ''
+    });
+    setIsPlatformModalOpen(true);
+  };
+
+  const handleOpenPlatformEdit = (platform: any) => {
+    setPlatformFormData({
+      id: platform.id,
+      name: platform.name,
+      api_url: platform.api_url,
+      api_key: platform.api_key || '',
+      is_active: platform.is_active,
+      keywords: platform.keywords,
+      exclude_keywords: platform.exclude_keywords || '',
+      regions: platform.regions,
+      min_price: platform.min_price ? String(platform.min_price) : '',
+      max_price: platform.max_price ? String(platform.max_price) : ''
+    });
+    setIsPlatformModalOpen(true);
+  };
+
+  const handleDeletePlatform = async (id: number) => {
+    if (!window.confirm('Вы уверены, что хотите удалить эту площадку?')) return;
+    try {
+      await apiClient.delete(`/tenders/platforms/${id}`);
+      toast?.showToast('Площадка удалена', 'success');
+      fetchPlatforms();
+    } catch (e) {
+      toast?.showToast('Не удалось удалить площадку', 'error');
+    }
+  };
+
+  const handlePlatformSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        name: platformFormData.name,
+        api_url: platformFormData.api_url,
+        api_key: platformFormData.api_key || null,
+        is_active: platformFormData.is_active,
+        keywords: platformFormData.keywords,
+        exclude_keywords: platformFormData.exclude_keywords || null,
+        regions: platformFormData.regions,
+        min_price: platformFormData.min_price ? parseFloat(platformFormData.min_price) : null,
+        max_price: platformFormData.max_price ? parseFloat(platformFormData.max_price) : null
+      };
+
+      if (platformFormData.id === 0) {
+        await apiClient.post('/tenders/platforms', payload);
+        toast?.showToast('Площадка добавлена', 'success');
+      } else {
+        await apiClient.put(`/tenders/platforms/${platformFormData.id}`, payload);
+        toast?.showToast('Площадка сохранена', 'success');
+      }
+      setIsPlatformModalOpen(false);
+      fetchPlatforms();
+    } catch (e: any) {
+      toast?.showToast('Ошибка сохранения площадки: ' + (e.response?.data?.detail || e.message), 'error');
     }
   };
 
@@ -491,6 +613,14 @@ export const Tenders: React.FC = () => {
         </div>
 
         <div className="flex gap-3 relative z-10 flex-wrap sm:flex-nowrap">
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="active:scale-95 hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center bg-zinc-150 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-750 dark:text-zinc-300 px-4 py-3 rounded-xl text-sm font-bold cursor-pointer"
+            title="Настройки API и Синхронизации"
+          >
+            <Settings className="w-5 h-5 text-[#F95700]" />
+          </button>
+
           <button
             onClick={handleExportExcel}
             className="active:scale-95 hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 rounded-xl text-sm font-bold cursor-pointer"
@@ -1367,6 +1497,299 @@ export const Tenders: React.FC = () => {
                     </button>
                   )}
                 </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Модальное окно: Настройки API и поиска тендеров ──────────────── */}
+      {isSettingsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-2xl rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8 shadow-2xl transition-colors max-h-[85vh] overflow-y-auto">
+            <button
+              onClick={() => setIsSettingsOpen(false)}
+              className="absolute top-4 right-4 p-2 rounded-full text-zinc-400 hover:text-zinc-700 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+            >
+              <X className="w-5.5 h-5.5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2.5 bg-orange-500/10 rounded-2xl border border-orange-500/20 text-[#F95700]">
+                <Settings className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-zinc-900 dark:text-white">
+                  Настройки API и Синхронизации
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-bold">
+                  Управление тендерными площадками и параметрами авто-поиска
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {/* Режим поиска */}
+              <div className="bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl p-5 space-y-3.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider block">Режим поиска тендеров</label>
+                    <span className="text-[11px] text-zinc-400 dark:text-zinc-500 block mt-0.5">
+                      Выберите режим синхронизации с тендерными базами
+                    </span>
+                  </div>
+                  <div className="flex bg-white dark:bg-zinc-950 p-1 rounded-xl border border-zinc-200 dark:border-zinc-800/80 self-start sm:self-center">
+                    <button
+                      type="button"
+                      onClick={() => handleSaveSettings({ tender_sync_mode: 'demo' })}
+                      className={`px-4 py-2 text-xs font-bold rounded-lg transition-all select-none cursor-pointer ${
+                        syncMode !== 'live'
+                          ? 'bg-[#F95700]/10 text-[#F95700] dark:bg-[#F95700]/20'
+                          : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
+                      }`}
+                    >
+                      Демонстрационный
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSaveSettings({ tender_sync_mode: 'live' })}
+                      className={`px-4 py-2 text-xs font-bold rounded-lg transition-all select-none cursor-pointer ${
+                        syncMode === 'live'
+                          ? 'bg-[#F95700]/10 text-[#F95700] dark:bg-[#F95700]/20'
+                          : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
+                      }`}
+                    >
+                      Боевой (API)
+                    </button>
+                  </div>
+                </div>
+                {syncMode === 'live' ? (
+                  <div className="p-3 bg-amber-500/10 text-amber-700 dark:text-amber-400 rounded-xl text-xs border border-amber-500/20">
+                    Требуется подключение коммерческих API-ключей ЕИС / B2B-Center.
+                  </div>
+                ) : (
+                  <div className="p-3 bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 rounded-xl text-xs border border-indigo-500/20">
+                    Имитация поиска: генерируются случайные демо-тендеры для проверки CRM-процессов.
+                  </div>
+                )}
+              </div>
+
+              {/* Список площадок */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-xs font-black text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
+                    Подключенные площадки ({platforms.length})
+                  </h4>
+                  <button
+                    onClick={handleOpenPlatformCreate}
+                    className="px-3 py-1.5 bg-[#F95700] text-white hover:bg-[#e04e00] rounded-xl text-xs font-black flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Добавить</span>
+                  </button>
+                </div>
+
+                {platforms.length === 0 ? (
+                  <div className="p-8 text-center text-zinc-400 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40">
+                    Нет настроенных площадок для синхронизации.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {platforms.map(p => (
+                      <div key={p.id} className="p-4 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl flex items-start justify-between gap-4">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <h5 className="font-extrabold text-zinc-900 dark:text-white text-sm">{p.name}</h5>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                              p.is_active === 1 
+                                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
+                                : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700'
+                            }`}>
+                              {p.is_active === 1 ? 'Активно' : 'Отключено'}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-zinc-400 font-mono select-all">{p.api_url}</p>
+                          
+                          <div className="flex flex-wrap gap-1 pt-1">
+                            {p.keywords.split(',').map((kw: string) => (
+                              <span key={kw} className="bg-orange-500/10 text-[#F95700] px-2 py-0.5 rounded text-[10px] font-black">
+                                {kw.trim()}
+                              </span>
+                            ))}
+                            {p.exclude_keywords && p.exclude_keywords.split(',').map((kw: string) => kw.trim() && (
+                              <span key={`ex-${kw}`} className="bg-red-500/10 text-red-500 px-2 py-0.5 rounded text-[10px] font-black opacity-80">
+                                -{kw.trim()}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenPlatformEdit(p)}
+                            className="p-2 text-zinc-400 hover:text-[#F95700] hover:bg-orange-500/10 rounded-lg cursor-pointer transition"
+                            title="Редактировать"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePlatform(p.id)}
+                            className="p-2 text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg cursor-pointer transition"
+                            title="Удалить"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-6 border-t border-zinc-100 dark:border-zinc-850 mt-6">
+              <button
+                onClick={() => setIsSettingsOpen(false)}
+                className="px-5 py-2.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-750 dark:text-zinc-300 rounded-xl text-xs font-black cursor-pointer transition"
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Модальное окно: Форма платформы API ──────────────────────────── */}
+      {isPlatformModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-md rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8 shadow-2xl transition-colors">
+            <button
+              onClick={() => setIsPlatformModalOpen(false)}
+              className="absolute top-4 right-4 p-2 rounded-full text-zinc-400 hover:text-zinc-700 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h3 className="text-lg font-black text-zinc-900 dark:text-white mb-6">
+              {platformFormData.id === 0 ? 'Подключение площадки API' : 'Редактирование параметров API'}
+            </h3>
+
+            <form onSubmit={handlePlatformSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-black text-zinc-700 dark:text-zinc-300">Название платформы</label>
+                <input
+                  type="text"
+                  required
+                  value={platformFormData.name}
+                  onChange={(e) => setPlatformFormData(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 rounded-xl px-4 py-3 text-xs font-bold text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-black text-zinc-700 dark:text-zinc-300">API URL эндпоинт</label>
+                <input
+                  type="url"
+                  required
+                  value={platformFormData.api_url}
+                  onChange={(e) => setPlatformFormData(prev => ({ ...prev, api_url: e.target.value }))}
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-855 rounded-xl px-4 py-3 text-xs font-mono text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-black text-zinc-700 dark:text-zinc-300">Токен / API Ключ</label>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={platformFormData.api_key}
+                  onChange={(e) => setPlatformFormData(prev => ({ ...prev, api_key: e.target.value }))}
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-855 rounded-xl px-4 py-3 text-xs font-mono text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-black text-zinc-700 dark:text-zinc-300">Ключевые слова (через запятую)</label>
+                <input
+                  type="text"
+                  required
+                  value={platformFormData.keywords}
+                  onChange={(e) => setPlatformFormData(prev => ({ ...prev, keywords: e.target.value }))}
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-855 rounded-xl px-4 py-3 text-xs font-bold text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-black text-zinc-700 dark:text-zinc-300">Минус-слова (через запятую)</label>
+                <input
+                  type="text"
+                  value={platformFormData.exclude_keywords}
+                  onChange={(e) => setPlatformFormData(prev => ({ ...prev, exclude_keywords: e.target.value }))}
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-855 rounded-xl px-4 py-3 text-xs font-bold text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-black text-zinc-700 dark:text-zinc-300">Регионы (через запятую)</label>
+                <input
+                  type="text"
+                  required
+                  value={platformFormData.regions}
+                  onChange={(e) => setPlatformFormData(prev => ({ ...prev, regions: e.target.value }))}
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-855 rounded-xl px-4 py-3 text-xs font-bold text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black text-zinc-700 dark:text-zinc-300 font-bold">Мин. цена (₽)</label>
+                  <input
+                    type="number"
+                    value={platformFormData.min_price}
+                    onChange={(e) => setPlatformFormData(prev => ({ ...prev, min_price: e.target.value }))}
+                    className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-855 rounded-xl px-4 py-3 text-xs font-mono text-zinc-900 dark:text-white focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black text-zinc-700 dark:text-zinc-300 font-bold">Макс. цена (₽)</label>
+                  <input
+                    type="number"
+                    value={platformFormData.max_price}
+                    onChange={(e) => setPlatformFormData(prev => ({ ...prev, max_price: e.target.value }))}
+                    className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-855 rounded-xl px-4 py-3 text-xs font-mono text-zinc-900 dark:text-white focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <input
+                  type="checkbox"
+                  id="p_active"
+                  checked={platformFormData.is_active === 1}
+                  onChange={(e) => setPlatformFormData(prev => ({ ...prev, is_active: e.target.checked ? 1 : 0 }))}
+                  className="rounded text-[#F95700] focus:ring-[#F95700] cursor-pointer"
+                />
+                <label htmlFor="p_active" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                  Включить авто-мониторинг площадки
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-6 border-t border-zinc-100 dark:border-zinc-850 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setIsPlatformModalOpen(false)}
+                  className="px-5 py-2.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-750 dark:text-zinc-300 rounded-xl text-xs font-black cursor-pointer transition"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-gradient-to-r from-[#F95700] to-orange-600 text-white hover:shadow-lg rounded-xl text-xs font-black cursor-pointer transition"
+                >
+                  Сохранить
+                </button>
               </div>
             </form>
           </div>

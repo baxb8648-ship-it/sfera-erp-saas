@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Lock, Activity, Sparkles, Terminal, CheckCircle2, Clock, Cpu, TrendingUp, Search
+  Lock, Activity, Sparkles, Terminal, CheckCircle2, Clock, Cpu, TrendingUp, Search,
+  Settings, RefreshCw, X
 } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 import { AIFineTuneSettings } from '../components/AIFineTuneSettings';
 import KnowledgeBase from './KnowledgeBase';
+import { apiClient } from '../../api/client';
 
 // ─── Готовые ИИ-Сотрудники для любого бизнеса (Fallback & Default Catalog) ───
 interface DigitalEmployee {
@@ -175,6 +177,84 @@ export const AIAgentsPage: React.FC = () => {
   const [liveLogs] = useState<AgentLogEntry[]>(PRESET_LIVE_LOGS);
   const [logSearch, setLogSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+
+  const [isBotModalOpen, setIsBotModalOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<DigitalEmployee | null>(null);
+  const [connectedBots, setConnectedBots] = useState<any[]>([]);
+  const [botTokenInput, setBotTokenInput] = useState('');
+  const [botNameInput, setBotNameInput] = useState('');
+  const [isConnectingBot, setIsConnectingBot] = useState(false);
+
+  const fetchConnectedBots = async () => {
+    try {
+      const res = await apiClient.get<any[]>('/telegram-bots');
+      if (res) {
+        setConnectedBots(res);
+      }
+    } catch (err) {
+      console.error('Failed to fetch telegram bots:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchConnectedBots();
+  }, []);
+
+  const mapEmpIdToRole = (id: string): string => {
+    switch (id) {
+      case 'sales-bot': return 'external_sales';
+      case 'support-bot': return 'external_support';
+      case 'estimate-bot': return 'internal_pto';
+      case 'supply-bot': return 'internal_supply';
+      case 'finance-bot': return 'internal_finance';
+      case 'legal-bot': return 'internal_legal';
+      default: return 'internal_copilot';
+    }
+  };
+
+  const handleConnectBot = async () => {
+    if (!selectedEmployee) return;
+    if (!botTokenInput.trim()) {
+      toast?.showToast('Введите токен Telegram-бота', 'error');
+      return;
+    }
+    if (!botNameInput.trim()) {
+      toast?.showToast('Введите название или юзернейм бота', 'error');
+      return;
+    }
+
+    setIsConnectingBot(true);
+    try {
+      const role = mapEmpIdToRole(selectedEmployee.id);
+      await apiClient.post('/telegram-bots', {
+        bot_token: botTokenInput.trim(),
+        bot_name: botNameInput.trim(),
+        role: role
+      });
+      toast?.showToast(`Бот для «${selectedEmployee.name}» успешно подключен!`, 'success');
+      setBotTokenInput('');
+      setBotNameInput('');
+      fetchConnectedBots();
+      setIsBotModalOpen(false);
+    } catch (err: any) {
+      const detail = err.response?.data?.detail || 'Не удалось подключить бота';
+      toast?.showToast(`Ошибка: ${detail}`, 'error');
+    } finally {
+      setIsConnectingBot(false);
+    }
+  };
+
+  const handleDisconnectBot = async (botId: number) => {
+    if (!window.confirm('Вы уверены, что хотите отключить и удалить этого Telegram-бота?')) return;
+    try {
+      await apiClient.delete(`/telegram-bots/${botId}`);
+      toast?.showToast('Бот успешно отключен', 'success');
+      fetchConnectedBots();
+      setIsBotModalOpen(false);
+    } catch (err: any) {
+      toast?.showToast('Ошибка отключения бота', 'error');
+    }
+  };
 
   const toggleEmployeeStatus = (id: string) => {
     setEmployees(prev => prev.map(emp => {
@@ -362,17 +442,33 @@ export const AIAgentsPage: React.FC = () => {
                   </div>
 
                   {/* Каналы связи и статистика */}
-                  <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800/80 flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {emp.channels.map((ch, i) => (
-                        <span key={i} className="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/60 text-[11px] font-semibold text-zinc-700 dark:text-zinc-300">
-                          {ch}
-                        </span>
-                      ))}
+                  <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800/80 flex flex-col gap-3">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {emp.channels.map((ch, i) => (
+                          <span key={i} className="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/60 text-[11px] font-semibold text-zinc-700 dark:text-zinc-300">
+                            {ch}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400">
+                        {emp.tasksCompleted > 0 ? `${emp.tasksCompleted} задач за месяц` : 'Готов к работе'}
+                      </div>
                     </div>
-                    <div className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400">
-                      {emp.tasksCompleted > 0 ? `${emp.tasksCompleted} задач за месяц` : 'Готов к работе'}
-                    </div>
+                    {!isLocked && (
+                      <div className="flex justify-end pt-1">
+                        <button
+                          onClick={() => {
+                            setSelectedEmployee(emp);
+                            setIsBotModalOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-[#F95700] transition cursor-pointer"
+                        >
+                          <Settings className="w-3.5 h-3.5" />
+                          <span>Настроить Telegram-бота</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -563,7 +659,138 @@ export const AIAgentsPage: React.FC = () => {
           <KnowledgeBase isTab={true} />
         </div>
       )}
+
+      {/* ── Модальное окно настройки Telegram-бота ───────────────────────── */}
+      {isBotModalOpen && selectedEmployee && (() => {
+        const role = mapEmpIdToRole(selectedEmployee.id);
+        const existingBot = connectedBots.find(b => b.role === role);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+            <div className="relative w-full max-w-lg rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8 shadow-2xl transition-colors">
+              <button
+                onClick={() => setIsBotModalOpen(false)}
+                className="absolute top-4 right-4 p-2 rounded-full text-zinc-400 hover:text-zinc-700 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+              >
+                <X className="w-5.5 h-5.5" />
+              </button>
+
+              <div className="flex items-center gap-3 mb-6">
+                <span className="text-3xl p-2.5 rounded-2xl bg-orange-50/60 dark:bg-zinc-800/80 border border-orange-500/15">
+                  {selectedEmployee.icon}
+                </span>
+                <div>
+                  <h3 className="text-lg font-black text-zinc-900 dark:text-white">
+                    Настройка Telegram-бота
+                  </h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 font-bold">
+                    для ИИ-Сотрудника: {selectedEmployee.name}
+                  </p>
+                </div>
+              </div>
+
+              {existingBot ? (
+                <div className="space-y-6">
+                  <div className="p-5 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold flex items-center gap-3">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                    <div>
+                      Бот успешно подключен и активен. Сообщения обрабатываются ИИ-Сотрудником в режиме реального времени.
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-zinc-500 font-bold">Имя бота:</span>
+                      <span className="text-zinc-900 dark:text-white font-extrabold">{existingBot.bot_name}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-zinc-500 font-bold">Токен:</span>
+                      <span className="font-mono text-zinc-400 dark:text-zinc-500">{existingBot.bot_token}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-zinc-500 font-bold">Роль в системе:</span>
+                      <span className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold">{existingBot.role}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button
+                      onClick={() => setIsBotModalOpen(false)}
+                      className="px-5 py-2.5 rounded-xl text-xs font-black text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+                    >
+                      Закрыть
+                    </button>
+                    <button
+                      onClick={() => handleDisconnectBot(existingBot.id)}
+                      className="px-5 py-2.5 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-600/20 transition cursor-pointer"
+                    >
+                      Отключить бота
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed p-4 rounded-2xl bg-orange-50/40 dark:bg-zinc-900 border border-orange-500/10">
+                    <span className="font-extrabold text-[#F95700]">Инструкция:</span>
+                    <ol className="list-decimal list-inside space-y-1.5 mt-2">
+                      <li>Перейдите в Telegram к боту <b>@BotFather</b>.</li>
+                      <li>Отправьте команду <code>/newbot</code> и задайте имя бота.</li>
+                      <li>Скопируйте полученный <b>HTTP API Token</b> и введите ниже.</li>
+                    </ol>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-black text-zinc-700 dark:text-zinc-300">Название / Юзернейм бота</label>
+                      <input
+                        type="text"
+                        placeholder="Например, @MyCompanySalesBot"
+                        value={botNameInput}
+                        onChange={(e) => setBotNameInput(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:ring-2 focus:ring-orange-500/40 transition"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-black text-zinc-700 dark:text-zinc-300">API Token Telegram-бота</label>
+                      <input
+                        type="text"
+                        placeholder="Вставьте токен от @BotFather"
+                        value={botTokenInput}
+                        onChange={(e) => setBotTokenInput(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-white text-xs font-mono focus:outline-none focus:ring-2 focus:ring-orange-500/40 transition"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button
+                      onClick={() => setIsBotModalOpen(false)}
+                      className="px-5 py-2.5 rounded-xl text-xs font-black text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+                      disabled={isConnectingBot}
+                    >
+                      Отмена
+                    </button>
+                    <button
+                      onClick={handleConnectBot}
+                      className="px-5 py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-[#F95700] to-orange-500 text-white shadow-lg shadow-orange-500/25 hover:shadow-orange-500/45 hover:scale-[1.01] transition duration-200 cursor-pointer flex items-center gap-2"
+                      disabled={isConnectingBot}
+                    >
+                      {isConnectingBot ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Подключение...</span>
+                        </>
+                      ) : (
+                        <span>Подключить бота</span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
-}
+};
 

@@ -19,9 +19,16 @@ class ApiError extends Error {
 export const apiClient = {
   async fetch<T = any>(endpoint: string, options: FetchOptions = {}): Promise<T> {
     // Авторизация через HttpOnly куки (credentials: include добавляется глобальным перехватчиком в main.tsx)
+    // Чтение CSRF-токена из куки
+    const csrfCookie = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('csrf_token='));
+    const csrfToken = csrfCookie ? csrfCookie.split('=')[1] : null;
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'ngrok-skip-browser-warning': '69420',
+      ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
       ...((options.headers as Record<string, string>) || {}),
     };
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Send, AlertCircle, CheckCircle, Loader2, Save, Settings as SettingsIcon, Plus, X, Edit2, Trash2, Check, Eye, EyeOff, Bot, Shield, Users, Briefcase, Copy, Sparkles, Crown, Zap } from 'lucide-react';
+import { apiClient } from '../../api/client';
 
 interface TenderPlatform {
   id: number;
@@ -82,36 +83,8 @@ export const IntegrationsSettings: React.FC = () => {
 
   const fetchTelegramBots = async () => {
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const endpoint = baseUrl.endsWith('/api/v1') ? `${baseUrl}/telegram-bots/` : `${baseUrl}/telegram-bots/`;
-      const response = await fetch(endpoint, { headers: {} });
-      if (response.ok) {
-        const data = await response.json();
-        setTelegramBots(data);
-      } else {
-        setTelegramBots([
-          {
-            id: 1,
-            bot_name: 'Sfera PM Copilot (Внутренний бот)',
-            username: '@sphera_pm_copilot_bot',
-            bot_token: '6812345678:AAHk_XYZ_employee_secret_token_1',
-            role: 'internal_copilot',
-            channel_id: '-1002345678901',
-            is_active: true,
-            status: 'active'
-          },
-          {
-            id: 2,
-            bot_name: 'Sfera Sales Assistant (Внешний бот)',
-            username: '@sphera_sales_rag_bot',
-            bot_token: '7198765432:AAJm_QWE_client_sales_token_2',
-            role: 'external_sales',
-            channel_id: null,
-            is_active: true,
-            status: 'active'
-          }
-        ]);
-      }
+      const data = await apiClient.get('/telegram-bots/');
+      setTelegramBots(data);
     } catch (e) {
       console.error('Error fetching telegram bots:', e);
       setTelegramBots([
@@ -142,13 +115,8 @@ export const IntegrationsSettings: React.FC = () => {
   const fetchSettings = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/settings/', {
-        headers: {}
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setSettings(data);
-      }
+      const data = await apiClient.get('/settings/');
+      setSettings(data);
     } catch (e) {
       console.error('Error fetching settings:', e);
     } finally {
@@ -158,13 +126,8 @@ export const IntegrationsSettings: React.FC = () => {
 
   const fetchPlatforms = async () => {
     try {
-      const response = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/tenders/platforms', {
-        headers: {}
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setPlatforms(data);
-      }
+      const data = await apiClient.get('/tenders/platforms');
+      setPlatforms(data);
     } catch (e) {
       console.error('Error fetching platforms:', e);
     }
@@ -174,23 +137,12 @@ export const IntegrationsSettings: React.FC = () => {
     const finalSettings = { ...settings, ...updates };
     setIsSaving(true);
     try {
-      const response = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/settings/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(finalSettings)
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setSettings(data);
-        alert('Настройки успешно сохранены!');
-      } else {
-        alert('Ошибка при сохранении настроек');
-      }
-    } catch (e) {
+      const data = await apiClient.post('/settings/', finalSettings);
+      setSettings(data);
+      alert('Настройки успешно сохранены!');
+    } catch (e: any) {
       console.error('Error saving settings:', e);
-      alert('Сетевая ошибка при сохранении');
+      alert('Ошибка при сохранении настроек: ' + (e.message || e));
     } finally {
       setIsSaving(false);
     }
@@ -200,21 +152,14 @@ export const IntegrationsSettings: React.FC = () => {
     setIsTestingSmtp(true);
     setSmtpTestResult(null);
     try {
-      const response = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/settings/test-smtp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(settings)
-      });
-      const data = await response.json();
-      if (response.ok && data.success) {
+      const data = await apiClient.post('/settings/test-smtp', settings);
+      if (data && data.success) {
         setSmtpTestResult({ success: true, message: 'Тестовое письмо успешно отправлено. Проверьте почтовый ящик.' });
       } else {
-        setSmtpTestResult({ success: false, message: data.detail || 'Ошибка соединения с сервером SMTP' });
+        setSmtpTestResult({ success: false, message: (data && data.detail) || 'Ошибка соединения с сервером SMTP' });
       }
-    } catch (e) {
-      setSmtpTestResult({ success: false, message: 'Сетевая ошибка. Не удалось выполнить тест.' });
+    } catch (e: any) {
+      setSmtpTestResult({ success: false, message: 'Ошибка: ' + (e.message || e) });
     } finally {
       setIsTestingSmtp(false);
     }
@@ -222,25 +167,17 @@ export const IntegrationsSettings: React.FC = () => {
 
   const handleTestTelegramConnection = async () => {
     try {
-      const response = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/settings/test-telegram', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          telegram_bot_token: settings.telegram_bot_token,
-          telegram_channel_id: settings.telegram_channel_id
-        })
+      const data = await apiClient.post('/settings/test-telegram', {
+        telegram_bot_token: settings.telegram_bot_token,
+        telegram_channel_id: settings.telegram_channel_id
       });
-      
-      const data = await response.json();
-      if (response.ok && data.success) {
+      if (data && data.success) {
         alert('Тестовое сообщение успешно отправлено в Telegram!');
       } else {
-        alert(data.detail || 'Ошибка отправки тестового сообщения в Telegram.');
+        alert((data && data.detail) || 'Ошибка отправки тестового сообщения в Telegram.');
       }
-    } catch (e) {
-      alert('Сетевая ошибка при тестировании Telegram.');
+    } catch (e: any) {
+      alert('Ошибка при тестировании Telegram: ' + (e.message || e));
     }
   };
 
@@ -282,47 +219,33 @@ export const IntegrationsSettings: React.FC = () => {
     const maxVal = platformFormData.max_price ? parseFloat(platformFormData.max_price) : null;
     
     try {
-      const response = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/tenders/platforms', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: platformFormData.name,
-          api_url: platformFormData.api_url,
-          api_key: platformFormData.api_key || null,
-          is_active: platformFormData.is_active,
-          keywords: platformFormData.keywords,
-          exclude_keywords: platformFormData.exclude_keywords || null,
-          regions: platformFormData.regions,
-          min_price: minVal,
-          max_price: maxVal
-        })
+      await apiClient.post('/tenders/platforms', {
+        name: platformFormData.name,
+        api_url: platformFormData.api_url,
+        api_key: platformFormData.api_key || null,
+        is_active: platformFormData.is_active,
+        keywords: platformFormData.keywords,
+        exclude_keywords: platformFormData.exclude_keywords || null,
+        regions: platformFormData.regions,
+        min_price: minVal,
+        max_price: maxVal
       });
-      if (response.ok) {
-        setIsPlatformModalOpen(false);
-        fetchPlatforms();
-      } else {
-        alert('Ошибка сохранения платформы');
-      }
-    } catch (e) {
+      setIsPlatformModalOpen(false);
+      fetchPlatforms();
+    } catch (e: any) {
       console.error(e);
-      alert('Сетевая ошибка при сохранении платформы');
+      alert('Ошибка при сохранении платформы: ' + (e.message || e));
     }
   };
 
   const handleDeletePlatform = async (pId: number) => {
     if (!window.confirm('Удалить эту площадку из мониторинга?')) return;
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || 'http://localhost:8000') + ''}/tenders/platforms/${pId}`, {
-        method: 'DELETE',
-        headers: {}
-      });
-      if (response.ok) {
-        fetchPlatforms();
-      }
-    } catch (e) {
+      await apiClient.delete(`/tenders/platforms/${pId}`);
+      fetchPlatforms();
+    } catch (e: any) {
       console.error(e);
+      alert('Ошибка при удалении: ' + (e.message || e));
     }
   };
 
@@ -373,89 +296,34 @@ export const IntegrationsSettings: React.FC = () => {
     }
 
     const botName = botFormData.bot_name.trim() || (botFormData.role === 'internal_copilot' ? 'PM Copilot Bot' : 'Sales Assistant Bot');
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-    const endpoint = baseUrl.endsWith('/api/v1') ? `${baseUrl}/telegram-bots/` : `${baseUrl}/telegram-bots/`;
 
     try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          bot_token: botFormData.bot_token.trim(),
-          bot_name: botName,
-          role: botFormData.role
-        })
+      await apiClient.post('/telegram-bots/', {
+        bot_token: botFormData.bot_token.trim(),
+        bot_name: botName,
+        role: botFormData.role
       });
-      if (response.ok) {
-        setIsBotModalOpen(false);
-        fetchTelegramBots();
-      } else {
-        const err = await response.json().catch(() => null);
-        if (response.status === 400 && (err?.detail?.includes('лимит') || err?.detail?.includes('максимум') || err?.detail?.includes('3') || err?.detail?.toLowerCase()?.includes('limit'))) {
-          setIsBotModalOpen(false);
-          setIsProModalOpen(true);
-        } else {
-          alert('Ошибка при сохранении бота: ' + (err?.detail || response.statusText));
-        }
-      }
-    } catch (err) {
-      console.error(err);
-      if (editingBotId !== null) {
-        setTelegramBots(prev => prev.map(b => b.id === editingBotId ? {
-          ...b,
-          bot_name: botName,
-          name: botName,
-          username: cleanUsername,
-          bot_token: botFormData.bot_token.trim(),
-          role: botFormData.role,
-          channel_id: botFormData.channel_id.trim() || null,
-          is_active: botFormData.is_active
-        } : b));
-      } else {
-        if (telegramBots.length >= 3) {
-          setIsBotModalOpen(false);
-          setIsProModalOpen(true);
-          return;
-        }
-        const newId = telegramBots.length > 0 ? Math.max(...telegramBots.map(b => b.id)) + 1 : 1;
-        setTelegramBots(prev => [
-          ...prev,
-          {
-            id: newId,
-            bot_name: botName,
-            name: botName,
-            username: cleanUsername,
-            bot_token: botFormData.bot_token.trim(),
-            role: botFormData.role,
-            channel_id: botFormData.channel_id.trim() || null,
-            is_active: botFormData.is_active,
-            status: 'active'
-          }
-        ]);
-      }
       setIsBotModalOpen(false);
+      fetchTelegramBots();
+    } catch (err: any) {
+      console.error(err);
+      if (err && err.status === 400 && (err.data?.detail?.includes('лимит') || err.data?.detail?.includes('максимум') || err.data?.detail?.includes('3') || err.data?.detail?.toLowerCase()?.includes('limit'))) {
+        setIsBotModalOpen(false);
+        setIsProModalOpen(true);
+      } else {
+        alert('Ошибка при сохранении бота: ' + (err.data?.detail || err.message || err));
+      }
     }
   };
 
   const handleDeleteBot = async (id: number) => {
     if (!confirm('Вы уверены, что хотите удалить этого Telegram-бота?')) return;
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-    const endpoint = baseUrl.endsWith('/api/v1') ? `${baseUrl}/telegram-bots/${id}` : `${baseUrl}/telegram-bots/${id}`;
     try {
-      const response = await fetch(endpoint, {
-        method: 'DELETE',
-        headers: {}
-      });
-      if (response.ok) {
-        fetchTelegramBots();
-      } else {
-        setTelegramBots(prev => prev.filter(b => b.id !== id));
-      }
-    } catch (err) {
+      await apiClient.delete(`/telegram-bots/${id}`);
+      fetchTelegramBots();
+    } catch (err: any) {
       console.error(err);
-      setTelegramBots(prev => prev.filter(b => b.id !== id));
+      alert('Ошибка при удалении бота: ' + (err.data?.detail || err.message || err));
     }
   };
 
@@ -493,10 +361,12 @@ export const IntegrationsSettings: React.FC = () => {
           <div className="flex items-center gap-1.5"><Send className="w-4 h-4" /> Telegram-Бот</div>
         </button>
         <button
-          onClick={() => setActiveSubTab('tenders')}
-          className={`px-4 py-2 text-sm font-semibold transition-all select-none cursor-pointer border-b-2 ${activeSubTab === 'tenders' ? 'border-[#F95700] text-[#F95700]' : 'border-transparent text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-300'}`}
+          onClick={() => {
+            window.location.hash = '#/crm/tenders';
+          }}
+          className="px-4 py-2 text-sm font-semibold transition-all select-none cursor-pointer text-gray-500 dark:text-zinc-400 hover:text-[#F95700] dark:hover:text-orange-400 flex items-center gap-1.5"
         >
-          <div className="flex items-center gap-1.5"><SettingsIcon className="w-4 h-4" /> API Тендеров</div>
+          <Briefcase className="w-4 h-4" /> Настройки API Тендеров ↗
         </button>
       </div>
 
@@ -809,7 +679,7 @@ export const IntegrationsSettings: React.FC = () => {
         </div>
       )}
 
-      {activeSubTab === 'tenders' && (
+      {false && activeSubTab === 'tenders' && (
         <div className="space-y-6">
           <div className="pb-2 flex justify-between items-center">
             <div>
@@ -939,7 +809,7 @@ export const IntegrationsSettings: React.FC = () => {
       )}
 
       {/* PLATFORM FORM MODAL */}
-      {isPlatformModalOpen && (
+      {false && isPlatformModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-xl w-full max-w-md border border-gray-100 dark:border-zinc-800 overflow-hidden transform transition-all my-8">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950">

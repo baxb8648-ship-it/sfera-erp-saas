@@ -870,7 +870,7 @@ class TelegramBot(Base):
     tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
     bot_token = Column(String, unique=True, nullable=False, index=True)
     bot_name = Column(String, nullable=True)
-    role = Column(String, nullable=False, default="internal_copilot") # 'internal_copilot' или 'external_sales'
+    role = Column(String, nullable=False, default="internal_copilot") # 'internal_copilot', 'external_sales', 'external_support', 'internal_pto', 'internal_supply', 'internal_finance', 'internal_legal'
     is_active = Column(Boolean, default=True)
     
     tenant = relationship("Tenant")
