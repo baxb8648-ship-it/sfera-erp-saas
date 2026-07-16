@@ -32,6 +32,7 @@ export function PublicBookingWidget() {
     const [busyAppointments, setBusyAppointments] = useState<BusySlot[]>([]);
     const [loading, setLoading] = useState(true);
     const [successState, setSuccessState] = useState(false);
+    const [tenantName, setTenantName] = useState('СФЕРА');
 
     // Form states
     const [step, setStep] = useState(1);
@@ -56,12 +57,14 @@ export function PublicBookingWidget() {
     const loadInitialData = async () => {
         setLoading(true);
         try {
-            const [svcRes, mastersRes] = await Promise.all([
+            const [svcRes, mastersRes, tenantRes] = await Promise.all([
                 apiClient.get(`/booking/public/services?tenant_id=${tenantId}`),
-                apiClient.get(`/booking/public/masters?tenant_id=${tenantId}`)
+                apiClient.get(`/booking/public/masters?tenant_id=${tenantId}`),
+                apiClient.get(`/booking/public/tenant-info?tenant_id=${tenantId}`).catch(() => ({ name: 'СФЕРА' }))
             ]);
             setServices(Array.isArray(svcRes) ? svcRes : []);
             setMasters(Array.isArray(mastersRes) ? mastersRes : []);
+            setTenantName(tenantRes && tenantRes.name ? tenantRes.name : 'СФЕРА');
         } catch (err) {
             console.error('Failed to load public booking data:', err);
         } finally {
@@ -197,7 +200,7 @@ export function PublicBookingWidget() {
                             <span>Онлайн-Запись</span>
                         </div>
                         <div className="space-y-2">
-                            <h1 className="text-xl font-black text-zinc-900 dark:text-white font-['Montserrat'] leading-tight">СФЕРА</h1>
+                            <h1 className="text-xl font-black text-zinc-900 dark:text-white font-['Montserrat'] leading-tight">{tenantName}</h1>
                             <p className="text-xs text-zinc-500 dark:text-zinc-400 font-bold leading-relaxed">Быстрое бронирование услуг и времени специалистов онлайн.</p>
                         </div>
                     </div>

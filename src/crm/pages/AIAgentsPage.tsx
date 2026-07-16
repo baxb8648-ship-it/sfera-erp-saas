@@ -7,7 +7,7 @@ import {
 import { useToast } from '../../components/ui/Toast';
 import { AIFineTuneSettings } from '../components/AIFineTuneSettings';
 import KnowledgeBase from './KnowledgeBase';
-import { apiClient } from '../../api/client';
+import { apiClient, API_BASE_URL } from '../../api/client';
 
 // ─── Готовые ИИ-Сотрудники для любого бизнеса (Fallback & Default Catalog) ───
 interface DigitalEmployee {
@@ -71,6 +71,18 @@ const PRESET_EMPLOYEES: DigitalEmployee[] = [
     tasksCompleted: 0,
     channels: ['Telegram', 'WhatsApp', 'Email', 'VC.ru'],
     priceMonthly: 5990
+  },
+  {
+    id: 'voice-copilot-bot',
+    name: 'Голосовой ИИ-Управляющий «СФЕРА-Voice»',
+    role: 'Голосовое управление CRM и отчетами',
+    description: 'Понимает живую русскую речь и голосовые команды. Создает сделки, ставит задачи сотрудникам, рассчитывает баланс компании и выводит сводки по тендерам напрямую через Telegram-бота.',
+    category: 'sales',
+    icon: '🎙️',
+    status: 'active',
+    tasksCompleted: 142,
+    channels: ['Telegram-бот', 'CRM'],
+    priceMonthly: 7990
   },
   {
     id: 'finance-bot',
@@ -209,55 +221,41 @@ export const AIAgentsPage: React.FC = () => {
   const [closerVoice, setCloserVoice] = useState('female_warm'); // 'female_warm' | 'female_business' | 'male_negotiator' | 'male_deep'
   const [ttsText, setTtsText] = useState('Привет! Я твой персональный ИИ-ассистент по продажам. Я готов закрывать сделки за 3 секунды!');
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [audioPlayback, setAudioPlayback] = useState<HTMLAudioElement | null>(null);
 
-  const handleSpeak = (textToSpeak: string) => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      
-      if (isSpeaking) {
-        setIsSpeaking(false);
-        return;
+  const handleSpeak = async (textToSpeak: string) => {
+    if (isSpeaking) {
+      if (audioPlayback) {
+        audioPlayback.pause();
+        audioPlayback.currentTime = 0;
       }
+      setIsSpeaking(false);
+      return;
+    }
 
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      utterance.lang = 'ru-RU';
-      
-      const voices = window.speechSynthesis.getVoices();
-      
-      if (closerVoice === 'female_warm') {
-        utterance.pitch = 1.25;
-        utterance.rate = 1.0;
-        const femaleVoice = voices.find(v => v.lang.startsWith('ru') && (v.name.toLowerCase().includes('google') || v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('irina') || v.name.toLowerCase().includes('microsoft') || v.name.toLowerCase().includes('zira')));
-        if (femaleVoice) utterance.voice = femaleVoice;
-      } else if (closerVoice === 'female_business') {
-        utterance.pitch = 1.05;
-        utterance.rate = 1.15;
-        const femaleVoice = voices.find(v => v.lang.startsWith('ru') && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('irina') || v.name.toLowerCase().includes('zira')));
-        if (femaleVoice) utterance.voice = femaleVoice;
-      } else if (closerVoice === 'male_negotiator') {
-        utterance.pitch = 0.95;
-        utterance.rate = 1.05;
-        const maleVoice = voices.find(v => v.lang.startsWith('ru') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('pavel') || v.name.toLowerCase().includes('alexander') || v.name.toLowerCase().includes('yury') || v.name.toLowerCase().includes('david')));
-        if (maleVoice) utterance.voice = maleVoice;
-      } else if (closerVoice === 'male_deep') {
-        utterance.pitch = 0.75;
-        utterance.rate = 0.9;
-        const maleVoice = voices.find(v => v.lang.startsWith('ru') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('pavel') || v.name.toLowerCase().includes('yury') || v.name.toLowerCase().includes('david')));
-        if (maleVoice) utterance.voice = maleVoice;
-      }
-
-      utterance.onend = () => {
-        setIsSpeaking(false);
-      };
-      
-      utterance.onerror = () => {
-        setIsSpeaking(false);
-      };
-
+    try {
       setIsSpeaking(true);
-      window.speechSynthesis.speak(utterance);
-    } else {
-      toast?.showToast('Синтез речи не поддерживается вашим браузером', 'error');
+      
+      const audioUrl = `${API_BASE_URL}/api/tts/generate?text=${encodeURIComponent(textToSpeak)}&voice=${closerVoice}`;
+      const audio = new Audio(audioUrl);
+      
+      setAudioPlayback(audio);
+      
+      audio.onended = () => {
+        setIsSpeaking(false);
+      };
+      
+      audio.onerror = (e) => {
+        console.error('Playback error:', e);
+        setIsSpeaking(false);
+        toast?.showToast('Не удалось воспроизвести аудио', 'error');
+      };
+
+      await audio.play();
+    } catch (err) {
+      console.error('TTS generation failed:', err);
+      setIsSpeaking(false);
+      toast?.showToast('Ошибка при генерации голоса', 'error');
     }
   };
 
@@ -280,6 +278,7 @@ export const AIAgentsPage: React.FC = () => {
     switch (id) {
       case 'sales-bot': return 'external_sales';
       case 'sales-closer-bot': return 'external_sales';
+      case 'voice-copilot-bot': return 'internal_copilot';
       case 'support-bot': return 'external_support';
       case 'estimate-bot': return 'internal_pto';
       case 'supply-bot': return 'internal_supply';
@@ -742,9 +741,11 @@ export const AIAgentsPage: React.FC = () => {
         const role = mapEmpIdToRole(selectedEmployee.id);
         const existingBot = connectedBots.find(b => b.role === role);
         const isCloser = selectedEmployee.id === 'sales-closer-bot';
+        const isVoiceCopilot = selectedEmployee.id === 'voice-copilot-bot';
+        const isWide = isCloser || isVoiceCopilot;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-            <div className={`relative w-full ${isCloser ? 'max-w-4xl' : 'max-w-lg'} rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8 shadow-2xl transition-all max-h-[90vh] overflow-y-auto`}>
+            <div className={`relative w-full ${isWide ? 'max-w-4xl' : 'max-w-lg'} rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8 shadow-2xl transition-all max-h-[90vh] overflow-y-auto`}>
               <button
                 onClick={() => setIsBotModalOpen(false)}
                 className="absolute top-4 right-4 p-2 rounded-full text-zinc-400 hover:text-zinc-700 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
@@ -766,7 +767,7 @@ export const AIAgentsPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className={`grid grid-cols-1 ${isCloser ? 'md:grid-cols-2' : ''} gap-6`}>
+              <div className={`grid grid-cols-1 ${isWide ? 'md:grid-cols-2' : ''} gap-6`}>
                 <div className="space-y-5">
                   <h4 className="text-xs font-black text-zinc-900 dark:text-white uppercase tracking-wider mb-2">
                     🤖 Связь с Telegram API
@@ -871,6 +872,44 @@ export const AIAgentsPage: React.FC = () => {
                 </div>
               )}
               </div>
+
+              {/* Правая колонка: Возможности СФЕРА-Voice */}
+              {isVoiceCopilot && (
+                <div className="border-t md:border-t-0 md:border-l border-zinc-200 dark:border-zinc-800/80 pt-6 md:pt-0 md:pl-6 space-y-5">
+                  <div>
+                    <h4 className="text-xs font-black text-zinc-900 dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+                      <span>🎙️ Возможности СФЕРА-Voice</span>
+                      <span className="px-2 py-0.5 rounded-full bg-orange-500/10 text-[#F95700] text-[9px] font-black">ACTIVE</span>
+                    </h4>
+                    <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+                      <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 hover:border-orange-500/25 transition">
+                        <span className="text-xs font-black text-zinc-900 dark:text-white block">💼 Сделки и Лиды из Голоса</span>
+                        <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block mt-1 leading-relaxed">
+                          Наговорите: <i>«Сделка с ООО Вектор на 300 000 рублей по покраске металлоконструкций»</i>. Бот извлечет бюджет, имя и контакты, предложив создать карточку.
+                        </span>
+                      </div>
+                      <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 hover:border-orange-500/25 transition">
+                        <span className="text-xs font-black text-zinc-900 dark:text-white block">📊 Запрос свободного баланса</span>
+                        <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block mt-1 leading-relaxed">
+                          Спросите ботом: <i>«Какой баланс на счетах?»</i> или <i>«Сколько денег в кассе?»</i>. ИИ мгновенно посчитает выручку и пришлет отчет руководителю.
+                        </span>
+                      </div>
+                      <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 hover:border-orange-500/25 transition">
+                        <span className="text-xs font-black text-zinc-900 dark:text-white block">📌 Быстрое планирование задач</span>
+                        <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block mt-1 leading-relaxed">
+                          Напишите или скажите: <i>«Бот, напомни мне завтра подготовить договор»</i>. ИИ-копилот сам определит название и поставит дедлайн в Kanban.
+                        </span>
+                      </div>
+                      <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 hover:border-orange-500/25 transition">
+                        <span className="text-xs font-black text-zinc-900 dark:text-white block">🎯 Лента последних тендеров</span>
+                        <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block mt-1 leading-relaxed">
+                          Запросите: <i>«Какие новые закупки появились?»</i> или <i>«Тендеры на сегодня»</i>. Бот пришлет подборку последних торгов.
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Правая колонка: Кастомизация личности (только для Closer-AI) */}
               {isCloser && (

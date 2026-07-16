@@ -5,7 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from ..database import get_db
-from ..models import BookingCategory, BookingService, TechCardItem, Appointment, InventoryItem, User, AuditLog, MaterialConsumption
+from ..models import BookingCategory, BookingService, TechCardItem, Appointment, InventoryItem, User, AuditLog, MaterialConsumption, Tenant
 from ..notifications import send_booking_notification
 from .auth import get_current_user
 
@@ -221,6 +221,19 @@ def complete_appointment(appointment_id: int, tenant_id: Optional[int] = None, d
     }
 
 # ----------------- PUBLIC ROUTES (NO AUTH) -----------------
+class TenantInfoResponse(BaseModel):
+    name: str
+    full_name: Optional[str] = None
+    class Config:
+        orm_mode = True
+
+@router.get("/public/tenant-info", response_model=TenantInfoResponse)
+def get_public_tenant_info(tenant_id: int, db: Session = Depends(get_db)):
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Компания не найдена")
+    return tenant
+
 
 @router.get("/public/services", response_model=List[ServiceResponse])
 def get_public_services(tenant_id: int, db: Session = Depends(get_db)):

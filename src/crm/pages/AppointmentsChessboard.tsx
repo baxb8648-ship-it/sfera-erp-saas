@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, CheckCircle2, Info, User as UserIcon, Phone, Clock, Trash2, Check, X } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckCircle2, Info, User as UserIcon, Phone, Clock, Trash2, Check, X, Sparkles } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 import { apiClient } from '../../api/client';
 import { GodTierModal } from '../components/GodTierModal';
+import { useAuth } from '../context/AuthContext';
 
 interface Appointment {
     id: number;
@@ -31,6 +32,7 @@ interface Master {
 
 export default function AppointmentsChessboard() {
     const { success, error, warning } = useToast();
+    const { user } = useAuth();
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [services, setServices] = useState<BookingService[]>([]);
     const [masters, setMasters] = useState<Master[]>([]);
@@ -229,29 +231,50 @@ export default function AppointmentsChessboard() {
 
     return (
         <div className="p-8 max-w-full mx-auto space-y-6">
-            <div className="flex items-center justify-between">
+            <style>{`
+                .custom-scrollbar::-webkit-scrollbar {
+                    height: 8px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: #e4e4e7;
+                    border-radius: 99px;
+                }
+                .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: #27272a;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: #d4d4d8;
+                }
+            `}</style>
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-3">
-                        <CalendarIcon className="w-8 h-8 text-blue-500" />
-                        Шахматка расписания
+                    <h1 className="text-3xl font-black tracking-tight text-zinc-950 dark:text-white flex items-center gap-3 font-['Montserrat']">
+                        <CalendarIcon className="w-8 h-8 text-[#F95700]" />
+                        Шахматка смен
                     </h1>
-                    <p className="mt-2 text-zinc-500 dark:text-zinc-400">
-                        Управление записями клиентов, контроль времени мастеров и авто-списание материалов
+                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400 font-bold">
+                        Управление записями клиентов, контроль времени мастеров и авто-списание ТМЦ.
                     </p>
                 </div>
-                <div className="flex items-center gap-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-1 shadow-sm">
+                
+                {/* Селектор дат */}
+                <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-1.5 shadow-sm shrink-0">
                     <button 
                         onClick={() => {
                             const d = new Date(currentDate); d.setDate(d.getDate() - 1);
                             setCurrentDate(d.toISOString().split('T')[0]);
                         }}
-                        className="px-4 py-2 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg font-medium"
+                        className="px-3.5 py-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl font-black text-xs transition"
                     >
                         ← Назад
                     </button>
                     <input 
                         type="date" 
-                        className="bg-transparent border-none outline-none font-bold text-zinc-900 dark:text-white px-2 cursor-pointer"
+                        className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-150 dark:border-zinc-850 rounded-xl outline-none font-black text-zinc-950 dark:text-white px-3 py-1.5 text-xs cursor-pointer focus:border-orange-500"
                         value={currentDate}
                         onChange={(e) => setCurrentDate(e.target.value)}
                     />
@@ -260,54 +283,106 @@ export default function AppointmentsChessboard() {
                             const d = new Date(currentDate); d.setDate(d.getDate() + 1);
                             setCurrentDate(d.toISOString().split('T')[0]);
                         }}
-                        className="px-4 py-2 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg font-medium"
+                        className="px-3.5 py-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl font-black text-xs transition"
                     >
                         Вперед →
                     </button>
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-x-auto relative">
-                {/* Chessboard Grid */}
-                <div style={{ minWidth: '1200px' }}>
-                    {/* Header: Time Slots */}
-                    <div className="flex border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 sticky top-0 z-10">
-                        <div className="w-48 shrink-0 border-r border-zinc-200 dark:border-zinc-800 p-4 font-semibold text-zinc-500 dark:text-zinc-400 flex items-center">
-                            Специалисты
+            {/* Персональный баннер онлайн-записи (Double-Bezel & Button-in-Button) */}
+            <div className="relative overflow-hidden p-1.5 rounded-[2rem] bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200/50 dark:border-zinc-800/40 shadow-sm transition-all duration-300">
+                <div className="relative overflow-hidden p-6 rounded-[calc(2rem-0.375rem)] bg-white dark:bg-zinc-950 shadow-[inset_0_1px_2px_rgba(255,255,255,0.05)] flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                    <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-[#F95700]/5 to-[#F95700]/0 rounded-full blur-3xl pointer-events-none" />
+                    
+                    <div className="space-y-3 relative z-10 flex-1 w-full">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F95700]/10 border border-[#F95700]/20 text-[#F95700] text-[10px] font-black uppercase tracking-widest font-mono">
+                            <Sparkles className="w-3.5 h-3.5 text-[#F95700] animate-pulse" />
+                            <span>Онлайн-Запись</span>
                         </div>
-                        <div className="flex-1 flex">
-                            {hours.map((time, idx) => (
-                                <div key={idx} className="flex-1 min-w-[80px] border-r border-zinc-200 dark:border-zinc-800 p-2 text-center text-xs font-medium text-zinc-400">
-                                    {time}
-                                </div>
-                            ))}
+                        <h2 className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-wider font-['Montserrat']">
+                            Персональная ссылка для клиентов
+                        </h2>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                            Разместите эту ссылку в соцсетях, на картах или отправьте напрямую клиентам для самостоятельной записи:
+                        </p>
+                        <div className="w-full sm:w-auto bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800/60 rounded-xl px-4 py-2.5 text-xs font-mono text-zinc-700 dark:text-zinc-300 font-semibold select-all break-all inline-block shadow-inner">
+                            {`${window.location.origin}/#/public-booking?tenant_id=${user?.tenant_id || 1}`}
                         </div>
                     </div>
+                    
+                    <button
+                        onClick={() => {
+                            navigator.clipboard.writeText(`${window.location.origin}/#/public-booking?tenant_id=${user?.tenant_id || 1}`);
+                            success('Ссылка для онлайн-записи скопирована!');
+                        }}
+                        className="group flex items-center gap-4 pl-6 pr-3 py-3 bg-gradient-to-r from-orange-500 to-[#F95700] hover:shadow-lg hover:shadow-orange-500/15 hover:scale-[1.01] active:scale-[0.99] text-white text-xs font-black rounded-full transition-all duration-300 cursor-pointer relative z-10 shrink-0 w-full sm:w-auto justify-center"
+                    >
+                        <span>Копировать ссылку</span>
+                        <span className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:rotate-12 group-hover:scale-105 shrink-0">
+                            <Sparkles className="w-4 h-4 text-white" />
+                        </span>
+                    </button>
+                </div>
+            </div>
 
-                    {/* Body: Masters and their timelines */}
-                    <div className="relative">
-                        {loading && <div className="absolute inset-0 bg-white/50 dark:bg-zinc-900/50 flex items-center justify-center z-20">Загрузка...</div>}
-                        
-                        {masters.map(master => {
-                            const masterApps = getAppointmentsForMaster(master.id);
-                            
-                            return (
-                                <div key={master.id} className="flex border-b border-zinc-100 dark:border-zinc-800/50 hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors group">
-                                    <div className="w-48 shrink-0 border-r border-zinc-200 dark:border-zinc-800 p-4 flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
-                                            {master.username.charAt(0).toUpperCase()}
-                                        </div>
-                                        <span className="font-medium text-zinc-900 dark:text-white truncate">{master.username}</span>
+            {/* Сетка шахматки (Double-Bezel) */}
+            <div className="relative overflow-hidden p-1.5 rounded-[2rem] bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200/50 dark:border-zinc-800/40 shadow-sm transition-all duration-300">
+                <div className="custom-scrollbar bg-white dark:bg-zinc-950 rounded-[calc(2rem-0.375rem)] border border-zinc-200/60 dark:border-zinc-800/60 shadow-lg overflow-x-auto relative">
+                    {/* Chessboard Grid */}
+                    <div style={{ minWidth: '1300px' }}>
+                        {/* Header: Time Slots */}
+                        <div className="flex border-b border-zinc-200/60 dark:border-zinc-800/60 bg-zinc-50/75 dark:bg-zinc-900/75 backdrop-blur-md sticky top-0 z-10">
+                            <div className="w-52 shrink-0 border-r border-zinc-200/60 dark:border-zinc-800/60 p-4 font-black text-[10px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 flex items-center bg-zinc-50/90 dark:bg-zinc-900/90 backdrop-blur-md font-['Montserrat']">
+                                Специалисты
+                            </div>
+                            <div className="flex-1 flex">
+                                {hours.map((time, idx) => (
+                                    <div key={idx} className="flex-1 min-w-[90px] border-r border-zinc-200/40 dark:border-zinc-800/50 p-3 text-center text-[11px] font-bold font-mono tracking-wider text-zinc-400 dark:text-zinc-500">
+                                        {time}
                                     </div>
-                                    <div className="flex-1 flex relative">
-                                        {/* Background Grid Cells */}
-                                        {hours.map((time, idx) => (
-                                            <div 
-                                                key={idx} 
-                                                onClick={() => handleCellClick(master.id, time)}
-                                                className="flex-1 min-w-[80px] border-r border-zinc-100 dark:border-zinc-800/50 cursor-crosshair opacity-0 group-hover:opacity-100 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all"
-                                                title={`Записать на ${time}`}
-                                            ></div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Body: Masters and their timelines */}
+                        <div className="relative">
+                            {loading && <div className="absolute inset-0 bg-white/50 dark:bg-zinc-950/50 flex items-center justify-center z-20 font-black text-xs text-[#F95700] backdrop-blur-sm">Загрузка расписания...</div>}
+                            
+                            {masters.map(master => {
+                                const masterApps = getAppointmentsForMaster(master.id);
+                                
+                                return (
+                                    <div key={master.id} className="flex border-b border-zinc-100 dark:border-zinc-800/40 hover:bg-zinc-50/[0.1] dark:hover:bg-zinc-900/[0.1] transition-all duration-300 group relative min-h-[100px]">
+                                        {/* Left Master Column */}
+                                        <div className="w-52 shrink-0 border-r border-zinc-200/60 dark:border-zinc-800/60 p-4 flex items-center gap-3 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm sticky left-0 z-10 shadow-[4px_0_10px_-5px_rgba(0,0,0,0.05)]">
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 text-white border border-zinc-700 flex items-center justify-center font-black text-sm shadow-md shrink-0">
+                                                {master.username.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div className="truncate space-y-1">
+                                                <span className="font-black text-xs text-zinc-900 dark:text-white block truncate font-['Montserrat']">{master.username}</span>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="relative flex h-2 w-2 shrink-0">
+                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                                    </span>
+                                                    <span className="text-[9px] font-bold text-zinc-500 dark:text-zinc-400 font-mono tracking-wider">НА СМЕНЕ</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 flex relative">
+                                            {/* Background Grid Cells */}
+                                            {hours.map((time, idx) => (
+                                                <div 
+                                                    key={idx} 
+                                                    onClick={() => handleCellClick(master.id, time)}
+                                                    className="flex-1 min-w-[90px] border-r border-zinc-200/30 dark:border-zinc-800/20 cursor-crosshair hover:bg-orange-500/[0.04] dark:hover:bg-[#F95700]/[0.02] transition-all duration-300 flex items-center justify-center group/cell"
+                                                    title={`Записать на ${time}`}
+                                                >
+                                                <span className="text-[10px] font-black text-[#F95700] opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    + Запись
+                                                </span>
+                                            </div>
                                         ))}
 
                                         {/* Placed Appointments */}
@@ -329,39 +404,55 @@ export default function AppointmentsChessboard() {
                                             const widthPercent = ((safeEnd - safeStart) / 11.5) * 100;
 
                                             const isCompleted = app.status === 'completed';
+                                            const isConfirmed = app.status === 'confirmed';
+                                            const isCancelled = app.status === 'cancelled';
                                             
                                             return (
                                                 <div 
                                                     key={app.id}
                                                     onClick={() => handleAppointmentClick(app)}
-                                                    className={`absolute top-1 bottom-1 rounded-lg p-2 shadow-sm border overflow-hidden transition-all cursor-pointer ${
+                                                    className={`absolute top-2 bottom-2 rounded-2xl p-3 border backdrop-blur-sm overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer group/card flex flex-col justify-between hover:-translate-y-[2px] active:scale-[0.98] ${
                                                         isCompleted 
-                                                        ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 opacity-70' 
-                                                        : app.status === 'confirmed'
-                                                        ? 'bg-[#F95700] dark:bg-orange-600 border-orange-600 dark:border-orange-500 text-white hover:shadow-md hover:z-10'
-                                                        : app.status === 'cancelled'
-                                                        ? 'bg-zinc-150 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:shadow-md hover:z-10 line-through'
-                                                        : 'bg-blue-500 dark:bg-blue-600 border-blue-600 dark:border-blue-500 text-white hover:shadow-md hover:z-10'
+                                                        ? 'bg-gradient-to-br from-emerald-500/5 to-teal-500/5 border-emerald-500/20 text-emerald-700 dark:text-emerald-400 hover:shadow-md shadow-emerald-500/5' 
+                                                        : isConfirmed
+                                                        ? 'bg-gradient-to-br from-orange-500 to-[#F95700] border-[#F95700]/10 text-white hover:shadow-lg hover:shadow-orange-500/20 shadow-md shadow-orange-500/10'
+                                                        : isCancelled
+                                                        ? 'bg-zinc-100/50 dark:bg-zinc-900/30 border-zinc-200/50 dark:border-zinc-800/40 text-zinc-450 dark:text-zinc-550 line-through opacity-50 hover:opacity-75'
+                                                        : 'bg-gradient-to-br from-blue-500/5 to-indigo-500/5 border-blue-500/20 text-blue-700 dark:text-blue-400 hover:shadow-md shadow-blue-500/5'
                                                     }`}
                                                     style={{ 
                                                         left: `${leftPercent}%`, 
                                                         width: `${widthPercent}%`,
-                                                        minWidth: '80px'
+                                                        minWidth: '95px'
                                                     }}
                                                 >
-                                                    <div className="flex flex-col h-full justify-between">
-                                                        <div className="truncate text-xs font-bold leading-tight">
-                                                            {app.client_name}
+                                                    <div className="flex flex-col h-full justify-between space-y-1">
+                                                        <div>
+                                                            <div className="truncate text-xs font-black leading-tight flex items-center gap-1.5 font-['Montserrat']">
+                                                                {isCompleted && <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-500" />}
+                                                                {isConfirmed && <Check className="w-3.5 h-3.5 shrink-0 text-white" />}
+                                                                <span className="truncate">{app.client_name}</span>
+                                                            </div>
+                                                            <div className={`truncate text-[9px] font-bold leading-tight mt-0.5 font-mono tracking-wide ${
+                                                                isCompleted 
+                                                                ? 'text-emerald-600 dark:text-emerald-400/80' 
+                                                                : isConfirmed
+                                                                ? 'text-white/80'
+                                                                : isCancelled 
+                                                                ? 'text-zinc-400 dark:text-zinc-600' 
+                                                                : 'text-blue-600 dark:text-blue-400/80'
+                                                            }`}>
+                                                                {app.service_name}
+                                                            </div>
                                                         </div>
-                                                        <div className={`truncate text-[10px] leading-tight ${isCompleted ? 'text-emerald-700 dark:text-emerald-400' : 'text-blue-100'}`}>
-                                                            {app.service_name}
-                                                        </div>
-                                                        {!isCompleted && (
+
+                                                        {/* Hover button for completion */}
+                                                        {!isCompleted && !isCancelled && (
                                                             <button 
                                                                 onClick={(e) => { e.stopPropagation(); handleComplete(app.id); }}
-                                                                className="mt-1 w-full flex items-center justify-center gap-1 bg-white/20 hover:bg-white/30 text-white rounded py-1 text-[10px] font-medium transition-colors"
+                                                                className="opacity-0 group-hover/card:opacity-100 transition-opacity w-full flex items-center justify-center gap-1 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-xl py-1.5 text-[9px] font-black uppercase tracking-wider"
                                                             >
-                                                                <CheckCircle2 className="w-3 h-3" /> Завершить
+                                                                <CheckCircle2 className="w-3.5 h-3.5" /> Завершить
                                                             </button>
                                                         )}
                                                     </div>
@@ -379,6 +470,7 @@ export default function AppointmentsChessboard() {
                     </div>
                 </div>
             </div>
+        </div>
 
             <GodTierModal
                 isOpen={isModalOpen}
@@ -400,7 +492,7 @@ export default function AppointmentsChessboard() {
                         <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Телефон</label>
                         <input
                             type="text"
-                            className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white outline-none focus:border-blue-500"
+                            className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white outline-none focus:border-[#F95700] transition-colors"
                             placeholder="+7 (999) 000-00-00"
                             value={formData.client_phone}
                             onChange={(e) => setFormData({...formData, client_phone: e.target.value})}
@@ -409,7 +501,7 @@ export default function AppointmentsChessboard() {
                     <div>
                         <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Услуга</label>
                         <select
-                            className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white outline-none focus:border-blue-500"
+                            className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white outline-none focus:border-[#F95700] transition-colors"
                             value={formData.service_id}
                             onChange={(e) => setFormData({...formData, service_id: e.target.value})}
                         >
@@ -420,21 +512,21 @@ export default function AppointmentsChessboard() {
                         </select>
                     </div>
                     
-                    <div className="bg-blue-50 dark:bg-blue-500/10 text-blue-800 dark:text-blue-400 p-4 rounded-xl text-sm flex gap-3">
-                        <Info className="w-5 h-5 shrink-0" />
-                        <p>После создания записи, администратору и мастеру будет отправлено <b>Telegram-уведомление</b>.</p>
+                    <div className="bg-orange-50 dark:bg-orange-500/10 text-[#F95700] dark:text-orange-400 p-4 rounded-xl text-xs font-semibold flex gap-3 border border-orange-200/20">
+                        <Info className="w-5 h-5 shrink-0 text-[#F95700]" />
+                        <p>После создания записи администратору и мастеру будет отправлено <b>Telegram-уведомление</b>.</p>
                     </div>
 
                     <div className="pt-4 flex justify-end gap-3">
                         <button
                             onClick={() => setIsModalOpen(false)}
-                            className="px-5 py-2.5 rounded-xl font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                            className="px-5 py-2.5 rounded-xl font-bold text-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
                         >
                             Отмена
                         </button>
                         <button
                             onClick={handleCreateAppointment}
-                            className="px-5 py-2.5 rounded-xl font-medium bg-blue-500 hover:bg-blue-600 text-white transition-colors"
+                            className="px-5 py-2.5 rounded-xl font-bold text-xs bg-[#F95700] hover:bg-orange-600 text-white transition hover:shadow-lg hover:shadow-orange-500/10 active:scale-[0.98]"
                         >
                             Записать клиента
                         </button>
@@ -511,7 +603,7 @@ export default function AppointmentsChessboard() {
                                     </label>
                                     <input
                                         type="text"
-                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:border-[#F95700] focus:ring-2 focus:ring-[#F95700]/20 transition-colors"
                                         value={manageFormData.client_name}
                                         onChange={(e) => setManageFormData({...manageFormData, client_name: e.target.value})}
                                     />
@@ -522,7 +614,7 @@ export default function AppointmentsChessboard() {
                                     </label>
                                     <input
                                         type="text"
-                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:border-[#F95700] focus:ring-2 focus:ring-[#F95700]/20 transition-colors"
                                         value={manageFormData.client_phone}
                                         onChange={(e) => setManageFormData({...manageFormData, client_phone: e.target.value})}
                                     />
@@ -533,7 +625,7 @@ export default function AppointmentsChessboard() {
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-black text-zinc-700 dark:text-zinc-300">Специалист</label>
                                     <select
-                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:border-[#F95700] focus:ring-2 focus:ring-[#F95700]/20 transition-colors"
                                         value={manageFormData.master_id}
                                         onChange={(e) => setManageFormData({...manageFormData, master_id: Number(e.target.value)})}
                                     >
@@ -545,7 +637,7 @@ export default function AppointmentsChessboard() {
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-black text-zinc-700 dark:text-zinc-300">Услуга</label>
                                     <select
-                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:border-[#F95700] focus:ring-2 focus:ring-[#F95700]/20 transition-colors"
                                         value={manageFormData.service_id}
                                         onChange={(e) => setManageFormData({...manageFormData, service_id: Number(e.target.value)})}
                                     >
@@ -563,7 +655,7 @@ export default function AppointmentsChessboard() {
                                     </label>
                                     <input
                                         type="datetime-local"
-                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none"
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:border-[#F95700] focus:ring-2 focus:ring-[#F95700]/20 transition-colors"
                                         value={manageFormData.datetime_start}
                                         onChange={(e) => setManageFormData({...manageFormData, datetime_start: e.target.value})}
                                     />
@@ -574,7 +666,7 @@ export default function AppointmentsChessboard() {
                                     </label>
                                     <input
                                         type="datetime-local"
-                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none"
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:border-[#F95700] focus:ring-2 focus:ring-[#F95700]/20 transition-colors"
                                         value={manageFormData.datetime_end}
                                         onChange={(e) => setManageFormData({...manageFormData, datetime_end: e.target.value})}
                                     />
@@ -582,7 +674,7 @@ export default function AppointmentsChessboard() {
                             </div>
                         </div>
 
-                        <div className="pt-4 flex justify-end gap-3 border-t border-zinc-100 dark:border-zinc-850">
+                        <div className="pt-4 flex justify-end gap-3 border-t border-zinc-100 dark:border-zinc-800">
                             <button
                                 onClick={() => setIsManageModalOpen(false)}
                                 className="px-5 py-2.5 rounded-xl font-bold text-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
