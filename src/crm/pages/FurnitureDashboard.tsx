@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Hammer, PackageSearch, LayoutTemplate, Plus, Trash2, RotateCcw, 
-  AlertCircle, Settings, Scissors, FileText, Image, CheckCircle, 
-  Clock, Factory, Wrench, Layers, Ruler, X, CalendarDays, Bot, Users
+  Settings, Scissors, FileText, Image, CheckCircle, 
+  Clock, Factory, Wrench, Layers, Ruler, X, CalendarDays, Bot, Sparkles, Users
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import { useToast } from '../../components/ui/Toast';
@@ -62,7 +62,21 @@ export default function FurnitureDashboard() {
     bot_name: ''
   });
 
-  // Модалки
+  // Модалка импорта спецификаций (Базис/PRO100)
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importText, setImportText] = useState('');
+
+  // Калькулятор КП и наценки State
+  const [pricing, setPricing] = useState({
+    priceSheet: 4500,        // Цена листа ЛДСП (руб)
+    priceEdge: 120,          // Цена погонного метра кромки (руб)
+    priceCut: 55,            // Стоимость реза пилы за 1 м (руб)
+    priceBanding: 80,        // Стоимость кромления за 1 м (руб)
+    priceAssembly: 6000,     // Стоимость сборки (руб)
+    markupPct: 120           // Торговая наценка (%)
+  });
+
+  // Модалки изделий
   const [isCreateProductModalOpen, setIsCreateProductModalOpen] = useState(false);
   const [newProductData, setNewProductData] = useState({
     name: '',
@@ -293,6 +307,104 @@ export default function FurnitureDashboard() {
     }
   };
 
+  // Парсинг спецификации
+  const handleImportSpecs = (textToParse: string) => {
+    const lines = textToParse.split('\n');
+    const newParts: any[] = [];
+    let countImported = 0;
+
+    lines.forEach((line, idx) => {
+      const cleanLine = line.trim();
+      if (!cleanLine || cleanLine.startsWith('#')) return;
+
+      // Определение разделителя
+      let delimiter = ';';
+      if (cleanLine.includes('\t')) delimiter = '\t';
+      else if (cleanLine.includes(',')) delimiter = ',';
+
+      const cols = cleanLine.split(delimiter);
+      if (cols.length >= 3) {
+        const name = cols[0].trim();
+        const width = Number(cols[1].trim());
+        const height = Number(cols[2].trim());
+        const count = cols[3] ? Number(cols[3].trim()) : 1;
+        const edge = cols[4] ? cols[4].trim() : '';
+
+        if (!isNaN(width) && !isNaN(height)) {
+          newParts.push({
+            id: (Date.now() + idx).toString(),
+            part_id: `I${String(countImported + 1).padStart(2, '0')}`,
+            name: name || 'Импортированная деталь',
+            width: width,
+            height: height,
+            count: isNaN(count) ? 1 : count,
+            can_rotate: true,
+            edge_banding: edge
+          });
+          countImported++;
+        }
+      }
+    });
+
+    if (newParts.length > 0) {
+      setParts(newParts);
+      showToast(`Успешно импортировано деталей: ${newParts.length}!`, 'success');
+      setIsImportModalOpen(false);
+      setImportText('');
+    } else {
+      showToast('Не удалось распознать формат. Проверьте разделители (длина;ширина;кол-во).', 'error');
+    }
+  };
+
+  // Файловый импорт
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      handleImportSpecs(text);
+    };
+    reader.readAsText(file);
+  };
+
+  // Экономические вычисления
+  const sheetsUsed = raskroyResult ? raskroyResult.total_sheets_used : 1;
+  const cutLengthMeters = raskroyResult 
+    ? (raskroyResult.sheets.reduce((acc: number, s: any) => acc + s.total_cut_length_mm, 0) / 1000) 
+    : 0;
+
+  const costMaterials = (sheetsUsed * pricing.priceSheet) + (totalLiveEdgeMeters * pricing.priceEdge);
+  const costWorks = (cutLengthMeters * pricing.priceCut) + (totalLiveEdgeMeters * pricing.priceBanding) + pricing.priceAssembly;
+  const totalCostPrice = costMaterials + costWorks;
+  const clientPrice = totalCostPrice * (1 + pricing.markupPct / 100);
+  const netProfit = clientPrice - totalCostPrice;
+
+  // Формирование КП
+  const handleCopyProposal = () => {
+    const textProposal = `
+========================================
+КОММЕРЧЕСКОЕ ПРЕДЛОЖЕНИЕ: СФЕРА МЕБЕЛЬ
+========================================
+Материал: ${sheet.material_name}
+Габариты листа: ${sheet.width} x ${sheet.height} мм
+
+РАСЧЁТ СТОИМОСТИ ИЗДЕЛИЯ:
+----------------------------------------
+1. Материалы (ЛДСП, кромка, фурнитура): ${costMaterials.toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽
+2. Производство (распил, кромление, сборка): ${costWorks.toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽
+----------------------------------------
+Полная себестоимость ТМЦ + Работы: ${totalCostPrice.toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽
+Конечная стоимость для клиента (наценка ${pricing.markupPct}%): ${clientPrice.toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽
+
+Срок изготовления: 10-14 рабочих дней.
+========================================
+СФЕРА ERP SaaS — Управление мебельным бизнесом.
+`;
+    navigator.clipboard.writeText(textProposal.trim());
+    showToast('Коммерческое предложение скопировано в буфер обмена!', 'success');
+  };
+
   const calendarDays = Array.from({ length: 7 }).map((_, i) => {
     const d = new Date();
     d.setDate(d.getDate() + i);
@@ -337,7 +449,7 @@ export default function FurnitureDashboard() {
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] whitespace-nowrap cursor-pointer ${
                     activeTab === tab.id 
-                      ? 'bg-white dark:bg-zinc-950 text-[#F95700] shadow-sm border border-zinc-200/40 dark:border-zinc-800/40' 
+                      ? 'bg-white dark:bg-zinc-955 text-[#F95700] shadow-sm border border-zinc-200/40 dark:border-zinc-800/40' 
                       : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
                   }`}
                 >
@@ -430,9 +542,17 @@ export default function FurnitureDashboard() {
                           <Scissors className="w-4 h-4 text-[#F95700]" />
                           Деталировка ({parts.length})
                         </h3>
-                        <button onClick={handleAddPart} className="text-[10px] font-black text-[#F95700] hover:text-orange-600 flex items-center gap-1 bg-[#F95700]/10 px-2.5 py-1.5 rounded-lg transition-colors uppercase tracking-widest font-mono cursor-pointer">
-                          <Plus className="w-3.5 h-3.5" /> Добавить
-                        </button>
+                        <div className="flex gap-1.5">
+                          <button 
+                            onClick={() => setIsImportModalOpen(true)}
+                            className="text-[10px] font-black text-blue-500 hover:text-blue-600 flex items-center gap-1 bg-blue-500/10 px-2.5 py-1.5 rounded-lg transition-colors uppercase tracking-widest font-mono cursor-pointer"
+                          >
+                            <FileText className="w-3.5 h-3.5" /> Импорт
+                          </button>
+                          <button onClick={handleAddPart} className="text-[10px] font-black text-[#F95700] hover:text-orange-600 flex items-center gap-1 bg-[#F95700]/10 px-2.5 py-1.5 rounded-lg transition-colors uppercase tracking-widest font-mono cursor-pointer">
+                            <Plus className="w-3.5 h-3.5" /> Добавить
+                          </button>
+                        </div>
                       </div>
 
                       {/* LIVE EDGE BANDING CALCULATOR BANNER */}
@@ -468,15 +588,15 @@ export default function FurnitureDashboard() {
                               
                               <div className="flex gap-2 mb-2 pr-8">
                                 <input type="text" value={p.part_id} onChange={e => handlePartChange(p.id, 'part_id', e.target.value)} placeholder="ID" className="w-16 px-2 py-1 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded text-xs font-mono font-bold dark:text-white text-center" />
-                                <input type="text" value={p.name} onChange={e => handlePartChange(p.id, 'name', e.target.value)} placeholder="Название" className="flex-1 px-2.5 py-1 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded text-xs font-bold dark:text-white" />
+                                <input type="text" value={p.name} onChange={e => handlePartChange(p.id, 'name', e.target.value)} placeholder="Название" className="flex-1 px-2.5 py-1 bg-white dark:bg-zinc-955 border border-zinc-200 dark:border-zinc-800 rounded text-xs font-bold dark:text-white" />
                               </div>
                               
                               <div className="flex items-center gap-2">
-                                <input type="number" value={p.width} onChange={e => handlePartChange(p.id, 'width', e.target.value)} placeholder="Длина" title="Длина (L)" className="w-20 px-2 py-1 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded text-xs font-mono font-bold dark:text-white text-center" />
+                                <input type="number" value={p.width} onChange={e => handlePartChange(p.id, 'width', e.target.value)} placeholder="Длина" title="Длина (L)" className="w-20 px-2 py-1 bg-white dark:bg-zinc-955 border border-zinc-200 dark:border-zinc-800 rounded text-xs font-mono font-bold dark:text-white text-center" />
                                 <span className="text-zinc-400 font-mono text-[10px]">x</span>
-                                <input type="number" value={p.height} onChange={e => handlePartChange(p.id, 'height', e.target.value)} placeholder="Ширина" title="Ширина (W)" className="w-20 px-2 py-1 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded text-xs font-mono font-bold dark:text-white text-center" />
+                                <input type="number" value={p.height} onChange={e => handlePartChange(p.id, 'height', e.target.value)} placeholder="Ширина" title="Ширина (W)" className="w-20 px-2 py-1 bg-white dark:bg-zinc-955 border border-zinc-200 dark:border-zinc-800 rounded text-xs font-mono font-bold dark:text-white text-center" />
                                 <span className="text-zinc-400 font-mono text-[10px] ml-1">шт:</span>
-                                <input type="number" value={p.count} onChange={e => handlePartChange(p.id, 'count', e.target.value)} className="w-12 px-2 py-1 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded text-xs font-mono font-black text-[#F95700] text-center" />
+                                <input type="number" value={p.count} onChange={e => handlePartChange(p.id, 'count', e.target.value)} className="w-12 px-2 py-1 bg-white dark:bg-zinc-955 border border-zinc-200 dark:border-zinc-800 rounded text-xs font-mono font-black text-[#F95700] text-center" />
                               </div>
                               
                               <div className="mt-2.5 pt-2 border-t border-zinc-200/40 dark:border-zinc-800/40 flex items-center justify-between text-xs">
@@ -486,7 +606,7 @@ export default function FurnitureDashboard() {
                                 </label>
                                 <div className="flex items-center gap-2">
                                   <span className="text-[9px] font-black text-zinc-400 uppercase font-mono">Кромка: <b className="text-[#F95700] font-mono">{partEdgeMeters}м</b></span>
-                                  <input type="text" value={p.edge_banding} onChange={e => handlePartChange(p.id, 'edge_banding', e.target.value)} placeholder="2/0/2/0" title="Стороны кромки В/Н/Л/П (мм)" className="w-20 px-2 py-1 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded text-[9px] font-mono dark:text-white text-center font-bold" />
+                                  <input type="text" value={p.edge_banding} onChange={e => handlePartChange(p.id, 'edge_banding', e.target.value)} placeholder="2/0/2/0" title="Стороны кромки В/Н/Л/П (мм)" className="w-20 px-2 py-1 bg-white dark:bg-zinc-955 border border-zinc-200 dark:border-zinc-800 rounded text-[9px] font-mono dark:text-white text-center font-bold" />
                                 </div>
                               </div>
                             </div>
@@ -516,13 +636,12 @@ export default function FurnitureDashboard() {
                 </div>
               </div>
 
-              {/* Right Panel: Visualization */}
-              <div className="lg:col-span-8">
+              {/* Right Panel: Visualization & Premium Calculator */}
+              <div className="lg:col-span-8 space-y-6">
                 {raskroyResult ? (
                   <div className="space-y-6">
                     {/* Summary Metrics */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      
                       <div className="relative overflow-hidden p-1 rounded-2xl bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200/50 dark:border-zinc-800/40 shadow-sm">
                         <div className="bg-white dark:bg-zinc-950 p-4 rounded-[calc(1rem-0.125rem)]">
                           <div className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-mono">Листов</div>
@@ -548,26 +667,11 @@ export default function FurnitureDashboard() {
                         <div className="bg-white dark:bg-zinc-950 p-4 rounded-[calc(1rem-0.125rem)]">
                           <div className="text-[10px] font-black text-blue-500 uppercase tracking-widest font-mono">Деталей / Остатков</div>
                           <div className="text-xl font-black text-gray-900 dark:text-white font-mono mt-1">
-                            {raskroyResult.total_parts_placed} <span className="text-zinc-400 font-normal">/</span> <span className="text-blue-500 font-mono">{raskroyResult.total_reusable_offcuts}</span>
+                            {raskroyResult.total_parts_placed} / <span className="text-blue-500 font-mono">{raskroyResult.total_reusable_offcuts}</span>
                           </div>
                         </div>
                       </div>
-
                     </div>
-
-                    {raskroyResult.unplaced_parts?.length > 0 && (
-                      <div className="bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 p-4 rounded-xl text-rose-600 dark:text-rose-400 flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                        <div>
-                          <div className="font-bold text-sm">Внимание! {raskroyResult.unplaced_parts.length} деталей не поместились (превышают габариты):</div>
-                          <ul className="mt-1 text-xs list-disc pl-5">
-                            {raskroyResult.unplaced_parts.map((up: any, i: number) => (
-                              <li key={i}>{up.name} ({up.width} x {up.height})</li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                    )}
 
                     {/* Sheets Map View */}
                     <div className="space-y-8">
@@ -578,7 +682,7 @@ export default function FurnitureDashboard() {
 
                         return (
                           <div key={s.sheet_index} className="relative overflow-hidden p-1 rounded-[2rem] bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200/50 dark:border-zinc-800/40 shadow-sm">
-                            <div className="bg-white dark:bg-zinc-950 p-6 rounded-[calc(2rem-0.25rem)]">
+                            <div className="bg-white dark:bg-zinc-955 p-6 rounded-[calc(2rem-0.25rem)]">
                               <div className="flex items-center justify-between mb-4">
                                 <h4 className="font-black text-sm uppercase tracking-wider flex items-center gap-2 text-gray-900 dark:text-white font-sans">
                                   <div className="w-6 h-6 rounded bg-[#F95700] text-white flex items-center justify-center text-xs font-mono font-bold">{s.sheet_index}</div>
@@ -597,7 +701,7 @@ export default function FurnitureDashboard() {
                                       width: '100%', 
                                       maxWidth: '800px',
                                       aspectRatio: `${sheetRatio}`, 
-                                      backgroundColor: '#e6d0b5', // Wood color
+                                      backgroundColor: '#e6d0b5',
                                       backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.05' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.15'/%3E%3C/svg%3E")`,
                                       border: '2px solid #8b5a2b'
                                     }}
@@ -612,9 +716,8 @@ export default function FurnitureDashboard() {
                                           width: `${(p.width / pxWidth) * 100}%`,
                                           height: `${(p.height / pxHeight) * 100}%`
                                         }}
-                                        title={`${p.name} - ${p.width}x${p.height} мм`}
                                       >
-                                        <span className="text-[#8b5a2b] font-black text-[8px] md:text-[10px] uppercase truncate px-1 max-w-full drop-shadow-sm font-mono">{p.part_id}</span>
+                                        <span className="text-[#8b5a2b] font-black text-[8px] md:text-[10px] uppercase truncate px-1 max-w-full font-mono">{p.part_id}</span>
                                         <span className="text-[#8b5a2b] font-mono text-[8px] opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                                           {p.width}x{p.height}
                                         </span>
@@ -626,8 +729,8 @@ export default function FurnitureDashboard() {
                                         key={`o-${idx}`}
                                         className={`absolute border ${
                                           o.is_reusable 
-                                            ? 'bg-emerald-500/30 border-emerald-600 backdrop-blur-sm' 
-                                            : 'bg-red-900/10 border-red-900/20 pattern-diagonal-lines pattern-red-900 pattern-bg-transparent pattern-size-4 pattern-opacity-10'
+                                            ? 'bg-emerald-500/30 border-emerald-600' 
+                                            : 'bg-red-900/10 border-red-900/20'
                                         } flex items-center justify-center overflow-hidden`}
                                         style={{
                                           left: `${(o.x / pxWidth) * 100}%`,
@@ -650,12 +753,115 @@ export default function FurnitureDashboard() {
                     </div>
                   </div>
                 ) : (
-                  <div className="h-full min-h-[400px] flex flex-col items-center justify-center bg-gray-50 dark:bg-zinc-900/20 rounded-[2.5rem] border border-dashed border-zinc-200 dark:border-zinc-800 text-zinc-400">
+                  <div className="h-full min-h-[300px] flex flex-col items-center justify-center bg-gray-50 dark:bg-zinc-900/20 rounded-[2.5rem] border border-dashed border-zinc-200 dark:border-zinc-800 text-zinc-400">
                     <LayoutTemplate className="w-16 h-16 mb-4 opacity-50 text-[#F95700]" />
-                    <h3 className="text-sm font-black text-gray-900 dark:text-white mb-2 uppercase tracking-widest font-sans">Сгенерировать карту раскроя</h3>
-                    <p className="text-xs max-w-sm text-center leading-relaxed font-bold">Наш математический движок оптимизирует 2D-расположение деталей с учетом толщины пропила и опиловки краев листа.</p>
+                    <h3 className="text-sm font-black text-gray-900 dark:text-white mb-2 uppercase tracking-widest font-sans">Карта раскроя пуста</h3>
+                    <p className="text-xs max-w-sm text-center leading-relaxed font-bold">Нажмите «Рассчитать Раскрой» для визуализации листов ЛДСП и полезного выхода.</p>
                   </div>
                 )}
+
+                {/* PREMIUM PRICING CALCULATOR */}
+                <div className="relative overflow-hidden p-1 rounded-[2.5rem] bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200/50 dark:border-zinc-800/40 shadow-md">
+                  <div className="bg-white dark:bg-zinc-950 p-6 rounded-[calc(2.5rem-0.25rem)]">
+                    <div className="flex justify-between items-center mb-5 border-b border-zinc-100 dark:border-zinc-800 pb-3">
+                      <h4 className="text-xs font-black text-zinc-900 dark:text-white uppercase tracking-widest font-sans flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-[#F95700]" /> Экономика заказа & Калькулятор КП
+                      </h4>
+                      <button
+                        onClick={handleCopyProposal}
+                        className="px-4 py-2 bg-[#F95700] hover:bg-orange-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider font-mono shadow-sm cursor-pointer"
+                      >
+                        Сформировать КП
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
+                      <div>
+                        <label className="block text-[8px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-mono mb-1">Лист ЛДСП (₽)</label>
+                        <input
+                          type="number"
+                          value={pricing.priceSheet}
+                          onChange={e => setPricing({ ...pricing, priceSheet: Number(e.target.value) })}
+                          className="w-full px-2.5 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-mono font-bold dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700] text-center"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[8px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-mono mb-1">Кромка м (₽)</label>
+                        <input
+                          type="number"
+                          value={pricing.priceEdge}
+                          onChange={e => setPricing({ ...pricing, priceEdge: Number(e.target.value) })}
+                          className="w-full px-2.5 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-mono font-bold dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700] text-center"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[8px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-mono mb-1">Распил м (₽)</label>
+                        <input
+                          type="number"
+                          value={pricing.priceCut}
+                          onChange={e => setPricing({ ...pricing, priceCut: Number(e.target.value) })}
+                          className="w-full px-2.5 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-mono font-bold dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700] text-center"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[8px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-mono mb-1">Кромление м (₽)</label>
+                        <input
+                          type="number"
+                          value={pricing.priceBanding}
+                          onChange={e => setPricing({ ...pricing, priceBanding: Number(e.target.value) })}
+                          className="w-full px-2.5 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-mono font-bold dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700] text-center"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[8px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-mono mb-1">Сборка (₽)</label>
+                        <input
+                          type="number"
+                          value={pricing.priceAssembly}
+                          onChange={e => setPricing({ ...pricing, priceAssembly: Number(e.target.value) })}
+                          className="w-full px-2.5 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-mono font-bold dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700] text-center"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[8px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-mono mb-1">Наценка (%)</label>
+                        <input
+                          type="number"
+                          value={pricing.markupPct}
+                          onChange={e => setPricing({ ...pricing, markupPct: Number(e.target.value) })}
+                          className="w-full px-2.5 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-mono font-bold dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700] text-center"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Costing Summary Dashboard */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-zinc-50 dark:bg-zinc-900/40 rounded-2xl border border-zinc-200/60 dark:border-zinc-850/60">
+                      <div>
+                        <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider font-mono">Себестоимость ТМЦ</div>
+                        <div className="text-base font-black text-gray-900 dark:text-white font-mono mt-1">
+                          {costMaterials.toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider font-mono">Себестоимость Работ</div>
+                        <div className="text-base font-black text-gray-900 dark:text-white font-mono mt-1">
+                          {costWorks.toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider font-mono font-black text-emerald-500">Цена для клиента</div>
+                        <div className="text-lg font-black text-emerald-500 font-mono mt-1">
+                          {clientPrice.toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider font-mono font-black text-[#F95700]">Чистая прибыль</div>
+                        <div className="text-lg font-black text-[#F95700] font-mono mt-1">
+                          {netProfit.toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
 
             </div>
@@ -713,7 +919,7 @@ export default function FurnitureDashboard() {
               
               {/* Orders Kanban / List */}
               <div className="relative overflow-hidden p-1 rounded-[2.5rem] bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200/50 dark:border-zinc-800/40 shadow-sm">
-                <div className="bg-white dark:bg-zinc-950 p-6 rounded-[calc(2.5rem-0.25rem)]">
+                <div className="bg-white dark:bg-zinc-955 p-6 rounded-[calc(2.5rem-0.25rem)]">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-widest font-sans flex items-center gap-2">
                       <Factory className="w-5 h-5 text-blue-500"/> Заказы в производстве
@@ -906,7 +1112,6 @@ export default function FurnitureDashboard() {
           >
             {/* Fittings Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              
               <div className="bg-white dark:bg-zinc-950 border border-zinc-200/60 dark:border-zinc-800/60 rounded-2xl p-5 shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-mono">Общая кромка пог. м</span>
@@ -922,7 +1127,7 @@ export default function FurnitureDashboard() {
                 <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-wider mt-1">ПВХ 0.4 мм / ПВХ 2.0 мм / АБС</div>
               </div>
 
-              <div className="bg-white dark:bg-zinc-950 border border-zinc-200/60 dark:border-zinc-800/60 rounded-2xl p-5 shadow-sm">
+              <div className="bg-white dark:bg-zinc-955 border border-zinc-200/60 dark:border-zinc-800/60 rounded-2xl p-5 shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-mono">Позиций фурнитуры</span>
                   <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500">
@@ -935,7 +1140,7 @@ export default function FurnitureDashboard() {
                 <div className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider font-mono mt-1">Комплектация под контроль</div>
               </div>
 
-              <div className="bg-white dark:bg-zinc-950 border border-zinc-200/60 dark:border-zinc-800/60 rounded-2xl p-5 shadow-sm">
+              <div className="bg-white dark:bg-zinc-955 border border-zinc-200/60 dark:border-zinc-800/60 rounded-2xl p-5 shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-mono">Расход клея EVA/PUR</span>
                   <div className="p-2 bg-purple-500/10 rounded-xl text-purple-500">
@@ -951,7 +1156,6 @@ export default function FurnitureDashboard() {
 
             {/* Fittings Catalog */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              
               <div className="lg:col-span-8 bg-white dark:bg-zinc-950 rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-6">
                   <div>
@@ -1030,7 +1234,7 @@ export default function FurnitureDashboard() {
                               }}
                               className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase font-mono tracking-wider cursor-pointer transition-all active:scale-[0.98] ${
                                 fit.status === 'in_stock' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' :
-                                fit.status === 'ordered' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' :
+                                fit.status === 'ordered' ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20' :
                                 fit.status === 'issued' ? 'bg-purple-500/10 text-purple-600 border border-purple-500/20' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'
                               }`}
                             >
@@ -1077,19 +1281,18 @@ export default function FurnitureDashboard() {
                         <div className="text-xs font-bold text-gray-900 dark:text-white font-sans">АБС-пластик 1.0 мм (Премиум)</div>
                         <div className="text-[10px] text-zinc-400 mt-0.5">Влагозащитный кухонный профиль</div>
                       </div>
-                      <div className="font-mono font-black text-sm text-zinc-400">14.5 м</div>
+                      <div className="font-mono font-black text-sm text-zinc-400 font-mono">{totalLiveEdgeMeters > 0 ? '14.5' : '0.0'} м</div>
                     </div>
                   </div>
 
                   <div className="mt-6 pt-4 border-t border-zinc-200/30 dark:border-zinc-800/30">
                     <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider font-mono text-zinc-500">
                       <span>Рекомендуемый запас:</span>
-                      <span className="font-bold text-[#F95700]">+8%</span>
+                      <span className="font-bold text-[#F95700] font-mono">+8%</span>
                     </div>
                   </div>
                 </div>
               </div>
-
             </div>
           </motion.div>
         )}
@@ -1195,7 +1398,7 @@ export default function FurnitureDashboard() {
             </div>
             
             <form onSubmit={handleSaveBotConfig} className="space-y-4">
-              <div className="space-y-3 p-4 bg-zinc-50 dark:bg-zinc-955 rounded-2xl border border-zinc-200/60 dark:border-zinc-850/60">
+              <div className="space-y-3 p-4 bg-zinc-50 dark:bg-zinc-950 rounded-2xl border border-zinc-200/60 dark:border-zinc-855/60">
                 <label className="flex items-center justify-between text-xs font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer">
                   <span className="font-sans">Автоприем заявок из Telegram</span>
                   <input 
@@ -1232,7 +1435,7 @@ export default function FurnitureDashboard() {
                   placeholder="748392019:AAFnXj83920..."
                   value={botConfig.bot_token}
                   onChange={e => setBotConfig({ ...botConfig, bot_token: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs font-mono dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-955 text-xs font-mono dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700]"
                 />
               </div>
 
@@ -1243,7 +1446,7 @@ export default function FurnitureDashboard() {
                   placeholder="SpheraFurnitureBot"
                   value={botConfig.bot_name}
                   onChange={e => setBotConfig({ ...botConfig, bot_name: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs font-bold dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700] font-mono"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-955 text-xs font-bold dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700] font-mono"
                 />
               </div>
 
@@ -1258,6 +1461,74 @@ export default function FurnitureDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ====== MODAL: НАСТРОЙКА ИМПОРТА ДЕТАЛЕЙ ====== */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full blur-2xl pointer-events-none" />
+            
+            <div className="flex items-center justify-between mb-5 border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <h3 className="text-sm font-black dark:text-white uppercase tracking-widest font-sans flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-500" /> Импорт из Базис / PRO100 / Excel
+              </h3>
+              <button onClick={() => setIsImportModalOpen(false)} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 transition-colors cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl text-[10px] text-zinc-500 leading-relaxed font-bold">
+                <p className="uppercase text-blue-500 font-black mb-1">Инструкция по формату:</p>
+                Вставьте строки деталировки в текстовое поле или выберите файл CSV/TXT. Формат строк:<br />
+                <code className="text-[#F95700] font-mono font-black">Название_детали ; Длина ; Ширина ; Количество ; Кромка_В/Н/Л/П</code><br />
+                Пример:<br />
+                <code className="font-mono text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-950 px-1 py-0.5 rounded">Боковина левая ; 2200 ; 600 ; 2 ; 2/0/0/0</code>
+              </div>
+
+              <div>
+                <label className="block text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-mono mb-2">Загрузить файл детализации (.csv, .txt)</label>
+                <input 
+                  type="file" 
+                  accept=".csv,.txt"
+                  onChange={handleFileChange}
+                  className="w-full text-xs text-zinc-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-blue-500/10 file:text-blue-500 hover:file:bg-blue-500/20 file:cursor-pointer cursor-pointer"
+                />
+              </div>
+
+              <div className="flex items-center my-3 text-zinc-400 text-xs">
+                <div className="flex-1 border-t border-zinc-200 dark:border-zinc-850" />
+                <span className="px-3 font-mono font-bold text-[9px] uppercase tracking-wider">Или вставьте текст</span>
+                <div className="flex-1 border-t border-zinc-200 dark:border-zinc-850" />
+              </div>
+
+              <div>
+                <textarea
+                  rows={6}
+                  placeholder="Боковина;2200;600;2;2/0/0/0&#10;Полка;870;550;6;2/0/2/0"
+                  value={importText}
+                  onChange={e => setImportText(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs font-mono dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                <button type="button" onClick={() => setIsImportModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer">
+                  Отмена
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => handleImportSpecs(importText)}
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all cursor-pointer font-mono uppercase tracking-wider"
+                >
+                  Импортировать
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -1308,7 +1579,7 @@ export default function FurnitureDashboard() {
                     type="time" required
                     value={newEvent.time}
                     onChange={e => setNewEvent({ ...newEvent, time: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs font-bold dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700]"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-955 text-xs font-bold dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700]"
                   />
                 </div>
               </div>
@@ -1379,7 +1650,7 @@ export default function FurnitureDashboard() {
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-md w-full p-6 shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#F95700]/10 to-transparent rounded-full blur-2xl pointer-events-none" />
             <div className="flex justify-between items-center mb-4 border-b border-zinc-100 dark:border-zinc-800 pb-3">
-              <h3 className="text-sm font-black dark:text-white font-sans uppercase tracking-wider">Фурнитура к заказа #{addFittingOrderId}</h3>
+              <h3 className="text-sm font-black dark:text-white font-sans uppercase tracking-wider">Фурнитура к заказу #{addFittingOrderId}</h3>
               <button onClick={() => setAddFittingOrderId(null)} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer">
                 <X className="w-4 h-4 text-zinc-400" />
               </button>
@@ -1403,7 +1674,7 @@ export default function FurnitureDashboard() {
                     type="text"
                     value={newFitting.article}
                     onChange={e => setNewFitting({ ...newFitting, article: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-mono dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700]"
+                    className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-955 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-mono dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700]"
                   />
                 </div>
                 <div>
@@ -1412,7 +1683,7 @@ export default function FurnitureDashboard() {
                     type="text"
                     value={newFitting.supplier}
                     onChange={e => setNewFitting({ ...newFitting, supplier: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-bold dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700]"
+                    className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-955 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-bold dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700]"
                   />
                 </div>
               </div>
@@ -1514,7 +1785,7 @@ export default function FurnitureDashboard() {
                     <select
                       value={newDetail.edge_top}
                       onChange={e => setNewDetail({ ...newDetail, edge_top: e.target.value })}
-                      className="w-full px-2 py-1.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-bold dark:text-white font-sans"
+                      className="w-full px-2 py-1.5 bg-zinc-50 dark:bg-zinc-955 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-bold dark:text-white font-sans"
                     >
                       <option value="none">Без кромки</option>
                       <option value="pvc_04">ПВХ 0.4 мм</option>
@@ -1528,7 +1799,7 @@ export default function FurnitureDashboard() {
                     <select
                       value={newDetail.edge_bottom}
                       onChange={e => setNewDetail({ ...newDetail, edge_bottom: e.target.value })}
-                      className="w-full px-2 py-1.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-bold dark:text-white font-sans"
+                      className="w-full px-2 py-1.5 bg-zinc-50 dark:bg-zinc-955 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-bold dark:text-white font-sans"
                     >
                       <option value="none">Без кромки</option>
                       <option value="pvc_04">ПВХ 0.4 мм</option>
@@ -1542,7 +1813,7 @@ export default function FurnitureDashboard() {
                     <select
                       value={newDetail.edge_left}
                       onChange={e => setNewDetail({ ...newDetail, edge_left: e.target.value })}
-                      className="w-full px-2 py-1.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-bold dark:text-white font-sans"
+                      className="w-full px-2 py-1.5 bg-zinc-50 dark:bg-zinc-955 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-bold dark:text-white font-sans"
                     >
                       <option value="none">Без кромки</option>
                       <option value="pvc_04">ПВХ 0.4 мм</option>
@@ -1612,7 +1883,7 @@ export default function FurnitureDashboard() {
                   rows={2} placeholder="Параметры, чертежи, спецификации..."
                   value={newProductData.description}
                   onChange={e => setNewProductData({ ...newProductData, description: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-850 bg-zinc-50 dark:bg-zinc-950 text-xs font-bold dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700] resize-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-850 bg-zinc-50 dark:bg-zinc-955 text-xs font-bold dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700] resize-none"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -1622,7 +1893,7 @@ export default function FurnitureDashboard() {
                     type="number" min={0} step={0.1}
                     value={newProductData.weight}
                     onChange={e => setNewProductData({ ...newProductData, weight: Number(e.target.value) })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-850 bg-zinc-50 dark:bg-zinc-955 text-xs font-mono font-bold dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700]"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-855 bg-zinc-50 dark:bg-zinc-955 text-xs font-mono font-bold dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700]"
                   />
                 </div>
                 <div>
