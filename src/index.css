@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Inter:wght@400;500;600;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Inter:wght@400;500;600;700;900&family=Plus+Jakarta+Sans:wght@700;800&family=Outfit:wght@300;400;600;800&family=Syne:wght@700;800&display=swap');
 
 @import "tailwindcss";
 
@@ -7,6 +7,7 @@
 @theme {
   --font-sans: 'Inter', sans-serif;
   --font-title: 'Montserrat', sans-serif;
+  --font-brand: 'Plus Jakarta Sans', sans-serif;
   --color-primary: var(--brand-color, #F95700);
   --color-brand: var(--brand-color, #F95700);
   --color-bg: var(--bg-color);

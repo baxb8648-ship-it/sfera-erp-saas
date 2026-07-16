@@ -35,14 +35,14 @@ class TransferCreate(BaseModel):
 def get_holding_groups(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Получить группы компаний (Холдинги) текущего пользователя.
-    Если холдинга ещё нет, создаём демонстрационную группу «Группа компаний ЛЕОНИКА» с 3 юрлицами.
+    Если холдинга ещё нет, создаём демонстрационную группу «Группа компаний СФЕРУМ» с 3 юрлицами.
     """
     groups = db.query(HoldingGroup).filter(HoldingGroup.owner_user_id == current_user.id).all()
     if not groups:
         default_group = HoldingGroup(
-            name="Группа компаний ЛЕОНИКА (SaaS ERP Холдинг)",
+            name="Группа компаний СФЕРУМ (SaaS ERP Холдинг)",
             owner_user_id=current_user.id,
-            description="Консолидированное управление группой предприятий ЛЕОНИКА"
+            description="Консолидированное управление группой предприятий СФЕРУМ"
         )
         db.add(default_group)
         db.commit()
@@ -50,7 +50,7 @@ def get_holding_groups(db: Session = Depends(get_db), current_user: User = Depen
 
         m1 = HoldingMember(
             holding_id=default_group.id,
-            company_name="ООО «ЛЕОНИКА СТРОЙ И ИНЖИНИРИНГ»",
+            company_name="ООО «СФЕРУМ СТРОЙ И ИНЖИНИРИНГ»",
             inn="7701234567",
             role="parent",
             share_percent=100.0,
@@ -60,7 +60,7 @@ def get_holding_groups(db: Session = Depends(get_db), current_user: User = Depen
         )
         m2 = HoldingMember(
             holding_id=default_group.id,
-            company_name="ООО «ЛЕОНИКА ТЕХНОЛОДЖИ» (IT & SaaS)",
+            company_name="ООО «СФЕРУМ ТЕХНОЛОДЖИ» (IT & SaaS)",
             inn="7702345678",
             role="subsidiary",
             share_percent=100.0,
@@ -70,7 +70,7 @@ def get_holding_groups(db: Session = Depends(get_db), current_user: User = Depen
         )
         m3 = HoldingMember(
             holding_id=default_group.id,
-            company_name="ООО «ЛЕОНИКА АГРО ПРОМ»",
+            company_name="ООО «СФЕРУМ АГРО ПРОМ»",
             inn="5603456789",
             role="branch",
             share_percent=80.0,
@@ -82,16 +82,16 @@ def get_holding_groups(db: Session = Depends(get_db), current_user: User = Depen
 
         t1 = HoldingTransfer(
             holding_id=default_group.id,
-            from_company="ООО «ЛЕОНИКА ТЕХНОЛОДЖИ» (IT & SaaS)",
-            to_company="ООО «ЛЕОНИКА СТРОЙ И ИНЖИНИРИНГ»",
+            from_company="ООО «СФЕРУМ ТЕХНОЛОДЖИ» (IT & SaaS)",
+            to_company="ООО «СФЕРУМ СТРОЙ И ИНЖИНИРИНГ»",
             amount=5000000.0,
             transfer_type="loan",
             description="Внутригрупповой заём на закупку строительных лесов"
         )
         t2 = HoldingTransfer(
             holding_id=default_group.id,
-            from_company="ООО «ЛЕОНИКА АГРО ПРОМ»",
-            to_company="ООО «ЛЕОНИКА СТРОЙ И ИНЖИНИРИНГ»",
+            from_company="ООО «СФЕРУМ АГРО ПРОМ»",
+            to_company="ООО «СФЕРУМ СТРОЙ И ИНЖИНИРИНГ»",
             amount=2400000.0,
             transfer_type="dividend",
             description="Распределение дивидендов за 2 квартал"

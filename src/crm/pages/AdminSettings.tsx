@@ -1138,12 +1138,12 @@ export const AdminSettings: React.FC = () => {
                     <input 
                       type="text" 
                       readOnly 
-                      value={`https://сфера-ерп.рф/register?ref=SFERUM-TENANT-${billingStatus?.id || '101'}-PRO`}
+                      value={`https://sferum.space/register?ref=SFERUM-TENANT-${billingStatus?.id || '101'}-PRO`}
                       className="flex-1 bg-transparent px-3 py-2 text-sm font-mono text-white focus:outline-none truncate"
                     />
                     <button
                       onClick={() => {
-                        navigator.clipboard.writeText(`https://сфера-ерп.рф/register?ref=SFERUM-TENANT-${billingStatus?.id || '101'}-PRO`);
+                        navigator.clipboard.writeText(`https://sferum.space/register?ref=SFERUM-TENANT-${billingStatus?.id || '101'}-PRO`);
                         setCopiedRef(true);
                         setTimeout(() => setCopiedRef(false), 3000);
                       }}

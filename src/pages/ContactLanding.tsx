@@ -44,7 +44,7 @@ export const ContactLanding: React.FC = () => {
     const orgName = settings.company_legal_name || 'ООО "СФЕРУМ"';
     const phone = settings.company_phone || '+7 (3532) 99-88-77';
     const email = settings.company_email || 'info@sphera-akz.ru';
-    const url = settings.company_website_url || 'https://леоника56.рф';
+    const url = settings.company_website_url || 'https://sferum.space';
     const address = settings.company_address || 'г. Оренбург, ул. Монтажников, д. 22';
 
     // Parse LastName / FirstName for vCard N field

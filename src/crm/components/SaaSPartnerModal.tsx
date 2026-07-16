@@ -133,7 +133,7 @@ export const SaaSPartnerModal: React.FC<SaaSPartnerModalProps> = ({
     }
   ];
 
-  const utmLink = `https://сфера-ерп.рф/register?agent=${partner.promoCode}`;
+  const utmLink = `https://sferum.space/register?agent=${partner.promoCode}`;
 
   return (
     <GodTierModal
@@ -290,7 +290,7 @@ export const SaaSPartnerModal: React.FC<SaaSPartnerModalProps> = ({
                   АГЕНТСКИЙ ДОГОВОР № AG-{partner.id}/2026
                 </div>
                 <p>
-                  <strong>ООО «Леоника СФЕРУМ»</strong>, именуемое в дальнейшем «Принципал / Лицензиар», в лице Генерального директора, с одной стороны, и <strong>{partner.name}</strong>, именуемое в дальнейшем «Агент / Партнер», с другой стороны, заключили настоящий договор о нижеследующем:
+                  <strong>ООО «ЛЕОНИКА»</strong>, именуемое в дальнейшем «Принципал / Лицензиар», в лице Генерального директора, с одной стороны, и <strong>{partner.name}</strong>, именуемое в дальнейшем «Агент / Партнер», с другой стороны, заключили настоящий договор о нижеследующем:
                 </p>
                 <div className="space-y-1.5 pl-4 border-l-2 border-emerald-500/50">
                   <p><strong>1. Предмет договора:</strong> Агент обязуется совершать от своего имени или от имени Принципала действия по привлечению новых конечных пользователей (Сублицензиатов) к использованию облачной ERP-системы «СФЕРУМ».</p>

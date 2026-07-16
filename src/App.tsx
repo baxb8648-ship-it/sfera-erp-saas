@@ -19,14 +19,11 @@ if (
   window.location.replace(window.location.href.replace('http:', 'https:'));
 }
 
-// Redirect subdomain to CRM route
 if (
   typeof window !== 'undefined' &&
   (
-    window.location.hostname === 'срм.леоника56.рф' || 
-    window.location.hostname === 'xn--l1ahc.xn--56-6kctpmeri.xn--p1ai' ||
-    window.location.hostname === 'crm.леоника56.рф' ||
-    window.location.hostname === 'crm.xn--56-6kctpmeri.xn--p1ai'
+    window.location.hostname === 'срм.sferum.space' || 
+    window.location.hostname === 'crm.sferum.space'
   ) &&
   (window.location.hash === '' || window.location.hash === '#/')
 ) {

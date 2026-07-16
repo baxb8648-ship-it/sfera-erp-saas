@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from .database import SessionLocal
-from .models import Tender, CompanySetting
+from .models import Tender, CompanySetting, TelegramBot
 from .ops_monitor import (
     check_tunnel_health,
     check_ollama_health,

@@ -15,8 +15,8 @@ export const SetupWizard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   // Step 1: Company details & Industry
-  const [companyName, setCompanyName] = useState('ЛЕОНИКА');
-  const [companyInn, setCompanyInn] = useState('5612080000');
+  const [companyName, setCompanyName] = useState('СФЕРУМ');
+  const [companyInn, setCompanyInn] = useState('5629021484');
   const [isLookingUpInn, setIsLookingUpInn] = useState(false);
   const [industry, setIndustry] = useState('construction');
 
@@ -60,8 +60,8 @@ export const SetupWizard: React.FC = () => {
     setIsLoading(true);
     try {
       await apiClient.put('/tenants/onboarding', {
-        inn: companyInn.trim() || '5612080000',
-        name: companyName.trim() || 'ЛЕОНИКА',
+        inn: companyInn.trim() || '5629021484',
+        name: companyName.trim() || 'СФЕРУМ',
         sphere: chosenSphere || 'construction'
       });
       if (botToken && user?.id) {
@@ -126,7 +126,7 @@ export const SetupWizard: React.FC = () => {
                           type="text"
                           value={companyInn}
                           onChange={(e) => setCompanyInn(e.target.value)}
-                          placeholder="5612080000"
+                          placeholder="5629021484"
                           className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#E64D00]"
                         />
                         <button
@@ -147,7 +147,7 @@ export const SetupWizard: React.FC = () => {
                       type="text"
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
-                      placeholder="ООО «ЛЕОНИКА»"
+                      placeholder="ООО «СФЕРУМ»"
                       className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 text-sm font-semibold text-zinc-900 dark:text-white focus:outline-none focus:border-[#E64D00]"
                     />
                   </div>

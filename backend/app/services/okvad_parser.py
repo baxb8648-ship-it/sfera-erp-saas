@@ -473,7 +473,7 @@ def run_okvad_campaign(db: Session, task_id: int, current_user_id: int):
         f"✅ <b>Найдено компаний:</b> {len(companies)}\n"
         f"📋 <b>Сохранено в базу:</b> {saved_count}\n"
         f"📞 <b>Обогащено контактами:</b> {enriched_count}{ai_note}\n\n"
-        f"📂 <a href='https://срм.леоника56.рф/#/crm'>Открыть базу лидов в CRM</a>"
+        f"📂 <a href='https://sferum.space/#/crm'>Открыть базу лидов в CRM</a>"
     )
     send_telegram_notification(tg_msg, db)
     logger.info(f"[OKVAD] Campaign '{task.name}' done: saved={saved_count}, enriched={enriched_count}")

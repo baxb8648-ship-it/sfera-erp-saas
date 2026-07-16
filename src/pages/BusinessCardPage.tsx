@@ -32,8 +32,8 @@ export const BusinessCardPage: React.FC = () => {
     tagline: 'Промышленная защита и изоляция',
     phone1: '+7 (963) 600-63-46',
     phone2: '+7 (987) 341-21-39',
-    website: 'леоника56.рф',
-    websiteUrl: 'https://xn--56-6kc6dma2c.xn--p1ai', // Punycode for леоника56.рф
+    website: 'sferum.space',
+    websiteUrl: 'https://sferum.space',
     regions: 'Оренбург • Самара • Уфа'
   };
 
@@ -42,7 +42,7 @@ export const BusinessCardPage: React.FC = () => {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const response = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/settings/');
+        const response = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8001') + '/settings/');
         if (response.ok) {
           const data = await response.json();
           setCardData({

@@ -184,7 +184,7 @@ export const CRMLayout: React.FC = () => {
     setEmailError('');
     setEmailSuccess(null);
     try {
-      // BUG-001 FIX: использовать порт 8001 (СФЕРУМ), а не 8000 (устаревший порт ЛЕОНИКА CRM)
+      // BUG-001 FIX: использовать порт 8001 (СФЕРУМ), а не 8000 (устаревший порт старой CRM)
       const response = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8001') + '/documents/send-email', {
         method: 'POST',
         headers: {
@@ -680,23 +680,19 @@ export const CRMLayout: React.FC = () => {
 
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-800 flex flex-col shadow-sm transform transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-6 border-b border-gray-200 dark:border-zinc-800 flex items-center justify-between">
-          <Link to="/crm" className="flex items-center gap-2.5 overflow-hidden">
-            {(settings as any).brand_logo_url ? (
-              <img src={(settings as any).brand_logo_url} alt="Logo" className="h-8 w-auto object-contain max-w-[120px]" />
-            ) : null}
-            <h1 className="text-2xl font-bold font-['Montserrat'] tracking-tight text-[#1a1a1a] dark:text-white truncate">
-              {(settings as any).brand_name ? (
-                <span style={{ color: (settings as any).brand_color || '#F95700' }}>{(settings as any).brand_name}</span>
-              ) : (
-                <>СФЕРУМ <span style={{ color: (settings as any).brand_color || '#F95700' }}>ERP</span></>
-              )}
-            </h1>
+        <div className="relative py-6 px-4 border-b border-gray-200 dark:border-zinc-800 flex items-center justify-center min-h-[73px]">
+          <Link to="/crm" className="flex items-center justify-center overflow-hidden select-none group">
+            <span 
+              className="text-xl font-extrabold font-brand tracking-[0.08em] uppercase transition-opacity duration-300 hover:opacity-80"
+              style={{ color: (settings as any).brand_color || '#F95700' }}
+            >
+              СФЕРУМ
+            </span>
           </Link>
           <button 
             type="button" 
             onClick={() => setIsSidebarOpen(false)} 
-            className="lg:hidden p-1.5 -mr-1.5 text-zinc-400 hover:text-zinc-650 dark:hover:text-zinc-200 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer"
+            className="lg:hidden absolute right-4 top-1/2 -translate-y-1/2 p-1.5 text-zinc-400 hover:text-zinc-650 dark:hover:text-zinc-200 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>

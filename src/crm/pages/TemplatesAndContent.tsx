@@ -1225,7 +1225,7 @@ export const TemplatesAndContent: React.FC = () => {
                     type="text"
                     value={settings.company_inn}
                     onChange={(e) => setSettings({ ...settings, company_inn: e.target.value })}
-                    placeholder="5610234567"
+                    placeholder="5629021484"
                     className="flex-1 px-3 py-2 border border-gray-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F95700]/50"
                   />
                   <button
@@ -1289,7 +1289,7 @@ export const TemplatesAndContent: React.FC = () => {
                   type="text"
                   value={settings.company_website}
                   onChange={(e) => setSettings({ ...settings, company_website: e.target.value })}
-                  placeholder="леоника56.рф"
+                  placeholder="sferum.space"
                   className="w-full px-3 py-2 border border-gray-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F95700]/50"
                 />
               </div>
@@ -1350,7 +1350,7 @@ export const TemplatesAndContent: React.FC = () => {
                   type="text"
                   value={settings.company_rs}
                   onChange={(e) => setSettings({ ...settings, company_rs: e.target.value })}
-                  placeholder="40702810101234567890"
+                  placeholder="40702810746000014531"
                   className="w-full px-3 py-2 border border-gray-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F95700]/50"
                 />
               </div>

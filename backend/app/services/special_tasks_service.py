@@ -268,7 +268,7 @@ def generate_custom_commercial_offer(customer_name: str, tender_title: str, offe
             f"Уважаемые коллеги из {customer_name}!\n\n"
             f"ООО «СФЕРУМ» предлагает Вам рассмотреть наше предложение по проекту \"{tender_title}\".\n\n"
             f"Наши условия:\n{offer_context}\n\n"
-            f"Контакты для связи: info@леоника56.рф\n"
+            f"Контакты для связи: info@sferum.space\n"
             f"С уважением, ООО «СФЕРУМ»"
         )
     return response
@@ -380,7 +380,7 @@ def run_special_task_campaign(db: Session, task_id: int, current_user_id: int):
                 f"🏢 <b>Клиент:</b> {lead['customer_name']} (ИНН: {lead['inn'] or 'Не указан'})\n"
                 f"📧 <b>Отправлено КП на:</b> {lead['email']}\n"
                 f"🔑 <b>Ключевое слово:</b> {special_task.keyword}\n"
-                f"💼 <b>Задача в CRM:</b> <a href='https://срм.леоника56.рф/#/crm'>Связаться по спецзаданию</a>\n"
+                f"💼 <b>Задача в CRM:</b> <a href='https://sferum.space/#/crm'>Связаться по спецзаданию</a>\n"
                 f"👤 <b>Исполнитель:</b> @{creator_name}"
             )
             send_telegram_notification(tg_message, db)

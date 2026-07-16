@@ -38,8 +38,8 @@ export default function HoldingDashboard() {
 
   // New transfer form
   const [newTransfer, setNewTransfer] = useState({
-    from_company: 'ООО «ЛЕОНИКА ТЕХНОЛОДЖИ» (IT & SaaS)',
-    to_company: 'ООО «ЛЕОНИКА СТРОЙ И ИНЖИНИРИНГ»',
+    from_company: 'ООО «СФЕРУМ ТЕХНОЛОДЖИ» (IT & SaaS)',
+    to_company: 'ООО «СФЕРУМ СТРОЙ И ИНЖИНИРИНГ»',
     amount: 1500000,
     transfer_type: 'loan',
     description: ''
@@ -129,7 +129,7 @@ export default function HoldingDashboard() {
               <Landmark className="w-3.5 h-3.5" /> Корпоративный центр управления
             </div>
             <h1 className="text-3xl font-black tracking-tight">
-              {currentGroup?.name || 'Группа компаний ЛЕОНИКА'}
+              {currentGroup?.name || 'Группа компаний СФЕРУМ'}
             </h1>
             <p className="text-zinc-400 text-sm mt-1 max-w-2xl">
               Консолидированный учёт дочерних предприятий, финансовое планирование группы и внутригрупповой трансферт активов
@@ -394,7 +394,7 @@ export default function HoldingDashboard() {
                 <label className="block text-xs font-semibold text-zinc-500 mb-1">Название юрлица</label>
                 <input
                   type="text"
-                  placeholder="ООО «ЛЕОНИКА ЛОГИСТИКА»"
+                  placeholder="ООО «СФЕРУМ ЛОГИСТИКА»"
                   value={newCompany.company_name}
                   onChange={e => setNewCompany({ ...newCompany, company_name: e.target.value })}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 text-sm font-semibold text-gray-900 dark:text-white"

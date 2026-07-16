@@ -332,8 +332,8 @@ def generate_document(client_id: int, doc_type: str, object_id: int = None, cust
         c.setFont(font_bold_name, 10)
         c.drawString(54, 570, "Исполнитель:")
         c.setFont(font_name, 10)
-        c.drawString(54, 555, f"Компания: {settings.get('company_legal_name', 'ООО \"СФЕРУМ\"')}")
-        c.drawString(54, 540, f"ИНН: {settings.get('company_inn', '5610234567')}")
+        c.drawString(54, 555, f"Компания: {settings.get('company_legal_name', 'ООО \"ЛЕОНИКА\"')}")
+        c.drawString(54, 540, f"ИНН: {settings.get('company_inn', '5629021484')}")
         
         y = 500
         if obj:

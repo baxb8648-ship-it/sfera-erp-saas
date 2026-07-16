@@ -3,7 +3,7 @@
     "id": "SUP-111",
     "tenant_id": 5,
     "tenant_name": "Компания #5",
-    "sender_username": "leonika",
+    "sender_username": "sferum_user",
     "category": "Биллинг и тарифы",
     "topic": "Как продлить подписку?",
     "priority": "medium",
@@ -13,7 +13,7 @@
     "telegram_thread_id": 43,
     "messages": [
       {
-        "sender": "leonika (Клиент)",
+        "sender": "sferum_user (Клиент)",
         "text": "Не принимает карту мир",
         "time": "17:31",
         "is_support": false,
@@ -40,6 +40,18 @@
         "text": "Здравствуйте! Приняли в работу, уже проверяем. 🔧",
         "time": "17:32",
         "is_support": true
+      },
+      {
+        "sender": "QWAS777 (Техподдержка)",
+        "text": "Здравствуйте! Чтобы продлить подписку, пожалуйста, попробуйте обновить информацию о вашей карте \"Мир\" или попробуйте использовать другую карту. Если проблема сохраняется, вы можете связаться с нашей службой поддержки для получения дополнительной помощи. Мы также можем предложить альтернативные методы оплаты для вашего удобства.",
+        "time": "17:21",
+        "is_support": true
+      },
+      {
+        "sender": "QWAS777 (Техподдержка)",
+        "text": "Здравствуйте! С вами свяжется специалист Семён.",
+        "time": "17:21",
+        "is_support": true
       }
     ]
   },
@@ -47,7 +59,7 @@
     "id": "SUP-110",
     "tenant_id": 5,
     "tenant_name": "Компания #5",
-    "sender_username": "leonika",
+    "sender_username": "sferum_user",
     "category": "Технический сбой",
     "topic": "Проверка Ветви",
     "priority": "critical",
@@ -57,7 +69,7 @@
     "telegram_thread_id": 33,
     "messages": [
       {
-        "sender": "leonika (Клиент)",
+        "sender": "sferum_user (Клиент)",
         "text": "Проверка ветки обновлений",
         "time": "14:10",
         "is_support": false,
@@ -86,7 +98,7 @@
         "is_support": true
       },
       {
-        "sender": "leonika (Клиент)",
+        "sender": "sferum_user (Клиент)",
         "text": "Спасибо",
         "time": "14:15",
         "is_support": false,
@@ -110,7 +122,7 @@
     "id": "SUP-109",
     "tenant_id": 5,
     "tenant_name": "Компания #5",
-    "sender_username": "leonika",
+    "sender_username": "sferum_user",
     "category": "Технический сбой",
     "topic": "Тест 4",
     "priority": "medium",
@@ -119,7 +131,7 @@
     "ai_suggestion": "Здравствуйте! Благодарим за обращение в нашу службу техподдержки СФЕРУМ. Для проверки кнопок мы рекомендуем выполнить следующие шаги: перейдите в раздел настроек и проверьте назначения кнопок, также убедитесь, что все необходимые права доступа назначены. Если у вас возникли дальнейшие вопросы или проблемы, пожалуйста, опишите подробнее.",
     "messages": [
       {
-        "sender": "leonika (Клиент)",
+        "sender": "sferum_user (Клиент)",
         "text": "Проверка кнопок ",
         "time": "13:47",
         "is_support": false,
@@ -136,7 +148,7 @@
         "is_support": true
       },
       {
-        "sender": "leonika (Клиент)",
+        "sender": "sferum_user (Клиент)",
         "text": "Я проверил. ",
         "time": "13:49",
         "is_support": false,
@@ -148,7 +160,7 @@
     "id": "SUP-108",
     "tenant_id": 5,
     "tenant_name": "Компания #5",
-    "sender_username": "leonika",
+    "sender_username": "sferum_user",
     "category": "Технический сбой",
     "topic": "Тест 3 ",
     "priority": "medium",
@@ -157,7 +169,7 @@
     "ai_suggestion": "Уважаемый клиент, благодарим за обращение в нашу службу поддержки. Мы проверили транскрипцию голосового ответа и готовы предоставить необходимую информацию для ее уточнения. Пожалуйста, предоставьте дополнительные данные о тесте, чтобы мы могли оказать вам более точную помощь. Если у вас есть какие-либо конкретные вопросы, мы готовы ответить на них.",
     "messages": [
       {
-        "sender": "leonika (Клиент)",
+        "sender": "sferum_user (Клиент)",
         "text": "Проверка транскрипции голосового ответа",
         "time": "10:40",
         "is_support": false,
@@ -187,7 +199,7 @@
         }
       },
       {
-        "sender": "leonika (Клиент)",
+        "sender": "sferum_user (Клиент)",
         "text": "Првиет. ",
         "time": "11:40",
         "is_support": false,
@@ -200,7 +212,7 @@
         "is_support": true
       },
       {
-        "sender": "leonika (Клиент)",
+        "sender": "sferum_user (Клиент)",
         "text": "Не работает кнопка",
         "time": "12:02",
         "is_support": false,
@@ -212,7 +224,7 @@
     "id": "SUP-107",
     "tenant_id": 5,
     "tenant_name": "Компания #5",
-    "sender_username": "leonika",
+    "sender_username": "sferum_user",
     "category": "Технический сбой",
     "topic": "Test 2",
     "priority": "medium",
@@ -220,7 +232,7 @@
     "created_at": "2026-07-15 10:28",
     "messages": [
       {
-        "sender": "leonika (Клиент)",
+        "sender": "sferum_user (Клиент)",
         "text": "проверка кнопок расположения",
         "time": "10:28",
         "is_support": false,
@@ -236,7 +248,7 @@
     "id": "SUP-106",
     "tenant_id": 5,
     "tenant_name": "Компания #5",
-    "sender_username": "leonika",
+    "sender_username": "sferum_user",
     "category": "Технический сбой",
     "topic": "Тест1",
     "priority": "medium",
@@ -244,7 +256,7 @@
     "created_at": "2026-07-15 10:22",
     "messages": [
       {
-        "sender": "leonika (Клиент)",
+        "sender": "sferum_user (Клиент)",
         "text": "Тестируем отправку Скринов",
         "time": "10:22",
         "is_support": false,
@@ -260,7 +272,7 @@
     "id": "SUP-105",
     "tenant_id": 5,
     "tenant_name": "Компания #5",
-    "sender_username": "leonika",
+    "sender_username": "sferum_user",
     "category": "Технический сбой",
     "topic": "КС-3",
     "priority": "medium",
@@ -268,7 +280,7 @@
     "created_at": "2026-07-11 10:14",
     "messages": [
       {
-        "sender": "leonika (Клиент)",
+        "sender": "sferum_user (Клиент)",
         "text": "Не печатает документ",
         "time": "10:14",
         "is_support": false,
@@ -279,7 +291,7 @@
         }
       },
       {
-        "sender": "leonika (Клиент)",
+        "sender": "sferum_user (Клиент)",
         "text": "Так пойдет?",
         "time": "11:06",
         "is_support": false,
@@ -291,7 +303,7 @@
     "id": "SUP-104",
     "tenant_id": 5,
     "tenant_name": "Компания #5",
-    "sender_username": "leonika",
+    "sender_username": "sferum_user",
     "category": "Запрос функционала",
     "topic": "Финансы",
     "priority": "high",
@@ -299,7 +311,7 @@
     "created_at": "2026-07-11 09:41",
     "messages": [
       {
-        "sender": "leonika (Клиент)",
+        "sender": "sferum_user (Клиент)",
         "text": "Здравствуйте не работает генерация документов.",
         "time": "09:41",
         "is_support": false,
@@ -320,7 +332,7 @@
   {
     "id": "SUP-101",
     "tenant_id": 1,
-    "tenant_name": "ООО Леоника",
+    "tenant_name": "ООО Сферум",
     "sender_username": "admin",
     "category": "Биллинг и тарифы",
     "topic": "Вопрос по продлению тарифа Enterprise и закрывающим актам",
@@ -389,7 +401,7 @@
   {
     "id": "SUP-103",
     "tenant_id": 1,
-    "tenant_name": "ООО Леоника",
+    "tenant_name": "ООО Сферум",
     "sender_username": "manager",
     "category": "Запрос функционала",
     "topic": "Добавить возможность прикреплять аудиозаписи к сделкам",

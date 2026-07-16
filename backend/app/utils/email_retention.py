@@ -96,7 +96,7 @@ def send_day7_checkin_email(db: Session, to_email: str, company_name: str):
         <p>Здравствуйте!</p>
         <p>Вы с нами уже 7 дней. Мы надеемся, что СФЕРУМ помогает вам автоматизировать бизнес-процессы.</p>
         <p>Знаете ли вы, что у нас есть <b>встроенные ИИ-Агенты</b>? Вы можете поручить ИИ анализировать ваши документы (RAG) или искать тендеры.</p>
-        <p><a href="https://сфера-erp.рф/crm/ai-agents" style="background: #4F46E5; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Попробовать ИИ-Агентов</a></p>
+        <p><a href="https://sferum.space/crm/ai-agents" style="background: #4F46E5; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Попробовать ИИ-Агентов</a></p>
         <br/>
         <p>С уважением,<br/>Команда СФЕРУМ</p>
     </body>
@@ -114,7 +114,7 @@ def send_trial_ending_alert_email(db: Session, to_email: str, company_name: str,
         <p>Ваш пробный период для компании <b>{company_name}</b> подходит к концу.</p>
         <p>Чтобы не потерять доступ к данным и продвинутым функциям (ИИ-Агенты, Снабжение, Финансы), пожалуйста, выберите подходящий тариф и произведите оплату в разделе <b>Биллинг</b>.</p>
         <br/>
-        <p><a href="https://сфера-erp.рф/crm/admin" style="background: #E11D48; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Перейти к оплате</a></p>
+        <p><a href="https://sferum.space/crm/admin" style="background: #E11D48; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Перейти к оплате</a></p>
         <br/>
         <p>С уважением,<br/>Команда СФЕРУМ</p>
     </body>

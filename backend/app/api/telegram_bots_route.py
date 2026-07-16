@@ -12,7 +12,7 @@ from .auth import get_current_user
 router = APIRouter(prefix="/telegram-bots", tags=["Telegram Bots"])
 
 # В реальности URL бэкенда должен браться из переменных окружения
-WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "https://срм.леоника56.рф/api/v1")
+WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "https://api.sferum.space/api/v1")
 
 class BotCreate(BaseModel):
     bot_token: str
@@ -70,8 +70,6 @@ def add_bot(payload: BotCreate, request: Request, db: Session = Depends(get_db),
         frontend_host = "https://sferum.space"
         if "localhost" in WEBHOOK_HOST or "127.0.0.1" in WEBHOOK_HOST:
             frontend_host = "http://localhost:5173"
-        elif "срм.леоника56.рф" in WEBHOOK_HOST:
-            frontend_host = "https://срм.леоника56.рф"
             
         menu_url = f"{frontend_host}/#/crm"
         menu_button_url = f"https://api.telegram.org/bot{payload.bot_token}/setChatMenuButton"

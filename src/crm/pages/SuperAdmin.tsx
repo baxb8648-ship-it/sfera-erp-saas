@@ -1120,7 +1120,7 @@ export const SuperAdmin: React.FC = () => {
                                 </span>
                                 <button
                                   onClick={() => {
-                                    navigator.clipboard.writeText(`https://сфера-ерп.рф/register?agent=${p.promoCode}`);
+                                    navigator.clipboard.writeText(`https://sferum.space/register?agent=${p.promoCode}`);
                                     setCopiedPromo(p.promoCode);
                                     setTimeout(() => setCopiedPromo(null), 3000);
                                   }}
@@ -1131,7 +1131,7 @@ export const SuperAdmin: React.FC = () => {
                                 </button>
                               </div>
                               <div className="text-[10px] text-gray-400 dark:text-zinc-500 mt-0.5 truncate max-w-[200px]">
-                                sfera-erp.ru/register?agent={p.promoCode}
+                                sferum.space/register?agent={p.promoCode}
                               </div>
                             </td>
                             <td className="py-4 px-5">

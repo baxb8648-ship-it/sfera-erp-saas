@@ -429,7 +429,7 @@ export const Equipment: React.FC = () => {
     setUnregisteredBarcode('');
     
     if (typeof window !== 'undefined' && !window.isSecureContext) {
-      setScannerError('Ошибка доступа к камере: Требуется защищенное соединение (HTTPS) для использования камеры. Пожалуйста, откройте сайт по адресу https://леоника56.рф');
+      setScannerError('Ошибка доступа к камере: Требуется защищенное соединение (HTTPS) для использования камеры. Пожалуйста, откройте сайт по адресу https://sferum.space');
       return;
     }
     

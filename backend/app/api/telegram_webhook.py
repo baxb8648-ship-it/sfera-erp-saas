@@ -525,7 +525,7 @@ def process_telegram_update_internal(update: dict, db: Session, token: str):
                         )
                     else:
                         help_msg = (
-                            "📖 <b>Справка по командам ЛЕОНИКА АКЗ</b>\n\n"
+                            "📖 <b>Справка по командам СФЕРУМ</b>\n\n"
                             "👤 <b>Доступные команды:</b>\n"
                             "• /start, /crm — открыть Mini App с Kanban-доской тендеров\n"
                             "• /мои_задачи — список ваших активных задач по тендерам\n"
@@ -534,7 +534,7 @@ def process_telegram_update_internal(update: dict, db: Session, token: str):
                     
                     markup = {
                         "inline_keyboard": [
-                            [{"text": "📱 Открыть CRM Mini App", "web_app": {"url": "https://срм.леоника56.рф/#/crm"}}]
+                            [{"text": "📱 Открыть CRM Mini App", "web_app": {"url": "https://sferum.space/#/crm"}}]
                         ]
                     }
                     
@@ -903,7 +903,7 @@ def process_telegram_update_internal(update: dict, db: Session, token: str):
                     if chat_type == "private":
                         markup = {
                             "inline_keyboard": [
-                                [{"text": "📱 Открыть CRM Mini App", "web_app": {"url": "https://срм.леоника56.рф/#/crm"}}]
+                                [{"text": "📱 Открыть CRM Mini App", "web_app": {"url": "https://sferum.space/#/crm"}}]
                             ]
                         }
                     else:
@@ -1064,7 +1064,7 @@ def handle_telegram_ai_query(token: str, chat_id: int, text: str, reply_to_messa
                 lines = ["🎯 <b>Последние 5 тендеров в CRM:</b>\n━━━━━━━━━━━━━━━━━━━━"]
                 for t in recent_tenders:
                     lines.append(f"🆕 <b>{t.title[:50]}...</b>\n   Заказчик: {t.customer_name or '—'}\n   Бюджет: <code>{t.price:,.2f} руб.</code>")
-                lines.append("━━━━━━━━━━━━━━━━━━━━\n<a href='https://срм.леоника56.рф/#/tenders'>Перейти в Тендеры →</a>")
+                lines.append("━━━━━━━━━━━━━━━━━━━━\n<a href='https://sferum.space/#/tenders'>Перейти в Тендеры →</a>")
                 send_telegram_reply_message(token, chat_id, "\n".join(lines), reply_to_message_id, thread_id)
             return
 
@@ -1130,7 +1130,7 @@ def handle_telegram_ai_query(token: str, chat_id: int, text: str, reply_to_messa
                 f"📌 <b>Название:</b> {new_task.title}\n"
                 f"📅 <b>Срок:</b> <code>{due_str}</code>\n"
                 f"👤 <b>Исполнитель:</b> {user.username}\n\n"
-                f"<a href='https://срм.леоника56.рф/#/tasks'>Перейти к задачам →</a>",
+                f"<a href='https://sferum.space/#/tasks'>Перейти к задачам →</a>",
                 reply_to_message_id, thread_id
             )
             return
@@ -1422,7 +1422,7 @@ def handle_confirm_voice_deal(token: str, chat_id: int, message_id: int, temp_id
         if budget_val > 0:
             parts.append(f"<b>💰 Бюджет:</b> <code>{budget_val:,.2f} руб.</code>")
         parts.append(f"<b>📌 Задача:</b> {new_task.title}")
-        parts.append(f"\n<a href='https://срм.леоника56.рф/#/clients'>Открыть Сделки в CRM →</a>")
+        parts.append(f"\n<a href='https://sferum.space/#/clients'>Открыть Сделки в CRM →</a>")
 
         edit_message_text(token, chat_id, message_id, "\n".join(parts))
 
@@ -1511,7 +1511,7 @@ def handle_confirm_voice_task(token: str, chat_id: int, message_id: int,
         if new_client_name:
             action = "Добавлен клиент" if create_client else "Клиент"
             parts.append(f"<b>🏢 {action}:</b> {new_client_name}")
-        parts.append(f"\n<a href='https://срм.леоника56.рф/#/tasks'>Открыть в CRM →</a>")
+        parts.append(f"\n<a href='https://sferum.space/#/tasks'>Открыть в CRM →</a>")
 
         edit_message_text(token, chat_id, message_id, "\n".join(parts))
 
@@ -1555,7 +1555,7 @@ def handle_confirm_voice_mro_task(token: str, chat_id: int, message_id: int, tem
 
         parts = ["🟢 <b>Вызов механика создан!</b>\n"]
         parts.append(f"<b>🔧 Заявка #{ticket_id} (ТОиР):</b> {new_ticket.issue_description[:100]}...")
-        parts.append(f"\n<a href='https://срм.леоника56.рф/#/service'>Открыть доску механика →</a>")
+        parts.append(f"\n<a href='https://sferum.space/#/service'>Открыть доску механика →</a>")
 
         edit_message_text(token, chat_id, message_id, "\n".join(parts))
 
@@ -1609,7 +1609,7 @@ def handle_confirm_voice_supply_task(token: str, chat_id: int, message_id: int, 
 
         parts = ["🟢 <b>Заявка на снабжение отправлена!</b>\n"]
         parts.append(f"<b>📦 Заказ #{order_id}:</b> {new_order.item_name} ({new_order.quantity} ед.)")
-        parts.append(f"\n<a href='https://срм.леоника56.рф/#/supply'>Открыть Канбан снабжения →</a>")
+        parts.append(f"\n<a href='https://sferum.space/#/supply'>Открыть Канбан снабжения →</a>")
 
         edit_message_text(token, chat_id, message_id, "\n".join(parts))
 

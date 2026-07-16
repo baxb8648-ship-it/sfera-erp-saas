@@ -14,7 +14,7 @@ export const Footer: React.FC = () => {
               Промышленная группа
             </span>
             <p className="text-[10px] text-text-muted uppercase font-bold mt-4">
-              © {currentYear} ООО «СФЕРУМ» | ИНН 5629021484 | ОГРН 1225600009480
+              © {currentYear} ООО «ЛЕОНИКА» | ИНН 5629021484
             </p>
           </div>
 

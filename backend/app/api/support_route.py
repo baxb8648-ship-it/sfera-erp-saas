@@ -161,7 +161,7 @@ def get_default_tickets() -> List[Dict[str, Any]]:
         {
             "id": "SUP-101",
             "tenant_id": 1,
-            "tenant_name": "ООО Леоника",
+            "tenant_name": "ООО Сферум",
             "sender_username": "admin",
             "category": "Биллинг и тарифы",
             "topic": "Вопрос по продлению тарифа Enterprise и закрывающим актам",
@@ -221,7 +221,7 @@ def get_default_tickets() -> List[Dict[str, Any]]:
         {
             "id": "SUP-103",
             "tenant_id": 1,
-            "tenant_name": "ООО Леоника",
+            "tenant_name": "ООО Сферум",
             "sender_username": "manager",
             "category": "Запрос функционала",
             "topic": "Добавить возможность прикреплять аудиозаписи к сделкам",

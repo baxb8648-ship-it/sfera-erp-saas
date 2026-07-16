@@ -159,7 +159,7 @@ def generate_biurs_commercial_offer(customer_name: str, tender_title: str, avail
             f"Материал находится на нашем складе в наличии {qty_info}. "
             f"Мы готовы осуществить отгрузку в день оплаты по специальной цене (скидка 15% как на складской остаток).\n"
             f"Все сертификаты и паспорта качества прилагаются.\n\n"
-            f"Контакты для связи: info@леоника56.рф\n"
+            f"Контакты для связи: info@sferum.space\n"
             f"С уважением, ООО «СФЕРУМ»"
         )
     return response
@@ -257,7 +257,7 @@ def run_biurs_campaign(db: Session, current_user_id: int):
             f"🏢 <b>Клиент:</b> {lead['customer_name']} (ИНН: {lead['inn']})\n"
             f"📧 <b>Отправлено КП на:</b> {lead['email']}\n"
             f"🎯 <b>Проект:</b> {lead['tender_title']}\n"
-            f"💼 <b>Задача в CRM:</b> <a href='https://срм.леоника56.рф/#/crm'>Связаться по КП БИУРС</a>\n"
+            f"💼 <b>Задача в CRM:</b> <a href='https://sferum.space/#/crm'>Связаться по КП БИУРС</a>\n"
             f"👤 <b>Ответственный менеджер:</b> @{creator_name}"
         )
         send_telegram_notification(tg_message, db)
