@@ -335,3 +335,76 @@ def add_order_detail(order_id: int, detail: FurnitureDetailCreate, tenant_id: Op
         "calc_linear_meters": calc_meters
     }
 
+# ============================
+# In-Memory Events & Bot Config
+# ============================
+
+class FurnitureEventCreate(BaseModel):
+    type: str # measurement, delivery, installation
+    client_name: str
+    client_phone: Optional[str] = None
+    address: str
+    master_name: str
+    date: str
+    time: str
+
+class FurnitureBotConfig(BaseModel):
+    is_active: bool
+    auto_assign: bool
+    reminders: bool
+    bot_token: Optional[str] = None
+    bot_name: Optional[str] = None
+
+_events_db = [
+    {
+        "id": 1,
+        "type": "measurement",
+        "client_name": "Алексей Смирнов",
+        "client_phone": "+7 (999) 111-22-33",
+        "address": "ул. Ленина, д. 10, кв. 45",
+        "master_name": "Константин (Конструктор)",
+        "date": "2026-07-16",
+        "time": "11:00"
+    },
+    {
+        "id": 2,
+        "type": "installation",
+        "client_name": "Мария Сидорова",
+        "client_phone": "+7 (999) 444-55-66",
+        "address": "пр. Мира, д. 25, кв. 112",
+        "master_name": "Сергей & Николай (Монтажники)",
+        "date": "2026-07-17",
+        "time": "14:00"
+    }
+]
+
+_bot_config_db = {
+    "is_active": True,
+    "auto_assign": True,
+    "reminders": True,
+    "bot_token": "748392019:AAFnXj83920...",
+    "bot_name": "SpheraFurnitureBot"
+}
+
+@router.get("/events")
+def get_furniture_events(current_user: User = Depends(get_current_user)):
+    return _events_db
+
+@router.post("/events")
+def create_furniture_event(evt: FurnitureEventCreate, current_user: User = Depends(get_current_user)):
+    new_id = max([e["id"] for e in _events_db]) + 1 if _events_db else 1
+    new_evt = evt.dict()
+    new_evt["id"] = new_id
+    _events_db.append(new_evt)
+    return new_evt
+
+@router.get("/bot-config")
+def get_furniture_bot_config(current_user: User = Depends(get_current_user)):
+    return _bot_config_db
+
+@router.post("/bot-config")
+def update_furniture_bot_config(config: FurnitureBotConfig, current_user: User = Depends(get_current_user)):
+    global _bot_config_db
+    _bot_config_db = config.dict()
+    return _bot_config_db
+
