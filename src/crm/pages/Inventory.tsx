@@ -1,9 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Edit2, Trash2, X, AlertTriangle, Package, Check, RefreshCw, QrCode, Scan, Camera, Volume2, Printer, ClipboardCheck } from 'lucide-react';
+import { 
+  Plus, Search, Edit2, Trash2, X, AlertTriangle, Package, Check, 
+  RefreshCw, QrCode, Scan, Camera, Volume2, Printer, ClipboardCheck,
+  ShoppingBag, Loader2
+} from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { Helmet } from 'react-helmet-async';
 import QRCode from 'qrcode';
 import { apiClient } from '../../api/client';
+import { useToast } from '../../components/ui/Toast';
 
 interface InventoryItem {
   id: number;
@@ -15,10 +20,35 @@ interface InventoryItem {
 }
 
 export const Inventory: React.FC = () => {
+  const toast = useToast();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('Все');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Страховой запас (Safety Stock)
+  const [thresholds, setThresholds] = useState<Record<number, number>>(() => {
+    try {
+      const saved = localStorage.getItem('sphera_inventory_thresholds');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('sphera_inventory_thresholds', JSON.stringify(thresholds));
+  }, [thresholds]);
+
+  const getMinThreshold = (item: InventoryItem) => {
+    if (thresholds[item.id] !== undefined) {
+      return thresholds[item.id];
+    }
+    // Дефолтные значения по единицам измерения
+    if (item.unit === 'шт') return 10;
+    if (item.unit === 'т') return 1;
+    return 25; // для кг, л, м
+  };
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -27,9 +57,10 @@ export const Inventory: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     quantity: '',
-    unit: 'кг',
+    unit: 'шт',
     category: 'Строительные материалы',
-    barcode: ''
+    barcode: '',
+    min_threshold: ''
   });
   const [formError, setFormError] = useState('');
 
@@ -230,19 +261,17 @@ export const Inventory: React.FC = () => {
     setUnregisteredBarcode('');
     
     if (typeof window !== 'undefined' && !window.isSecureContext) {
-      setScannerError('Ошибка доступа к камере: Требуется защищенное соединение (HTTPS) для использования камеры. Пожалуйста, откройте сайт по адресу https://леоника56.рф');
+      setScannerError('Ошибка доступа к камере: Требуется защищенное соединение (HTTPS) для использования камеры.');
       return;
     }
     
     let camId = forceCameraId || selectedCameraId;
     
-    // Retrieve available cameras
     try {
       const devices = await Html5Qrcode.getCameras();
       if (devices && devices.length > 0) {
         setCameras(devices);
         if (!camId) {
-          // Find environment/back camera if possible
           const backCam = devices.find(d => 
             d.label.toLowerCase().includes('back') || 
             d.label.toLowerCase().includes('environment') ||
@@ -261,7 +290,6 @@ export const Inventory: React.FC = () => {
         const html5Qrcode = new Html5Qrcode(scannerId);
         html5QrcodeRef.current = html5Qrcode;
         
-        // Start scanner using camera ID if available, otherwise fallback to environment facingMode
         const config = camId ? camId : { facingMode: "environment" };
         
         const videoConstraints: MediaTrackConstraints = camId 
@@ -295,7 +323,6 @@ export const Inventory: React.FC = () => {
     setSelectedCameraId(cameraId);
     if (html5QrcodeRef.current) {
       await stopScannerInternal();
-      // Restart scanner with the new cameraId
       setTimeout(() => {
         startScanner(scanTarget, cameraId);
       }, 250);
@@ -316,7 +343,6 @@ export const Inventory: React.FC = () => {
     }
   };
 
-  // Process a scanned barcode (from Camera or Hardware Scanner)
   const processScannedBarcode = async (decodedText: string, target: 'adjust' | 'form_barcode' = 'adjust') => {
     if (target === 'form_barcode') {
       playBeep();
@@ -361,39 +387,10 @@ export const Inventory: React.FC = () => {
     }
   };
 
-  // Hardware Scanner Integration
+  const itemsRef = useRef(items);
   useEffect(() => {
-    let barcodeBuffer = '';
-    let lastKeyTime = Date.now();
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input or textarea
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
-      const currentTime = Date.now();
-      
-      // Hardware scanners typically input characters very fast (< 50ms between strokes)
-      if (currentTime - lastKeyTime > 50) {
-        barcodeBuffer = '';
-      }
-      lastKeyTime = currentTime;
-
-      if (e.key === 'Enter') {
-        if (barcodeBuffer.length > 3) {
-          console.log('[Hardware Scanner] Detected barcode:', barcodeBuffer);
-          processScannedBarcode(barcodeBuffer, scanTarget);
-        }
-        barcodeBuffer = '';
-      } else if (e.key.length === 1) { // Only printable chars
-        barcodeBuffer += e.key;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [items, scanTarget]); // Add dependencies so items are fresh
+    itemsRef.current = items;
+  }, [items]);
 
   const handleHardwareScan = async (barcode: string) => {
     playBeep();
@@ -430,17 +427,12 @@ export const Inventory: React.FC = () => {
             handleOpenCreateModal(barcode);
           }
         } catch (e) {
-          console.error("Error looking up barcode from hardware scanner", e);
+          console.error("Error looking up barcode", e);
           handleOpenCreateModal(barcode);
         }
       }
     }
   };
-
-  const itemsRef = useRef(items);
-  useEffect(() => {
-    itemsRef.current = items;
-  }, [items]);
 
   const handleHardwareScanRef = useRef(handleHardwareScan);
   useEffect(() => {
@@ -453,10 +445,7 @@ export const Inventory: React.FC = () => {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const now = Date.now();
-      
-      if (e.key.length > 1 && e.key !== 'Enter') {
-        return;
-      }
+      if (e.key.length > 1 && e.key !== 'Enter') return;
 
       const diff = now - lastKeyTime;
       lastKeyTime = now;
@@ -572,9 +561,10 @@ export const Inventory: React.FC = () => {
     setFormData({
       name: '',
       quantity: '0',
-      unit: 'кг',
+      unit: 'шт',
       category: 'Строительные материалы',
-      barcode: prefilledBarcode
+      barcode: prefilledBarcode,
+      min_threshold: '10'
     });
     setFormError('');
     setIsModalOpen(true);
@@ -588,7 +578,8 @@ export const Inventory: React.FC = () => {
       quantity: item.quantity.toString(),
       unit: item.unit,
       category: item.category || 'Строительные материалы',
-      barcode: item.barcode || ''
+      barcode: item.barcode || '',
+      min_threshold: getMinThreshold(item).toString()
     });
     setFormError('');
     setIsModalOpen(true);
@@ -609,6 +600,12 @@ export const Inventory: React.FC = () => {
       return;
     }
 
+    const minT = parseFloat(formData.min_threshold);
+    if (isNaN(minT) || minT < 0) {
+      setFormError('Минимальный запас должен быть числом');
+      return;
+    }
+
     const payload = {
       name: formData.name,
       quantity: qty,
@@ -618,10 +615,15 @@ export const Inventory: React.FC = () => {
     };
 
     try {
+      let savedItem: any = null;
       if (modalType === 'create') {
-        await apiClient.post('/inventory/', payload);
+        savedItem = await apiClient.post('/inventory/', payload);
       } else {
-        await apiClient.patch(`/inventory/${currentItemId}`, payload);
+        savedItem = await apiClient.patch(`/inventory/${currentItemId}`, payload);
+      }
+
+      if (savedItem && savedItem.id) {
+        setThresholds(prev => ({ ...prev, [savedItem.id]: minT }));
       }
       setIsModalOpen(false);
       fetchInventory();
@@ -681,71 +683,108 @@ export const Inventory: React.FC = () => {
     }
   };
 
-  // Filter and Search logic
+  // Автозаказ поставщику на дефицитные позиции
+  const handleGenerateOrderSupplier = () => {
+    const deficitItems = items.filter(item => item.quantity < getMinThreshold(item));
+    if (deficitItems.length === 0) {
+      toast.success('Все запасы в норме! Заказ поставщику не требуется.');
+      return;
+    }
+
+    let textOrder = `
+========================================
+ЗАЯВКА НА ПОПОЛНЕНИЕ СКЛАДА: СФЕРА ERP
+========================================
+Дата: ${new Date().toLocaleDateString('ru-RU')}
+Склад: Основной склад компании (SaaS)
+
+ТРЕБУЕТСЯ ЗАКУПИТЬ ДЛЯ ВОССТАНОВЛЕНИЯ МИН. ЗАПАСОВ:
+----------------------------------------
+`;
+
+    deficitItems.forEach((item, idx) => {
+      const threshold = getMinThreshold(item);
+      const toOrder = threshold * 2 - item.quantity; // заказываем с запасом до двойного минимума
+      textOrder += `${idx + 1}) ${item.name}\n   Текущий остаток: ${item.quantity} ${item.unit} | Мин. порог: ${threshold} ${item.unit}\n   Рекомендуемый объем закупки: +${toOrder} ${item.unit}\n\n`;
+    });
+
+    textOrder += `----------------------------------------\nВсего позиций к заказу: ${deficitItems.length}\n========================================`;
+    
+    navigator.clipboard.writeText(textOrder.trim());
+    toast.success('Спецификация автозаказа скопирована в буфер обмена!');
+  };
+
   const filteredItems = items.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'Все' || item.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  // Inventory stats
   const totalItemsCount = items.length;
-  const lowStockCount = items.filter(i => i.quantity < 10).length;
+  // Запас на исходе — те, что меньше своего индивидуального порога
+  const lowStockCount = items.filter(i => i.quantity < getMinThreshold(i)).length;
   const totalVolume = items.reduce((acc, curr) => acc + curr.quantity, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-[1600px] mx-auto pb-12 p-1 text-left font-['Inter']">
       <Helmet>
         <title>Склад | СФЕРА</title>
       </Helmet>
-      {/* Top statistics overview cards */}
+
+      {/* Top statistics overview cards - DOUBLE BEZEL & GEIST MONO */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800 flex items-center justify-between hover:-translate-y-1 hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 ease-out cursor-default">
-          <div>
-            <p className="text-sm text-gray-500 dark:text-zinc-400 mb-1">Всего позиций</p>
-            <h3 className="text-2xl font-bold font-['Montserrat'] text-[#1a1a1a] dark:text-zinc-100">{totalItemsCount}</h3>
-          </div>
-          <div className="p-3 rounded-lg bg-orange-50">
-            <Package className="w-6 h-6 text-[#F95700]" />
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800 flex items-center justify-between hover:-translate-y-1 hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 ease-out cursor-default">
-          <div>
-            <p className="text-sm text-gray-500 dark:text-zinc-400 mb-1">Запас на исходе (&lt; 10)</p>
-            <h3 className="text-2xl font-bold font-['Montserrat'] text-red-600">{lowStockCount}</h3>
-          </div>
-          <div className={`p-3 rounded-lg ${lowStockCount > 0 ? 'bg-red-50' : 'bg-green-50'}`}>
-            <AlertTriangle className={`w-6 h-6 ${lowStockCount > 0 ? 'text-red-600' : 'text-green-600'}`} />
+        <div className="relative overflow-hidden p-1 rounded-[2rem] bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200/50 dark:border-zinc-800/40 shadow-sm transition-all duration-300 hover:shadow-orange-500/5 hover:border-orange-500/20 group">
+          <div className="bg-white dark:bg-zinc-950 p-5 rounded-[calc(2rem-0.25rem)] flex items-center justify-between">
+            <div>
+              <p className="text-[9px] uppercase tracking-widest text-zinc-405 dark:text-zinc-500 font-black font-mono">Всего позиций ТМЦ</p>
+              <h3 className="text-xl lg:text-2xl font-black text-gray-900 dark:text-white font-mono mt-2">{totalItemsCount}</h3>
+            </div>
+            <div className="p-3 rounded-xl bg-orange-500/5 border border-orange-500/10 text-[#F95700]">
+              <Package className="w-5 h-5" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800 flex items-center justify-between hover:-translate-y-1 hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 ease-out cursor-default">
-          <div>
-            <p className="text-sm text-gray-500 dark:text-zinc-400 mb-1">Общий объем запасов</p>
-            <h3 className="text-2xl font-bold font-['Montserrat'] text-[#1a1a1a] dark:text-zinc-100">
-              {totalVolume.toLocaleString()} ед.
-            </h3>
+        <div className="relative overflow-hidden p-1 rounded-[2rem] bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200/50 dark:border-zinc-800/40 shadow-sm transition-all duration-300 hover:shadow-rose-500/5 hover:border-rose-500/20 group">
+          <div className="bg-white dark:bg-zinc-950 p-5 rounded-[calc(2rem-0.25rem)] flex items-center justify-between">
+            <div>
+              <p className="text-[9px] uppercase tracking-widest text-zinc-405 dark:text-zinc-500 font-black font-mono">Критический дефицит</p>
+              <h3 className={`text-xl lg:text-2xl font-black font-mono mt-2 ${lowStockCount > 0 ? 'text-red-500' : 'text-emerald-500'}`}>{lowStockCount}</h3>
+            </div>
+            <div className={`p-3 rounded-xl border ${lowStockCount > 0 ? 'bg-red-500/5 border-red-500/10 text-red-500' : 'bg-emerald-500/5 border-emerald-500/10 text-emerald-500'}`}>
+              <AlertTriangle className="w-5 h-5" />
+            </div>
           </div>
-          <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/40">
-            <RefreshCw className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        </div>
+
+        <div className="relative overflow-hidden p-1 rounded-[2rem] bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200/50 dark:border-zinc-800/40 shadow-sm transition-all duration-300 hover:shadow-blue-500/5 hover:border-blue-500/20 group">
+          <div className="bg-white dark:bg-zinc-955 p-5 rounded-[calc(2rem-0.25rem)] flex items-center justify-between">
+            <div>
+              <p className="text-[9px] uppercase tracking-widest text-zinc-405 dark:text-zinc-500 font-black font-mono">Суммарный объем запасов</p>
+              <h3 className="text-xl lg:text-2xl font-black text-gray-900 dark:text-white font-mono mt-2">
+                {totalVolume.toLocaleString('ru-RU')} ед.
+              </h3>
+            </div>
+            <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/10 text-blue-500">
+              <RefreshCw className="w-5 h-5" />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Панель быстрого подключения ИИ-бота ПТО */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-zinc-900 to-zinc-950 border border-orange-500/20 p-5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-white">
-        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-orange-500/10 rounded-full blur-2xl pointer-events-none" />
-        <div className="flex items-center gap-3.5 relative z-10">
-          <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-[#F95700] shrink-0">
+      {/* Voice Telegram Command Info Panel */}
+      <div className="bg-zinc-900 border border-zinc-850 p-6 rounded-[2.5rem] relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-white">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-[#F95700]/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="flex items-center gap-4 relative z-10">
+          <div className="w-11 h-11 bg-[#F95700]/10 border border-[#F95700]/20 rounded-2xl flex items-center justify-center text-[#F95700] shrink-0">
             <Volume2 className="w-5 h-5 animate-pulse" />
           </div>
           <div>
-            <h4 className="font-extrabold text-sm text-white flex items-center gap-2">
-              Голосовое списание материалов через Telegram
+            <h4 className="font-extrabold text-sm uppercase tracking-wider font-sans">
+              Голосовое списание ТМЦ в Telegram-боте
             </h4>
-            <p className="text-xs text-zinc-400 mt-0.5 max-w-2xl leading-relaxed">
-              Ваши прорабы могут наговаривать списание материалов голосом прямо со стройплощадки в личный Telegram-бот. ИИ автоматически распознает позицию, количество, объект и скорректирует остатки на складе.
+            <p className="text-xs text-zinc-405 mt-1 leading-relaxed max-w-3xl">
+              Ваши прорабы и мастера цеха могут просто наговаривать списание материалов голосом прямо на объекте. ИИ-ассистент платформы СФЕРА автоматически распознает аудиосообщение, найдет позицию, рассчитает расход и скорректирует складской остаток.
             </p>
           </div>
         </div>
@@ -753,58 +792,61 @@ export const Inventory: React.FC = () => {
           onClick={() => {
             window.location.hash = '#/crm/ai-agents';
           }}
-          className="px-4.5 py-2.5 bg-gradient-to-r from-[#F95700] to-orange-500 hover:shadow-lg hover:shadow-orange-500/20 text-white rounded-xl text-xs font-black transition cursor-pointer select-none shrink-0"
+          className="px-4.5 py-3 bg-[#F95700] hover:bg-orange-600 text-white font-black rounded-2xl text-[10px] uppercase tracking-wider font-mono transition-colors cursor-pointer shrink-0"
         >
           Настроить бота ПТО ➔
         </button>
       </div>
 
       {/* Control bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-zinc-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800">
-        <div className="flex flex-1 items-center space-x-3 bg-gray-50 dark:bg-zinc-800 px-3 py-2 rounded-lg border border-gray-200 dark:border-zinc-700 focus-within:ring-2 focus-within:ring-[#F95700]/20 focus-within:border-[#F95700] transition-all">
-          <Search className="w-4 h-4 text-gray-400 dark:text-zinc-500" />
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white dark:bg-zinc-950 p-4 rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 shadow-sm">
+        <div className="flex flex-1 items-center space-x-3 bg-zinc-50 dark:bg-zinc-900 px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800">
+          <Search className="w-4 h-4 text-zinc-450 dark:text-zinc-500" />
           <input
             type="text"
-            placeholder="Поиск по названию..."
+            placeholder="Поиск по наименованию ТМЦ..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-transparent border-none outline-none w-full text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500"
+            className="bg-transparent border-none outline-none w-full text-xs text-zinc-850 dark:text-white placeholder-zinc-400 font-bold focus:ring-0"
           />
         </div>
 
-        <div className="flex gap-2 w-full md:w-auto flex-wrap justify-end">
+        <div className="flex flex-wrap gap-2 w-full xl:w-auto justify-end">
           {selectedIds.length > 0 && (
             <button
               onClick={handleBulkDelete}
-              className="active:scale-95 transition-all duration-200 flex-1 md:flex-initial flex items-center justify-center bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20 px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer"
+              className="px-4 py-2.5 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 active:scale-[0.97] rounded-xl transition-all font-mono uppercase tracking-wider text-[10px] font-black cursor-pointer"
             >
-              <Trash2 className="w-4 h-4 mr-2" />
-              <span className="truncate">Удалить ({selectedIds.length})</span>
+              <Trash2 className="w-4 h-4 mr-1 inline" /> Удалить ({selectedIds.length})
             </button>
           )}
 
           <button
-            onClick={handleOpenAudit}
-            className="active:scale-95 transition-all flex-1 md:flex-initial flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer"
+            onClick={handleGenerateOrderSupplier}
+            className="px-4 py-2.5 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 active:scale-[0.97] rounded-xl transition-all font-mono uppercase tracking-wider text-[10px] font-black cursor-pointer"
           >
-            <ClipboardCheck className="w-4 h-4 mr-2 text-[#F95700]" />
-            Инвентаризация (ИНВ-3)
+            <ShoppingBag className="w-4 h-4 mr-1 text-[#F95700] inline" /> Автозаказ поставщику
+          </button>
+
+          <button
+            onClick={handleOpenAudit}
+            className="px-4 py-2.5 bg-zinc-100 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-800 active:scale-[0.97] rounded-xl transition-all font-mono uppercase tracking-wider text-[10px] font-black cursor-pointer border border-zinc-200 dark:border-zinc-800"
+          >
+            <ClipboardCheck className="w-4 h-4 mr-1 text-[#F95700] inline" /> Сличительный акт (ИНВ-3)
           </button>
 
           <button
             onClick={() => startScanner('adjust')}
-            className="active:scale-95 transition-all flex-1 md:flex-initial flex items-center justify-center bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800/50 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 text-gray-700 dark:text-zinc-300 px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer"
+            className="px-4 py-2.5 bg-zinc-100 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-800 active:scale-[0.97] rounded-xl transition-all font-mono uppercase tracking-wider text-[10px] font-black cursor-pointer border border-zinc-200 dark:border-zinc-800"
           >
-            <Scan className="w-4 h-4 mr-2 text-[#F95700]" />
-            Сканировать QR
+            <Scan className="w-4 h-4 mr-1 text-blue-500 inline" /> Сканировать QR
           </button>
           
           <button
             onClick={() => handleOpenCreateModal()}
-            className="active:scale-95 transition-all flex-1 md:flex-initial flex items-center justify-center bg-[#F95700] text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#e04e00] cursor-pointer"
+            className="px-4.5 py-2.5 bg-[#F95700] hover:bg-orange-600 text-white active:scale-[0.97] rounded-xl transition-all font-mono uppercase tracking-wider text-[10px] font-black shadow-md shadow-orange-500/15 cursor-pointer"
           >
-            <Plus className="w-4 h-4 mr-2" />
-            Добавить позицию
+            <Plus className="w-4.5 h-4.5 mr-1 inline" /> Добавить ТМЦ
           </button>
         </div>
       </div>
@@ -815,10 +857,10 @@ export const Inventory: React.FC = () => {
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`active:scale-95 transition-all px-4 py-2 rounded-full text-xs font-semibold ${
+            className={`px-4.5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
               selectedCategory === cat
-                ? 'bg-[#F95700] text-white'
-                : 'bg-white dark:bg-zinc-900 text-gray-650 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800 border border-gray-200 dark:border-zinc-800'
+                ? 'bg-[#F95700] text-white shadow-sm shadow-orange-500/10'
+                : 'bg-white dark:bg-zinc-950 text-zinc-650 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900 border border-zinc-200 dark:border-zinc-800'
             }`}
           >
             {cat}
@@ -827,70 +869,27 @@ export const Inventory: React.FC = () => {
       </div>
 
       {isLoading ? (
-        <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-800 text-left">
-              <thead className="bg-gray-50 dark:bg-zinc-800/40 text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider">
-                <tr>
-                  <th className="px-6 py-4 w-12 text-center">
-                    <div className="h-4 bg-zinc-200 dark:bg-zinc-850 rounded w-4 mx-auto" />
-                  </th>
-                  <th className="px-6 py-4">Наименование</th>
-                  <th className="px-6 py-4">Категория</th>
-                  <th className="px-6 py-4">Остаток</th>
-                  <th className="px-6 py-4 text-center">Быстрое изменение</th>
-                  <th className="px-6 py-4 text-right">Действия</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-zinc-800/60 text-sm animate-pulse">
-                {Array.from({ length: 5 }).map((_, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4 w-12 text-center">
-                      <div className="h-4 bg-zinc-200 dark:bg-zinc-855 rounded w-4 mx-auto" />
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-48" />
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="h-5 bg-zinc-200 dark:bg-zinc-800 rounded-full w-24" />
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="h-4 bg-zinc-250 dark:bg-zinc-800 rounded w-16" />
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-center space-x-1">
-                        <div className="w-8 h-6 bg-zinc-200 dark:bg-zinc-800 rounded" />
-                        <div className="w-6 h-6 bg-zinc-200 dark:bg-zinc-800 rounded" />
-                        <div className="w-6 h-6 bg-zinc-200 dark:bg-zinc-800 rounded" />
-                        <div className="w-8 h-6 bg-zinc-200 dark:bg-zinc-800 rounded" />
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end space-x-2">
-                        <div className="w-8 h-8 bg-zinc-200 dark:bg-zinc-800 rounded-lg" />
-                        <div className="w-8 h-8 bg-zinc-200 dark:bg-zinc-800 rounded-lg" />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="relative overflow-hidden p-1 rounded-[2rem] bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200/50 dark:border-zinc-800/40">
+          <div className="bg-white dark:bg-zinc-950 p-6 rounded-[calc(2rem-0.25rem)] py-16 text-center font-mono text-[10px] uppercase text-zinc-400">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-[#F95700]" /> Синхронизация склада ТМЦ...
           </div>
         </div>
       ) : filteredItems.length === 0 ? (
-        <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800 p-20 flex flex-col items-center justify-center text-gray-400">
-          <Package className="w-12 h-12 mb-3 opacity-50 text-gray-300 dark:text-zinc-700" />
-          <p className="text-sm text-gray-500 dark:text-zinc-400">Товары на складе не найдены</p>
+        <div className="relative overflow-hidden p-1 rounded-[2rem] bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200/50 dark:border-zinc-800/40">
+          <div className="bg-white dark:bg-zinc-955 p-12 rounded-[calc(2rem-0.25rem)] text-center text-zinc-400 font-mono text-[10px] uppercase space-y-2 flex flex-col items-center justify-center">
+            <Package className="w-12 h-12 text-[#F95700] opacity-40 mb-2" />
+            <span>Товары на складе не обнаружены</span>
+          </div>
         </div>
       ) : (
         <div className="space-y-4">
           {/* Desktop Table View */}
-          <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-800 text-left">
-                <thead className="bg-gray-50 dark:bg-zinc-800/40 text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider">
-                  <tr>
-                    <th className="px-6 py-4 w-12 text-center">
+          <div className="hidden md:block relative overflow-hidden p-1 rounded-[2rem] bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200/50 dark:border-zinc-800/40 shadow-sm">
+            <div className="bg-white dark:bg-zinc-950 p-6 rounded-[calc(2rem-0.25rem)]">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-zinc-200 dark:border-zinc-800 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase font-mono tracking-wider">
+                    <th className="pb-3.5 w-10 text-center">
                       <input
                         type="checkbox"
                         checked={filteredItems.length > 0 && selectedIds.length === filteredItems.length}
@@ -901,22 +900,24 @@ export const Inventory: React.FC = () => {
                             setSelectedIds([]);
                           }
                         }}
-                        className="rounded border-gray-350 dark:border-zinc-700 text-[#F95700] focus:ring-[#F95700] cursor-pointer"
+                        className="rounded border-zinc-300 dark:border-zinc-750 text-[#F95700] focus:ring-[#F95700] cursor-pointer w-4 h-4"
                       />
                     </th>
-                    <th className="px-6 py-4">Наименование</th>
-                    <th className="px-6 py-4">Категория</th>
-                    <th className="px-6 py-4">Остаток</th>
-                    <th className="px-6 py-4 text-center">Быстрое изменение</th>
-                    <th className="px-6 py-4 text-right">Действия</th>
+                    <th className="pb-3.5 px-4">Наименование ТМЦ</th>
+                    <th className="pb-3.5 px-4">Категория</th>
+                    <th className="pb-3.5 px-4">Текущий остаток</th>
+                    <th className="pb-3.5 px-4 text-center">Мин. страховой порог</th>
+                    <th className="pb-3.5 px-4 text-center">Быстрое изменение</th>
+                    <th className="pb-3.5 text-center">Действия</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-zinc-800/60 text-sm text-[#1a1a1a] dark:text-zinc-200">
+                <tbody className="divide-y divide-zinc-200/30 dark:divide-zinc-800/40 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
                   {filteredItems.map((item) => {
-                    const isLow = item.quantity < 10;
+                    const threshold = getMinThreshold(item);
+                    const isDeficit = item.quantity < threshold;
                     return (
-                      <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-zinc-800/50 dark:bg-zinc-800/50 dark:hover:bg-zinc-800/30 transition-colors">
-                        <td className="px-6 py-4 w-12 text-center" onClick={(e) => e.stopPropagation()}>
+                      <tr key={item.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-900/10 transition-colors">
+                        <td className="py-3.5 text-center">
                           <input
                             type="checkbox"
                             checked={selectedIds.includes(item.id)}
@@ -927,75 +928,78 @@ export const Inventory: React.FC = () => {
                                 setSelectedIds(prev => prev.filter(id => id !== item.id));
                               }
                             }}
-                            className="rounded border-gray-350 dark:border-zinc-700 text-[#F95700] focus:ring-[#F95700] cursor-pointer"
+                            className="rounded border-zinc-300 dark:border-zinc-750 text-[#F95700] focus:ring-[#F95700] cursor-pointer w-4 h-4"
                           />
                         </td>
-                        <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                        <td className="py-3.5 px-4 font-bold text-zinc-900 dark:text-white">
                           <div className="flex items-center space-x-2">
                             <span>{item.name}</span>
-                            {isLow && (
-                              <span className="bg-red-50 text-red-600 px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center">
-                                <AlertTriangle className="w-3 h-3 mr-1" /> Мало
+                            {isDeficit && (
+                              <span className="bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded text-[8px] font-black uppercase font-mono tracking-wider border border-red-500/20">
+                                ДЕФИЦИТ
                               </span>
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <span className="px-2.5 py-1 rounded-full text-xs bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300">
+                        <td className="py-3.5 px-4">
+                          <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-zinc-100 dark:bg-zinc-900 text-zinc-650 dark:text-zinc-400">
                             {item.category || 'Без категории'}
                           </span>
                         </td>
-                        <td className="px-6 py-4 font-semibold">
-                          <span className={isLow ? 'text-red-650' : 'text-zinc-900 dark:text-white'}>
+                        <td className="py-3.5 px-4 font-mono font-black text-sm">
+                          <span className={isDeficit ? 'text-red-500' : 'text-zinc-900 dark:text-white'}>
                             {item.quantity} {item.unit}
                           </span>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center justify-center space-x-1">
+                        <td className="py-3.5 px-4 text-center font-mono font-black text-zinc-400">
+                          {threshold} {item.unit}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center justify-center space-x-1 font-mono">
                             <button
                               onClick={() => handleQuickAdjust(item.id, -10)}
-                              className="active:scale-95 transition-all text-xs bg-gray-100 dark:bg-zinc-800 hover:bg-red-100 dark:hover:bg-red-950/40 text-gray-700 dark:text-zinc-300 hover:text-red-750 dark:hover:text-red-400 px-2 py-1 rounded font-medium cursor-pointer"
+                              className="px-2 py-1 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-rose-500/10 hover:text-rose-500 rounded text-[10px] font-bold cursor-pointer transition-colors"
                             >
                               -10
                             </button>
                             <button
                               onClick={() => handleQuickAdjust(item.id, -1)}
-                              className="active:scale-95 transition-all text-xs bg-gray-100 dark:bg-zinc-800 hover:bg-red-100 dark:hover:bg-red-950/40 text-gray-700 dark:text-zinc-300 hover:text-red-750 dark:hover:text-red-400 px-2 py-1 rounded font-medium cursor-pointer"
+                              className="px-2 py-1 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-rose-500/10 hover:text-rose-500 rounded text-[10px] font-bold cursor-pointer transition-colors"
                             >
                               -1
                             </button>
                             <button
                               onClick={() => handleQuickAdjust(item.id, 1)}
-                              className="active:scale-95 transition-all text-xs bg-gray-100 dark:bg-zinc-800 hover:bg-green-100 dark:hover:bg-green-950/40 text-gray-700 dark:text-zinc-300 hover:text-green-755 dark:hover:text-green-400 px-2 py-1 rounded font-medium cursor-pointer"
+                              className="px-2 py-1 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-emerald-500/10 hover:text-emerald-500 rounded text-[10px] font-bold cursor-pointer transition-colors"
                             >
                               +1
                             </button>
                             <button
                               onClick={() => handleQuickAdjust(item.id, 10)}
-                              className="active:scale-95 transition-all text-xs bg-gray-100 dark:bg-zinc-800 hover:bg-green-100 dark:hover:bg-green-950/40 text-gray-700 dark:text-zinc-300 hover:text-green-755 dark:hover:text-green-400 px-2 py-1 rounded font-medium cursor-pointer"
+                              className="px-2 py-1 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-emerald-500/10 hover:text-emerald-500 rounded text-[10px] font-bold cursor-pointer transition-colors"
                             >
                               +10
                             </button>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-right space-x-2">
+                        <td className="py-3.5 text-center space-x-1.5">
                           <button
                             onClick={() => handleShowQrModal(item)}
-                            className="active:scale-95 transition-all inline-flex items-center justify-center min-w-[40px] min-h-[40px] p-2 text-gray-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/20 rounded-lg cursor-pointer"
-                            title="Показать QR-код"
+                            className="p-1.5 text-zinc-400 hover:text-blue-500 hover:bg-blue-500/10 rounded-md transition-colors cursor-pointer"
+                            title="QR-код"
                           >
                             <QrCode className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleOpenEditModal(item)}
-                            className="active:scale-95 transition-all inline-flex items-center justify-center min-w-[40px] min-h-[40px] p-2 text-gray-500 dark:text-zinc-400 hover:text-[#F95700] dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/20 rounded-lg cursor-pointer"
+                            className="p-1.5 text-zinc-400 hover:text-[#F95700] hover:bg-orange-500/10 rounded-md transition-colors cursor-pointer"
                             title="Редактировать"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => setDeleteId(item.id)}
-                            className="active:scale-95 transition-all inline-flex items-center justify-center min-w-[40px] min-h-[40px] p-2 text-gray-500 dark:text-zinc-400 hover:text-red-650 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg cursor-pointer"
+                            className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-500/10 rounded-md transition-colors cursor-pointer"
                             title="Удалить"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -1012,97 +1016,67 @@ export const Inventory: React.FC = () => {
           {/* Mobile Cards View */}
           <div className="block md:hidden space-y-4 py-2">
             {filteredItems.map((item) => {
-              const isLow = item.quantity < 10;
+              const threshold = getMinThreshold(item);
+              const isDeficit = item.quantity < threshold;
               return (
-                <div key={item.id} className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-gray-150 dark:border-zinc-800 shadow-sm space-y-3 hover:border-[#F95700]/30 transition-all">
+                <div key={item.id} className="bg-white dark:bg-zinc-950 p-4 rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 shadow-sm space-y-3">
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex items-start gap-2.5">
-                      <div className="pt-0.5" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(item.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedIds(prev => [...prev, item.id]);
-                            } else {
-                              setSelectedIds(prev => prev.filter(id => id !== item.id));
-                            }
-                          }}
-                          className="rounded border-gray-300 dark:border-zinc-700 text-[#F95700] focus:ring-[#F95700] cursor-pointer"
-                        />
-                      </div>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(item.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedIds(prev => [...prev, item.id]);
+                          } else {
+                            setSelectedIds(prev => prev.filter(id => id !== item.id));
+                          }
+                        }}
+                        className="rounded border-zinc-300 dark:border-zinc-750 text-[#F95700] focus:ring-[#F95700] cursor-pointer w-4 h-4 mt-0.5"
+                      />
                       <div>
-                        <h4 className="font-bold text-[#1a1a1a] dark:text-white text-base leading-tight break-words">{item.name}</h4>
+                        <h4 className="font-bold text-gray-900 dark:text-white text-sm leading-tight break-words">{item.name}</h4>
+                        <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-0.5">{item.category || 'Без категории'}</p>
                       </div>
                     </div>
-                    {isLow && (
-                      <span className="bg-red-50 text-red-600 px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center flex-shrink-0">
-                        <AlertTriangle className="w-3 h-3 mr-1" /> Мало
+                    {isDeficit && (
+                      <span className="bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded text-[8px] font-black uppercase font-mono tracking-wider border border-red-500/20 shrink-0">
+                        ДЕФИЦИТ
                       </span>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs pt-1.5 border-t border-gray-100 dark:border-zinc-800">
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-1.5 border-t border-zinc-200/40 dark:border-zinc-800/40">
                     <div>
-                      <span className="text-gray-400 dark:text-zinc-550 text-[9px] font-semibold uppercase tracking-wider">Категория:</span>
-                      <p className="font-medium text-gray-700 dark:text-zinc-300 mt-0.5">{item.category || 'Без категории'}</p>
+                      <span className="text-zinc-400 dark:text-zinc-500 text-[9px] font-black uppercase font-mono">Остаток:</span>
+                      <p className={`font-mono font-black text-sm mt-0.5 ${isDeficit ? 'text-red-500' : 'text-zinc-900 dark:text-white'}`}>{item.quantity} {item.unit}</p>
                     </div>
                     <div>
-                      <span className="text-gray-400 dark:text-zinc-550 text-[9px] font-semibold uppercase tracking-wider">Остаток:</span>
-                      <p className={`font-extrabold text-sm mt-0.5 ${isLow ? 'text-red-650' : 'text-zinc-900 dark:text-white'}`}>{item.quantity} {item.unit}</p>
+                      <span className="text-zinc-400 dark:text-zinc-500 text-[9px] font-black uppercase font-mono">Мин. порог:</span>
+                      <p className="font-mono font-black text-zinc-450 dark:text-zinc-400 text-sm mt-0.5">{threshold} {item.unit}</p>
                     </div>
                   </div>
 
-                  {item.barcode && (
-                    <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">
-                      Штрихкод: {item.barcode}
-                    </p>
-                  )}
-
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-100 dark:border-zinc-800">
-                    <div className="flex items-center space-x-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-zinc-200/40 dark:border-zinc-800/40">
+                    <div className="flex items-center space-x-1 font-mono">
                       <button
                         onClick={() => handleQuickAdjust(item.id, -1)}
-                        className="active:scale-95 transition-all text-xs bg-gray-100 dark:bg-zinc-800 hover:bg-red-100 dark:hover:bg-red-950/40 text-gray-700 dark:text-zinc-300 hover:text-red-750 dark:hover:text-red-400 px-2 py-1 rounded font-medium cursor-pointer"
+                        className="px-2 py-1 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-305 hover:bg-rose-500/10 hover:text-rose-500 rounded text-[9px] font-bold cursor-pointer"
                       >
                         -1
                       </button>
                       <button
                         onClick={() => handleQuickAdjust(item.id, 1)}
-                        className="active:scale-95 transition-all text-xs bg-gray-100 dark:bg-zinc-800 hover:bg-green-100 dark:hover:bg-green-950/40 text-gray-700 dark:text-zinc-300 hover:text-green-755 dark:hover:text-green-400 px-2 py-1 rounded font-medium cursor-pointer"
+                        className="px-2 py-1 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-305 hover:bg-emerald-500/10 hover:text-emerald-500 rounded text-[9px] font-bold cursor-pointer"
                       >
                         +1
-                      </button>
-                      <button
-                        onClick={() => handleQuickAdjust(item.id, 10)}
-                        className="active:scale-95 transition-all text-xs bg-gray-100 dark:bg-zinc-800 hover:bg-green-100 dark:hover:bg-green-950/40 text-gray-700 dark:text-zinc-300 hover:text-green-755 dark:hover:text-green-400 px-2 py-1 rounded font-medium cursor-pointer"
-                      >
-                        +10
                       </button>
                     </div>
 
                     <div className="flex gap-1">
-                      <button
-                        onClick={() => handleShowQrModal(item)}
-                        className="p-2 text-gray-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/20 rounded-lg cursor-pointer"
-                        title="Показать QR-код"
-                      >
-                        <QrCode className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleOpenEditModal(item)}
-                        className="p-2 text-gray-500 dark:text-zinc-400 hover:text-[#F95700] dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/20 rounded-lg cursor-pointer"
-                        title="Редактировать"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => setDeleteId(item.id)}
-                        className="p-2 text-gray-500 dark:text-zinc-400 hover:text-red-650 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg cursor-pointer"
-                        title="Удалить"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <button onClick={() => handleShowQrModal(item)} className="p-1.5 text-zinc-400 hover:text-blue-500 rounded-md"><QrCode className="w-4 h-4" /></button>
+                      <button onClick={() => handleOpenEditModal(item)} className="p-1.5 text-zinc-400 hover:text-[#F95700] rounded-md"><Edit2 className="w-4 h-4" /></button>
+                      <button onClick={() => setDeleteId(item.id)} className="p-1.5 text-zinc-400 hover:text-red-500 rounded-md"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </div>
                 </div>
@@ -1114,64 +1088,51 @@ export const Inventory: React.FC = () => {
 
       {/* Add / Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[6px] p-4">
-          <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md rounded-xl shadow-2xl w-full max-w-md border border-gray-100 dark:border-zinc-800 overflow-hidden transform transition-all">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-zinc-800">
-              <h3 className="text-lg font-bold font-['Montserrat'] text-[#1a1a1a] dark:text-white">
-                {modalType === 'create' ? 'Добавление позиции' : 'Редактирование позиции'}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-md w-full p-6 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#F95700]/10 to-transparent rounded-full blur-2xl pointer-events-none" />
+            
+            <div className="flex items-center justify-between mb-5 border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <h3 className="text-sm font-black dark:text-white uppercase tracking-widest font-sans flex items-center gap-2">
+                <Package className="w-5 h-5 text-[#F95700]" /> {modalType === 'create' ? 'Создать ТМЦ карточку' : 'Редактировать ТМЦ'}
               </h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1 rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800 hover:text-gray-600 dark:text-zinc-400 dark:hover:text-zinc-300 transition-all cursor-pointer"
-              >
-                <X className="w-5 h-5" />
+              <button onClick={() => setIsModalOpen(false)} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 transition-colors cursor-pointer">
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleFormSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleFormSubmit} className="space-y-4">
               {formError && (
-                <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 text-red-650 dark:text-red-400 text-xs rounded-lg flex items-center font-medium">
-                  <AlertTriangle className="w-4 h-4 mr-2 flex-shrink-0 animate-bounce" />
-                  <span>{formError}</span>
-                </div>
+                <div className="p-3 bg-rose-500/10 text-rose-505 border border-rose-500/20 text-xs font-bold rounded-xl">{formError}</div>
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-zinc-400 uppercase mb-1">
-                  Наименование товара / материала
-                </label>
+                <label className="block text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-mono mb-1">Наименование ТМЦ *</label>
                 <input
-                  type="text"
-                  required
-                  placeholder="Например: Грунт цинконаполненный"
+                  type="text" required
+                  placeholder="Грунт полиуретановый..."
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full bg-gray-50 dark:bg-zinc-850 border border-gray-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F95700]/20 focus:border-[#F95700] text-[#1a1a1a] dark:text-white"
+                  className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-bold dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700]"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-zinc-400 uppercase mb-1">
-                    Количество
-                  </label>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <label className="block text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-mono mb-1">Количество</label>
                   <input
-                    type="number"
-                    step="any"
-                    required
+                    type="number" step="any" required
                     value={formData.quantity}
                     onChange={(e) => setFormData(prev => ({ ...prev, quantity: e.target.value }))}
-                    className="w-full bg-gray-50 dark:bg-zinc-850 border border-gray-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F95700]/20 focus:border-[#F95700] text-[#1a1a1a] dark:text-white"
+                    className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-mono font-bold dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-zinc-400 uppercase mb-1">
-                    Ед. измерения
-                  </label>
+                  <label className="block text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-mono mb-1">Ед. измерения</label>
                   <select
                     value={formData.unit}
                     onChange={(e) => setFormData(prev => ({ ...prev, unit: e.target.value }))}
-                    className="w-full bg-gray-50 dark:bg-zinc-850 border border-gray-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F95700]/20 focus:border-[#F95700] text-[#1a1a1a] dark:text-white cursor-pointer"
+                    className="w-full px-2 py-2 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-950 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#F95700]"
                   >
                     {units.map(u => (
                       <option key={u} value={u}>{u}</option>
@@ -1180,57 +1141,56 @@ export const Inventory: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-zinc-400 uppercase mb-1">
-                  Категория
-                </label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                  className="w-full bg-gray-50 dark:bg-zinc-850 border border-gray-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F95700]/20 focus:border-[#F95700] text-[#1a1a1a] dark:text-white cursor-pointer"
-                >
-                  {categories.filter(c => c !== 'Все').map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-mono mb-1">Мин. страховой порог</label>
+                  <input
+                    type="number" required
+                    value={formData.min_threshold}
+                    onChange={(e) => setFormData(prev => ({ ...prev, min_threshold: e.target.value }))}
+                    className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-955 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-mono font-bold dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-mono mb-1">Категория</label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                    className="w-full px-2 py-2 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-955 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#F95700]"
+                  >
+                    {categories.filter(c => c !== 'Все').map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-zinc-400 uppercase mb-1">
-                  Штрихкод производителя
-                </label>
+                <label className="block text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-mono mb-1">Штрихкод</label>
                 <div className="flex gap-2">
                   <input
-                    type="text"
-                    placeholder="Например: 4601234567890"
+                    type="text" placeholder="Штрихкод производителя..."
                     value={formData.barcode}
                     onChange={(e) => setFormData(prev => ({ ...prev, barcode: e.target.value }))}
-                    className="flex-1 bg-gray-50 dark:bg-zinc-850 border border-gray-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F95700]/20 focus:border-[#F95700] text-[#1a1a1a] dark:text-white"
+                    className="flex-1 px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-955 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-mono dark:text-white focus:outline-none focus:ring-1 focus:ring-[#F95700]"
                   />
                   <button
                     type="button"
                     onClick={() => startScanner('form_barcode')}
-                    className="p-2 border border-gray-200 dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800 text-gray-500 dark:text-zinc-400 rounded-lg flex items-center justify-center transition-all cursor-pointer"
-                    title="Сканировать штрихкод камерой"
+                    className="p-2 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-850 text-zinc-450 dark:text-zinc-400 rounded-xl cursor-pointer transition-colors"
                   >
                     <Camera className="w-5 h-5 text-[#F95700]" />
                   </button>
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100 dark:border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="active:scale-95 transition-all px-4 py-2 border border-gray-200 dark:border-zinc-700 text-gray-500 dark:text-zinc-400 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-zinc-800/50 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 font-medium cursor-pointer"
-                >
+              <div className="flex justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800 mt-4">
+                <button type="button" onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 cursor-pointer">
                   Отмена
                 </button>
-                <button
-                  type="submit"
-                  className="active:scale-95 transition-all px-4 py-2 bg-[#F95700] hover:bg-[#e04e00] text-white rounded-lg text-sm font-semibold flex items-center cursor-pointer"
-                >
-                  <Check className="w-4 h-4 mr-2" />
+                <button type="submit"
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-[#F95700] hover:bg-orange-600 text-white shadow-md transition-all cursor-pointer font-mono uppercase tracking-wider">
                   Сохранить
                 </button>
               </div>
@@ -1241,29 +1201,25 @@ export const Inventory: React.FC = () => {
 
       {/* Delete Confirmation Modal */}
       {deleteId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[6px] p-4">
-          <div className="bg-white/90 dark:bg-zinc-900/95 backdrop-blur-md rounded-xl shadow-2xl w-full max-w-sm border border-gray-100 dark:border-zinc-800 overflow-hidden p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center space-x-3 text-red-600 dark:text-red-500">
-              <div className="p-3 bg-red-50 dark:bg-red-500/10 rounded-full">
-                <AlertTriangle className="w-6 h-6" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center space-x-3 text-red-500">
+              <div className="p-2.5 bg-red-500/10 rounded-full">
+                <Trash2 className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold font-['Montserrat'] text-gray-900 dark:text-white">Удалить позицию?</h3>
+              <h3 className="text-lg font-black font-sans uppercase tracking-wider">Удалить позицию ТМЦ?</h3>
             </div>
-            <p className="text-sm text-gray-500 dark:text-zinc-400">
-              Данное действие необратимо. Вы действительно хотите удалить эту позицию со склада?
+            <p className="text-xs text-zinc-500 leading-relaxed font-bold">
+              Вы хотите навсегда стереть эту ТМЦ позицию со склада? Все связанные приходы и расходы по объектам станут архивными.
             </p>
-            <div className="flex justify-end space-x-3 pt-2">
-              <button
-                onClick={() => setDeleteId(null)}
-                className="active:scale-95 transition-all px-4 py-2 border border-gray-200 dark:border-zinc-700 text-gray-500 dark:text-zinc-400 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-zinc-800/50 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 font-medium cursor-pointer"
-              >
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => setDeleteId(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-505 cursor-pointer">
                 Отмена
               </button>
-              <button
-                onClick={() => deleteId !== null && handleDeleteItem(deleteId)}
-                className="active:scale-95 transition-all px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold shadow-md shadow-red-500/20 cursor-pointer"
-              >
-                Удалить
+              <button onClick={() => deleteId !== null && handleDeleteItem(deleteId)}
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 text-white cursor-pointer font-mono uppercase tracking-wider">
+                Удалить ТМЦ
               </button>
             </div>
           </div>
@@ -1272,46 +1228,35 @@ export const Inventory: React.FC = () => {
 
       {/* 1. QR Code Viewer Modal */}
       {isQrModalOpen && qrItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[6px] p-4">
-          <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md rounded-xl shadow-2xl w-full max-w-sm border border-gray-100 dark:border-zinc-800 overflow-hidden transform transition-all p-6 text-center space-y-6">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-zinc-800 pb-3">
-              <h3 className="text-lg font-bold font-['Montserrat'] text-gray-900 dark:text-white flex items-center gap-1.5">
-                <QrCode className="w-5 h-5 text-[#F95700]" /> QR-код товара
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-sm w-full p-6 shadow-2xl text-center space-y-4 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full blur-2xl pointer-events-none" />
+            <div className="flex justify-between items-center border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <h3 className="text-sm font-black dark:text-white uppercase tracking-widest font-sans flex items-center gap-2">
+                <QrCode className="w-5 h-5 text-blue-500" /> QR Этикетка ТМЦ
               </h3>
-              <button
-                onClick={() => setIsQrModalOpen(false)}
-                className="p-1 rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800 transition-all cursor-pointer"
-              >
-                <X className="w-5 h-5" />
+              <button onClick={() => setIsQrModalOpen(false)} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer">
+                <X className="w-4.5 h-4.5 text-zinc-400" />
               </button>
             </div>
-
-            <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl inline-block border border-gray-100 dark:border-zinc-800 shadow-inner">
+            
+            <div className="bg-white p-4 rounded-2xl inline-block border border-zinc-200 shadow-inner">
               <img src={qrDataUrl} alt="QR Code" className="w-48 h-48 mx-auto" />
             </div>
 
             <div className="space-y-1">
-              <h4 className="font-bold text-base text-gray-900 dark:text-white break-words">{qrItem.name}</h4>
-              <p className="text-xs text-gray-500 dark:text-zinc-400 bg-gray-50 dark:bg-zinc-950 py-1 px-3 rounded w-fit mx-auto font-mono">
+              <h4 className="font-bold text-sm text-gray-900 dark:text-white break-words">{qrItem.name}</h4>
+              <p className="text-[10px] text-zinc-400 dark:text-zinc-500 bg-zinc-50 dark:bg-zinc-950 py-1 px-3 rounded w-fit mx-auto font-mono font-bold border border-zinc-200 dark:border-zinc-800">
                 sphera-inv-{qrItem.id}
               </p>
             </div>
 
-            <div className="flex gap-3 pt-3 border-t border-gray-100 dark:border-zinc-800">
-              <button
-                type="button"
-                onClick={() => setIsQrModalOpen(false)}
-                className="flex-1 py-2 border border-gray-200 dark:border-zinc-700 text-gray-500 dark:text-zinc-400 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-zinc-800/50 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 font-medium transition-all cursor-pointer"
-              >
+            <div className="flex gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+              <button onClick={() => setIsQrModalOpen(false)} className="w-full py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 font-bold text-xs rounded-xl cursor-pointer">
                 Закрыть
               </button>
-              <button
-                type="button"
-                onClick={handlePrintQr}
-                className="flex-1 py-2 bg-[#F95700] hover:bg-[#e04e00] text-white font-bold text-sm rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <Printer className="w-4 h-4" />
-                Печать
+              <button onClick={handlePrintQr} className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer font-mono uppercase tracking-wider">
+                <Printer className="w-4 h-4" /> Печать
               </button>
             </div>
           </div>
@@ -1320,83 +1265,67 @@ export const Inventory: React.FC = () => {
 
       {/* 2. Camera Scanner Modal */}
       {isScannerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[6px] p-4">
-          <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md rounded-xl shadow-2xl w-full max-w-md border border-gray-100 dark:border-zinc-800 overflow-hidden transform transition-all">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-zinc-800">
-              <h3 className="text-lg font-bold font-['Montserrat'] text-gray-900 dark:text-white flex items-center gap-1.5">
-                <Camera className="w-5 h-5 text-[#F95700]" /> Сканирование QR
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-md w-full p-6 shadow-2xl relative overflow-hidden text-left space-y-4">
+            <div className="flex justify-between items-center border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <h3 className="text-sm font-black dark:text-white uppercase tracking-widest font-sans flex items-center gap-2">
+                <Camera className="w-5 h-5 text-[#F95700]" /> Сканер штрих/QR-кода
               </h3>
-              <button
-                onClick={handleCloseScanner}
-                className="p-1 rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800 transition-all cursor-pointer"
-              >
-                <X className="w-5 h-5" />
+              <button onClick={handleCloseScanner} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer">
+                <X className="w-4.5 h-4.5 text-zinc-400" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
-              <p className="text-xs text-gray-500 dark:text-zinc-400 text-center">
-                Направьте камеру мобильного устройства на QR-код товара для быстрого изменения остатков.
-              </p>
+            <p className="text-[11px] text-zinc-400 text-center leading-relaxed font-bold">
+              Поместите QR-код или линейный штрихкод товара в рамку видоискателя для быстрого поиска ТМЦ.
+            </p>
 
-              {cameras.length > 0 && (
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider">
-                    Активная камера
-                  </label>
-                  <select
-                    value={selectedCameraId}
-                    onChange={(e) => handleSwitchCamera(e.target.value)}
-                    className="w-full bg-gray-50 dark:bg-zinc-850 border border-gray-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F95700]/20 focus:border-[#F95700] text-gray-900 dark:text-white cursor-pointer"
-                  >
-                    {cameras.map((camera) => (
-                      <option key={camera.id} value={camera.id}>
-                        {camera.label || `Камера ${camera.id.slice(0, 5)}...`}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="text-[10px] text-gray-400 dark:text-zinc-500 italic mt-1 leading-snug">
-                    * Примечание: На смартфонах с несколькими объективами переключение между задними камерами может всё равно открывать только основную камеру из-за ограничений браузера.
-                  </span>
-                </div>
-              )}
-
-              <div className="relative overflow-hidden rounded-xl bg-black border border-zinc-800 aspect-square flex items-center justify-center">
-                <div id={scannerId} className="w-full h-full"></div>
-                {/* Scanner laser overlay line */}
-                <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-[#F95700]/70 shadow-[0_0_8px_#F95700] animate-pulse"></div>
+            {cameras.length > 0 && (
+              <div className="space-y-1.5">
+                <label className="block text-[8px] font-black text-zinc-400 dark:text-zinc-550 uppercase tracking-widest font-mono">Выбор камеры</label>
+                <select
+                  value={selectedCameraId}
+                  onChange={(e) => handleSwitchCamera(e.target.value)}
+                  className="w-full px-2 py-2 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-950 text-xs font-bold focus:outline-none"
+                >
+                  {cameras.map((camera) => (
+                    <option key={camera.id} value={camera.id}>
+                      {camera.label || `Видеокамера ${camera.id.slice(0, 5)}...`}
+                    </option>
+                  ))}
+                </select>
               </div>
+            )}
 
-              {scannerError && (
-                <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 text-red-650 dark:text-red-400 text-xs rounded-lg flex items-center font-medium">
-                  <AlertTriangle className="w-4 h-4 mr-2 flex-shrink-0 animate-bounce" />
-                  <span>{scannerError}</span>
-                </div>
-              )}
-
-              {unregisteredBarcode && (
-                <div className="p-4 bg-amber-50 dark:bg-amber-950/10 border border-amber-200/50 dark:border-amber-900/30 rounded-xl text-center space-y-3">
-                  <p className="text-xs text-amber-800 dark:text-amber-400 font-semibold leading-relaxed">
-                    Штрихкод <span className="font-mono font-bold bg-amber-100 dark:bg-zinc-800 text-amber-950 dark:text-white px-2 py-0.5 rounded border border-amber-200 dark:border-zinc-700">{unregisteredBarcode}</span> не найден на складе.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleCreateFromBarcode}
-                    className="w-full py-2.5 bg-[#F95700] hover:bg-[#e04e00] active:scale-98 text-white font-bold text-xs uppercase tracking-wider rounded-lg transition-all cursor-pointer shadow-lg shadow-orange-500/10"
-                  >
-                    ➕ Зарегистрировать новый товар
-                  </button>
-                </div>
-              )}
+            <div className="relative overflow-hidden rounded-2xl bg-black aspect-square flex items-center justify-center border border-zinc-800">
+              <div id={scannerId} className="w-full h-full"></div>
+              {/* Laser Line */}
+              <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-[#F95700]/70 shadow-[0_0_8px_#F95700] animate-pulse"></div>
             </div>
 
-            <div className="px-6 py-4 bg-gray-50 dark:bg-zinc-950 border-t border-gray-100 dark:border-zinc-800 flex justify-end">
-              <button
-                type="button"
-                onClick={handleCloseScanner}
-                className="px-4 py-2 border border-gray-200 dark:border-zinc-700 text-gray-500 dark:text-zinc-400 rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800 font-semibold cursor-pointer"
-              >
-                Отмена
+            {scannerError && (
+              <div className="p-3 bg-rose-500/10 text-rose-500 border border-rose-500/20 text-xs font-bold rounded-xl">{scannerError}</div>
+            )}
+
+            {unregisteredBarcode && (
+              <div className="p-4 bg-amber-500/5 border border-amber-500/15 rounded-2xl text-center space-y-3">
+                <p className="text-xs text-amber-600 leading-relaxed font-bold">
+                  Код <span className="font-mono bg-zinc-100 dark:bg-zinc-950 px-1 py-0.5 rounded text-amber-500">{unregisteredBarcode}</span> отсутствует на складе.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleCreateFromBarcode}
+                  className="w-full py-2 bg-[#F95700] hover:bg-orange-600 text-white font-black text-[10px] uppercase tracking-wider font-mono rounded-xl transition-all shadow-md cursor-pointer"
+                >
+                  Зарегистрировать ТМЦ
+                </button>
+              </div>
+            )}
+            
+            <div className="flex justify-end pt-2 border-t border-zinc-100 dark:border-zinc-800">
+              <button type="button" onClick={handleCloseScanner}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 cursor-pointer">
+                Закрыть сканер
               </button>
             </div>
           </div>
@@ -1405,104 +1334,81 @@ export const Inventory: React.FC = () => {
 
       {/* 3. Scan Adjust/Quick Adjustment Modal */}
       {isScanAdjustOpen && scannedItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[6px] p-4">
-          <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md rounded-xl shadow-2xl w-full max-w-sm border border-gray-100 dark:border-zinc-800 overflow-hidden transform transition-all p-6 space-y-5">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-zinc-800 pb-3">
-              <h3 className="text-lg font-bold font-['Montserrat'] text-gray-900 dark:text-white flex items-center gap-1.5">
-                <Volume2 className="w-5 h-5 text-green-500" /> Успешный скан!
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-center relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#F95700]/10 to-transparent rounded-full blur-2xl pointer-events-none" />
+            <div className="flex justify-between items-center border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <h3 className="text-sm font-black dark:text-white uppercase tracking-widest font-sans flex items-center gap-2">
+                <Check className="w-5 h-5 text-emerald-500" /> ТМЦ Код Распознан!
               </h3>
-              <button
-                onClick={() => setIsScanAdjustOpen(false)}
-                className="p-1 rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-800 transition-all cursor-pointer"
-              >
-                <X className="w-5 h-5" />
+              <button onClick={() => setIsScanAdjustOpen(false)} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer">
+                <X className="w-4.5 h-4.5 text-zinc-400" />
               </button>
             </div>
 
-            <div className="text-center space-y-2">
-              <div className="mx-auto w-12 h-12 rounded-full bg-orange-50 dark:bg-orange-950/20 text-[#F95700] flex items-center justify-center">
+            <div className="space-y-2">
+              <div className="mx-auto w-12 h-12 rounded-full bg-orange-500/10 text-[#F95700] flex items-center justify-center">
                 <Package className="w-6 h-6" />
               </div>
-              <h4 className="font-bold text-base text-gray-900 dark:text-white break-words">{scannedItem.name}</h4>
-              <p className="text-xs text-gray-500 dark:text-zinc-400">Категория: {scannedItem.category || 'Без категории'}</p>
-              <p className="text-sm font-semibold mt-1 text-gray-700 dark:text-zinc-300">
-                Текущий остаток: <span className="text-gray-950 dark:text-white bg-gray-100 dark:bg-zinc-800 px-2 py-0.5 rounded font-mono font-bold">{scannedItem.quantity} {scannedItem.unit}</span>
-              </p>
+              <h4 className="font-bold text-sm text-gray-900 dark:text-white break-words">{scannedItem.name}</h4>
+              <p className="text-[10px] text-zinc-405 dark:text-zinc-500 font-mono font-bold">Остаток: {scannedItem.quantity} {scannedItem.unit} | Мин: {getMinThreshold(scannedItem)} {scannedItem.unit}</p>
             </div>
 
             {adjustmentError && (
-              <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 text-red-650 dark:text-red-400 text-xs rounded-lg flex items-center font-medium">
-                <AlertTriangle className="w-4 h-4 mr-2 flex-shrink-0" />
-                <span>{adjustmentError}</span>
-              </div>
+              <div className="p-3 bg-rose-500/10 text-rose-500 border border-rose-500/20 text-xs font-bold rounded-xl">{adjustmentError}</div>
             )}
 
-            <form className="space-y-4">
+            <form className="space-y-4 text-left">
               <div>
-                <label className="block text-[10px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider mb-1">
-                  Изменение объема ({scannedItem.unit})
-                </label>
+                <label className="block text-[8px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-mono mb-1">Количество для прихода/расхода</label>
                 <input
-                  type="number"
-                  step="any"
-                  required
+                  type="number" step="any" required
                   value={adjustmentQty}
                   onChange={(e) => setAdjustmentQty(e.target.value)}
-                  className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F95700]/20 focus:border-[#F95700] text-gray-900 dark:text-white font-mono font-bold text-center"
+                  className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-mono font-bold dark:text-white text-center focus:ring-1 focus:ring-[#F95700] focus:outline-none"
                 />
               </div>
 
-              {/* Quick changes buttons */}
               <div className="flex flex-wrap justify-center gap-1.5">
                 {[-10, -5, -1, 1, 5, 10].map(val => (
                   <button
-                    type="button"
-                    key={val}
+                    type="button" key={val}
                     onClick={() => {
-                      setAdjustmentQty(prev => {
-                        const parsed = parseFloat(prev) || 0;
-                        return Math.max(0, parsed + val).toString();
-                      });
+                      const parsed = parseFloat(adjustmentQty) || 0;
+                      setAdjustmentQty(Math.max(0, parsed + val).toString());
                     }}
-                    className="px-2.5 py-1 text-xs bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-750 text-gray-700 dark:text-zinc-300 rounded font-semibold transition-colors cursor-pointer"
+                    className="px-3 py-1 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 rounded font-black text-[10px] cursor-pointer"
                   >
                     {val > 0 ? `+${val}` : val}
                   </button>
                 ))}
               </div>
 
-              {/* Instant 1-click actions */}
-              <div className="flex gap-2 border-t border-gray-100 dark:border-zinc-800 pt-3">
+              <div className="flex gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800 text-[10px] font-black uppercase font-mono">
                 <button
                   type="button"
                   onClick={() => handleInstantAdjust('remove', 1)}
-                  className="flex-1 py-2 bg-red-50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-700 dark:text-red-450 font-bold text-xs rounded-lg transition-all text-center cursor-pointer border border-red-200/50 dark:border-red-900/30 flex items-center justify-center gap-1"
+                  className="flex-1 py-2 bg-rose-500/5 text-rose-500 rounded-xl border border-rose-500/10 hover:bg-rose-500/10 cursor-pointer"
                 >
-                  ⚡ Быстрый Расход -1
+                  Расход -1
                 </button>
                 <button
                   type="button"
                   onClick={() => handleInstantAdjust('add', 1)}
-                  className="flex-1 py-2 bg-green-50 dark:bg-green-950/20 hover:bg-green-100 dark:hover:bg-green-900/30 text-green-700 dark:text-green-450 font-bold text-xs rounded-lg transition-all text-center cursor-pointer border border-green-200/50 dark:border-green-900/30 flex items-center justify-center gap-1"
+                  className="flex-1 py-2 bg-emerald-500/5 text-emerald-500 rounded-xl border border-emerald-500/10 hover:bg-emerald-500/10 cursor-pointer"
                 >
-                  ⚡ Быстрый Приход +1
+                  Приход +1
                 </button>
               </div>
 
-              <div className="flex gap-3 pt-3 border-t border-gray-100 dark:border-zinc-800">
-                <button
-                  type="button"
-                  onClick={(e) => handleScanAdjustSubmit(e, 'remove')}
-                  className="flex-1 py-2 bg-red-650 hover:bg-red-700 active:scale-95 text-white font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer"
-                >
-                  Списать (Расход)
+              <div className="flex gap-2 pt-2 text-[10px] font-black uppercase font-mono">
+                <button type="button" onClick={(e) => handleScanAdjustSubmit(e, 'remove')}
+                  className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl cursor-pointer">
+                  Списать
                 </button>
-                <button
-                  type="button"
-                  onClick={(e) => handleScanAdjustSubmit(e, 'add')}
-                  className="flex-1 py-2 bg-green-650 hover:bg-green-700 active:scale-95 text-white font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer"
-                >
-                  Пополнить (Приход)
+                <button type="button" onClick={(e) => handleScanAdjustSubmit(e, 'add')}
+                  className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl cursor-pointer">
+                  Пополнить
                 </button>
               </div>
             </form>
@@ -1512,129 +1418,93 @@ export const Inventory: React.FC = () => {
 
       {/* Bulk Delete Confirmation Modal */}
       {isBulkDeleteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[6px] p-4 transition-all">
-          <div className="bg-white dark:bg-zinc-900 backdrop-blur-md rounded-xl shadow-2xl w-full max-w-sm border border-gray-100 dark:border-zinc-800 overflow-hidden p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center space-x-3 text-red-600 dark:text-red-500">
-              <div className="p-3 bg-red-50 dark:bg-red-500/10 rounded-full">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-center">
+            <div className="flex items-center space-x-3 text-red-500 justify-center">
+              <div className="p-2.5 bg-red-500/10 rounded-full">
                 <Trash2 className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold font-['Montserrat']">Массовое удаление</h3>
+              <h3 className="text-lg font-black font-sans uppercase tracking-wider">Массовое удаление ТМЦ</h3>
             </div>
-            <p className="text-sm text-gray-500 dark:text-zinc-400">
-              Вы уверены, что хотите удалить выбранные позиции ({selectedIds.length} шт.)? Это действие нельзя отменить.
+            <p className="text-xs text-zinc-500 leading-relaxed font-bold">
+              Вы хотите стереть {selectedIds.length} позиций ТМЦ? Данное действие необратимо и пересчитает объемы ТМЦ в связанных модулях.
             </p>
-            <div className="flex justify-end space-x-3 pt-2">
-              <button
-                onClick={() => setIsBulkDeleteModalOpen(false)}
-                className="active:scale-95 transition-all px-4 py-2 border border-gray-200 dark:border-zinc-700 text-gray-500 dark:text-zinc-400 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-zinc-800/50 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 font-medium cursor-pointer"
-              >
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => setIsBulkDeleteModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 cursor-pointer">
                 Отмена
               </button>
-              <button
-                onClick={confirmBulkDelete}
-                className="active:scale-95 transition-all px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold shadow-md shadow-red-500/20 cursor-pointer"
-              >
-                Удалить
+              <button onClick={confirmBulkDelete}
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 text-white cursor-pointer font-mono uppercase tracking-wider">
+                Стереть все
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Инвентаризационная ведомость ИНВ-3 (Сличительный Акт) */}
+      {/* ИНВ-3 Audit Modal */}
       {isAuditModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl max-w-4xl w-full p-6 space-y-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-4">
-              <div>
-                <h3 className="text-lg font-bold font-['Montserrat'] text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                  <ClipboardCheck className="w-5 h-5 text-[#F95700]" />
-                  Сличительная ведомость инвентаризации (ИНВ-3)
-                </h3>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  Сверка книжного остатка с фактическим наличием на складе и расчет излишков/недостач
-                </p>
-              </div>
-              <button
-                onClick={() => setIsAuditModalOpen(false)}
-                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 rounded-lg cursor-pointer"
-              >
-                <X className="w-5 h-5" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-4 text-left">
+            <div className="flex justify-between items-center border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <h3 className="text-sm font-black dark:text-white uppercase tracking-widest font-sans flex items-center gap-2">
+                <ClipboardCheck className="w-5 h-5 text-[#F95700]" /> Инвентаризационная ведомость ИНВ-3
+              </h3>
+              <button onClick={() => setIsAuditModalOpen(false)} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer">
+                <X className="w-4.5 h-4.5 text-zinc-400" />
               </button>
             </div>
 
-            <div className="overflow-y-auto flex-1 pr-1 custom-scrollbar">
-              <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800 text-left text-xs">
-                <thead className="bg-zinc-50 dark:bg-zinc-800/60 font-bold text-zinc-500 uppercase">
-                  <tr>
-                    <th className="p-3">ID</th>
-                    <th className="p-3">Наименование ТМЦ</th>
-                    <th className="p-3">По учету</th>
-                    <th className="p-3 w-36">Факт. наличие</th>
-                    <th className="p-3">Отклонение</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
-                  {items.map((item) => {
-                    const fact = auditFacts[item.id] ?? item.quantity;
-                    const diff = fact - item.quantity;
-                    return (
-                      <tr key={item.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30">
-                        <td className="p-3 font-mono text-zinc-400">#{item.id}</td>
-                        <td className="p-3 font-bold text-zinc-800 dark:text-zinc-200">{item.name}</td>
-                        <td className="p-3 font-semibold text-zinc-600 dark:text-zinc-300">
-                          {item.quantity} {item.unit}
-                        </td>
-                        <td className="p-3">
-                          <input
-                            type="number"
-                            value={fact}
-                            onChange={(e) => {
-                              const val = parseFloat(e.target.value) || 0;
-                              setAuditFacts(prev => ({ ...prev, [item.id]: val }));
-                            }}
-                            className="w-24 bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs font-bold text-zinc-900 dark:text-white focus:outline-none focus:border-[#F95700]"
-                          />
-                        </td>
-                        <td className="p-3 font-extrabold">
-                          {diff === 0 ? (
-                            <span className="text-zinc-400">Норма (0)</span>
-                          ) : diff > 0 ? (
-                            <span className="text-emerald-500">+{diff} {item.unit} (Излишек)</span>
-                          ) : (
-                            <span className="text-rose-500">{diff} {item.unit} (Недостача)</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <p className="text-[11px] text-zinc-400 leading-relaxed font-bold">
+              Укажите фактическое наличие товаров на складе для выгрузки сличительного акта ИНВ-3 с автоматическим расчетом излишков и недостач.
+            </p>
+
+            <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+              {items.map(item => {
+                const fact = auditFacts[item.id] ?? item.quantity;
+                const diff = fact - item.quantity;
+                return (
+                  <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs">
+                    <div className="font-bold text-gray-900 dark:text-white sm:max-w-xs truncate">{item.name}</div>
+                    <div className="flex items-center gap-4">
+                      <div className="font-mono text-zinc-450">Учет: <b>{item.quantity}</b> {item.unit}</div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold">Факт:</span>
+                        <input
+                          type="number"
+                          value={fact}
+                          onChange={(e) => setAuditFacts({ ...auditFacts, [item.id]: Number(e.target.value) })}
+                          className="w-16 px-2 py-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded text-xs font-mono font-bold text-center"
+                        />
+                      </div>
+                      <div className={`font-mono font-black w-24 text-right ${diff > 0 ? 'text-green-500' : diff < 0 ? 'text-red-500' : 'text-zinc-450'}`}>
+                        {diff > 0 ? `+${diff}` : diff} {item.unit}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
-            <div className="flex justify-between items-center border-t border-zinc-200 dark:border-zinc-800 pt-4">
-              <span className="text-xs text-zinc-500">
-                Всего позиций в описи: <b>{items.length}</b>
-              </span>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setIsAuditModalOpen(false)}
-                  className="px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
-                >
-                  Закрыть
-                </button>
-                <button
-                  onClick={handlePrintAuditAct}
-                  className="px-4 py-2 bg-[#F95700] hover:bg-orange-600 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-md cursor-pointer"
-                >
-                  <Printer className="w-4 h-4" />
-                  Печать АКТА ИНВ-3
-                </button>
-              </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800 mt-4">
+              <button type="button" onClick={() => setIsAuditModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 cursor-pointer">
+                Отмена
+              </button>
+              <button type="button" onClick={handlePrintQr} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 cursor-pointer font-mono uppercase tracking-wider" style={{ display: 'none' }} />
+              <button
+                type="button"
+                onClick={handlePrintAuditAct}
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-[#F95700] hover:bg-orange-600 text-white shadow-md transition-all cursor-pointer font-mono uppercase tracking-wider"
+              >
+                🖨 Печать акта ИНВ-3
+              </button>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 };
