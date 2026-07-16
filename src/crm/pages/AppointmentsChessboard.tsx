@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Calendar as CalendarIcon, CheckCircle2, Info, User as UserIcon, Phone, Clock, Trash2, Check, X, Sparkles } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 import { apiClient } from '../../api/client';
@@ -39,8 +39,9 @@ export default function AppointmentsChessboard() {
     const [masters, setMasters] = useState<Master[]>([]);
     const [loading, setLoading] = useState(false);
     
-    // Board state
+    // Board states
     const [currentDate, setCurrentDate] = useState<string>(new Date().toISOString().split('T')[0]);
+    const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
     
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -73,12 +74,56 @@ export default function AppointmentsChessboard() {
     const [activeCompleteAppId, setActiveCompleteAppId] = useState<number | null>(null);
     const [deductionItems, setDeductionItems] = useState<any[]>([]);
 
+    // Calculate week days starting from Monday based on currentDate
+    const getWeekDays = useCallback((baseDateStr: string) => {
+        const baseDate = new Date(baseDateStr);
+        const day = baseDate.getDay();
+        const diff = baseDate.getDate() - day + (day === 0 ? -6 : 1);
+        const monday = new Date(baseDate.setDate(diff));
+        
+        const days: string[] = [];
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(monday);
+            d.setDate(monday.getDate() + i);
+            days.push(d.toISOString().split('T')[0]);
+        }
+        return days;
+    }, []);
+
+    const weekDays = getWeekDays(currentDate);
+
+    const fetchData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const startQueryDate = viewMode === 'day' ? currentDate : weekDays[0];
+            const endQueryDate = viewMode === 'day' ? currentDate : weekDays[6];
+
+            const [usersRes, svcRes, appRes] = await Promise.all([
+                apiClient.get('/users/'),
+                apiClient.get('/booking/services'),
+                apiClient.get(`/booking/appointments?start_date=${startQueryDate}T00:00:00&end_date=${endQueryDate}T23:59:59`)
+            ]);
+            setMasters(Array.isArray(usersRes) ? usersRes.filter((u: any) => u.is_active === 1) : []);
+            setServices(Array.isArray(svcRes) ? svcRes : []);
+            setAppointments(Array.isArray(appRes) ? appRes : []);
+        } catch (err) {
+            console.error(err);
+            error('Не удалось загрузить данные расписания');
+        } finally {
+            setLoading(false);
+        }
+    }, [currentDate, viewMode, weekDays, error]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
     const handleAppointmentClick = (app: Appointment) => {
         setSelectedAppointment(app);
         setManageFormData({
             master_id: app.master_id,
             service_id: app.service_id,
-            datetime_start: app.datetime_start.split('.')[0], // clean ISO
+            datetime_start: app.datetime_start.split('.')[0], 
             datetime_end: app.datetime_end.split('.')[0],
             client_name: app.client_name,
             client_phone: app.client_phone || '',
@@ -147,41 +192,19 @@ export default function AppointmentsChessboard() {
         }
     };
 
-    useEffect(() => {
-        fetchData();
-    }, [currentDate]);
-
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            // Fetch users (masters), services, and appointments
-            const [usersRes, svcRes, appRes] = await Promise.all([
-                apiClient.get('/users/'),
-                apiClient.get('/booking/services'),
-                apiClient.get(`/booking/appointments?start_date=${currentDate}T00:00:00&end_date=${currentDate}T23:59:59`)
-            ]);
-            // For now, let's treat all active users as masters, or in a real app filter by role
-            setMasters(Array.isArray(usersRes) ? usersRes.filter((u: any) => u.is_active === 1) : []);
-            setServices(Array.isArray(svcRes) ? svcRes : []);
-            setAppointments(Array.isArray(appRes) ? appRes : []);
-        } catch (err) {
-            console.error(err);
-            error('Не удалось загрузить данные расписания');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Build timeline columns: 09:00 to 20:00, every 30 mins
+    // Build timeline columns for day view: 09:00 to 20:00, every 30 mins
     const hours: string[] = [];
     for (let h = 9; h <= 20; h++) {
         hours.push(`${h.toString().padStart(2, '0')}:00`);
         if (h < 20) hours.push(`${h.toString().padStart(2, '0')}:30`);
     }
 
-    const handleCellClick = (masterId: number, timeStr: string) => {
+    const handleCellClick = (masterId: number, timeStr: string, targetDate?: string) => {
         setSelectedMasterId(masterId);
         setSelectedTimeStr(timeStr);
+        if (targetDate) {
+            setCurrentDate(targetDate);
+        }
         setIsModalOpen(true);
     };
 
@@ -194,7 +217,6 @@ export default function AppointmentsChessboard() {
         const svc = services.find(s => s.id === Number(formData.service_id));
         if (!svc) return;
 
-        // Calculate end time
         const startDt = new Date(`${currentDate}T${selectedTimeStr}:00`);
         const endDt = new Date(startDt.getTime() + svc.duration_minutes * 60000);
 
@@ -252,13 +274,19 @@ export default function AppointmentsChessboard() {
         }
     };
 
-    // Map appointments to grid positions
     const getAppointmentsForMaster = (masterId: number) => {
         return appointments.filter(a => a.master_id === masterId);
     };
 
+    const getDayName = (dateStr: string) => {
+        const d = new Date(dateStr);
+        const weekday = d.toLocaleDateString('ru-RU', { weekday: 'short' });
+        const dayMonth = d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+        return `${weekday} ${dayMonth}`;
+    };
+
     return (
-        <div className="p-8 max-w-full mx-auto space-y-6">
+        <div className="p-8 max-w-full mx-auto space-y-6 text-left">
             <style>{`
                 .custom-scrollbar::-webkit-scrollbar {
                     height: 8px;
@@ -278,9 +306,9 @@ export default function AppointmentsChessboard() {
                 }
             `}</style>
 
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-black tracking-tight text-zinc-950 dark:text-white flex items-center gap-3 font-['Montserrat']">
+                    <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-zinc-950 dark:text-white flex items-center gap-3 font-['Montserrat']">
                         <CalendarIcon className="w-8 h-8 text-[#F95700]" />
                         Шахматка смен
                     </h1>
@@ -289,36 +317,56 @@ export default function AppointmentsChessboard() {
                     </p>
                 </div>
                 
-                {/* Селектор дат */}
-                <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-1.5 shadow-sm shrink-0">
-                    <button 
-                        onClick={() => {
-                            const d = new Date(currentDate); d.setDate(d.getDate() - 1);
-                            setCurrentDate(d.toISOString().split('T')[0]);
-                        }}
-                        className="px-3.5 py-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl font-black text-xs transition"
-                    >
-                        ← Назад
-                    </button>
-                    <input 
-                        type="date" 
-                        className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-150 dark:border-zinc-850 rounded-xl outline-none font-black text-zinc-950 dark:text-white px-3 py-1.5 text-xs cursor-pointer focus:border-orange-500"
-                        value={currentDate}
-                        onChange={(e) => setCurrentDate(e.target.value)}
-                    />
-                    <button 
-                        onClick={() => {
-                            const d = new Date(currentDate); d.setDate(d.getDate() + 1);
-                            setCurrentDate(d.toISOString().split('T')[0]);
-                        }}
-                        className="px-3.5 py-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl font-black text-xs transition"
-                    >
-                        Вперед →
-                    </button>
+                <div className="flex flex-wrap items-center gap-3 shrink-0">
+                    {/* Переключатель День/Неделя */}
+                    <div className="flex bg-zinc-100 dark:bg-zinc-900 p-1.5 rounded-2xl border border-zinc-200/50 dark:border-zinc-800/60 shadow-inner">
+                        <button
+                            onClick={() => setViewMode('day')}
+                            className={`px-4.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 ${viewMode === 'day' ? 'bg-[#F95700] text-white shadow-md' : 'text-zinc-505 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'}`}
+                        >
+                            День
+                        </button>
+                        <button
+                            onClick={() => setViewMode('week')}
+                            className={`px-4.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 ${viewMode === 'week' ? 'bg-[#F95700] text-white shadow-md' : 'text-zinc-550 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'}`}
+                        >
+                            Неделя
+                        </button>
+                    </div>
+
+                    {/* Селектор дат */}
+                    <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-1.5 shadow-sm">
+                        <button 
+                            onClick={() => {
+                                const d = new Date(currentDate);
+                                d.setDate(d.getDate() - (viewMode === 'day' ? 1 : 7));
+                                setCurrentDate(d.toISOString().split('T')[0]);
+                            }}
+                            className="px-3.5 py-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl font-black text-xs transition"
+                        >
+                            ← Назад
+                        </button>
+                        <input 
+                            type="date" 
+                            className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-150 dark:border-zinc-850 rounded-xl outline-none font-black text-zinc-950 dark:text-white px-3 py-1.5 text-xs cursor-pointer focus:border-orange-500"
+                            value={currentDate}
+                            onChange={(e) => setCurrentDate(e.target.value)}
+                        />
+                        <button 
+                            onClick={() => {
+                                const d = new Date(currentDate);
+                                d.setDate(d.getDate() + (viewMode === 'day' ? 1 : 7));
+                                setCurrentDate(d.toISOString().split('T')[0]);
+                            }}
+                            className="px-3.5 py-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl font-black text-xs transition"
+                        >
+                            Вперед →
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {/* Персональный баннер онлайн-записи (Double-Bezel & Button-in-Button) */}
+            {/* Персональный баннер онлайн-записи (Double-Bezel) */}
             <div className="relative overflow-hidden p-1.5 rounded-[2rem] bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200/50 dark:border-zinc-800/40 shadow-sm transition-all duration-300">
                 <div className="relative overflow-hidden p-6 rounded-[calc(2rem-0.375rem)] bg-white dark:bg-zinc-950 shadow-[inset_0_1px_2px_rgba(255,255,255,0.05)] flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                     <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-[#F95700]/5 to-[#F95700]/0 rounded-full blur-3xl pointer-events-none" />
@@ -347,7 +395,7 @@ export default function AppointmentsChessboard() {
                         className="group flex items-center gap-4 pl-6 pr-3 py-3 bg-gradient-to-r from-orange-500 to-[#F95700] hover:shadow-lg hover:shadow-orange-500/15 hover:scale-[1.01] active:scale-[0.99] text-white text-xs font-black rounded-full transition-all duration-300 cursor-pointer relative z-10 shrink-0 w-full sm:w-auto justify-center"
                     >
                         <span>Копировать ссылку</span>
-                        <span className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:rotate-12 group-hover:scale-105 shrink-0">
+                        <span className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0">
                             <Sparkles className="w-4 h-4 text-white" />
                         </span>
                     </button>
@@ -357,140 +405,223 @@ export default function AppointmentsChessboard() {
             {/* Сетка шахматки (Double-Bezel) */}
             <div className="relative overflow-hidden p-1.5 rounded-[2rem] bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200/50 dark:border-zinc-800/40 shadow-sm transition-all duration-300">
                 <div className="custom-scrollbar bg-white dark:bg-zinc-950 rounded-[calc(2rem-0.375rem)] border border-zinc-200/60 dark:border-zinc-800/60 shadow-lg overflow-x-auto relative">
-                    {/* Chessboard Grid */}
-                    <div style={{ minWidth: '1300px' }}>
-                        {/* Header: Time Slots */}
-                        <div className="flex border-b border-zinc-200/60 dark:border-zinc-800/60 bg-zinc-50/75 dark:bg-zinc-900/75 backdrop-blur-md sticky top-0 z-10">
-                            <div className="w-52 shrink-0 border-r border-zinc-200/60 dark:border-zinc-800/60 p-4 font-black text-[10px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 flex items-center bg-zinc-50/90 dark:bg-zinc-900/90 backdrop-blur-md font-['Montserrat']">
-                                Специалисты
-                            </div>
-                            <div className="flex-1 flex">
-                                {hours.map((time, idx) => (
-                                    <div key={idx} className="flex-1 min-w-[90px] border-r border-zinc-200/40 dark:border-zinc-800/50 p-3 text-center text-[11px] font-bold font-mono tracking-wider text-zinc-400 dark:text-zinc-500">
-                                        {time}
+                    <div style={{ minWidth: viewMode === 'day' ? '1300px' : '1200px' }}>
+                        
+                        {/* ─── DAY VIEW MODE ─── */}
+                        {viewMode === 'day' && (
+                            <>
+                                {/* Header: Time Slots */}
+                                <div className="flex border-b border-zinc-200/60 dark:border-zinc-800/60 bg-zinc-50/75 dark:bg-zinc-900/75 backdrop-blur-md sticky top-0 z-10">
+                                    <div className="w-52 shrink-0 border-r border-zinc-200/60 dark:border-zinc-800/60 p-4 font-black text-[10px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 flex items-center bg-zinc-50/90 dark:bg-zinc-900/90 backdrop-blur-md font-['Montserrat']">
+                                        Специалисты
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Body: Masters and their timelines */}
-                        <div className="relative">
-                            {loading && <div className="absolute inset-0 bg-white/50 dark:bg-zinc-950/50 flex items-center justify-center z-20 font-black text-xs text-[#F95700] backdrop-blur-sm">Загрузка расписания...</div>}
-                            
-                            {masters.map(master => {
-                                const masterApps = getAppointmentsForMaster(master.id);
-                                
-                                return (
-                                    <div key={master.id} className="flex border-b border-zinc-100 dark:border-zinc-800/40 hover:bg-zinc-50/[0.1] dark:hover:bg-zinc-900/[0.1] transition-all duration-300 group relative min-h-[100px]">
-                                        {/* Left Master Column */}
-                                        <div className="w-52 shrink-0 border-r border-zinc-200/60 dark:border-zinc-800/60 p-4 flex items-center gap-3 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm sticky left-0 z-10 shadow-[4px_0_10px_-5px_rgba(0,0,0,0.05)]">
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 text-white border border-zinc-700 flex items-center justify-center font-black text-sm shadow-md shrink-0">
-                                                {master.username.charAt(0).toUpperCase()}
-                                            </div>
-                                            <div className="truncate space-y-1">
-                                                <span className="font-black text-xs text-zinc-900 dark:text-white block truncate font-['Montserrat']">{master.username}</span>
-                                                <div className="flex items-center gap-1.5">
-                                                    <span className="relative flex h-2 w-2 shrink-0">
-                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                                                    </span>
-                                                    <span className="text-[9px] font-bold text-zinc-500 dark:text-zinc-400 font-mono tracking-wider">НА СМЕНЕ</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex-1 flex relative">
-                                            {/* Background Grid Cells */}
-                                            {hours.map((time, idx) => (
-                                                <div 
-                                                    key={idx} 
-                                                    onClick={() => handleCellClick(master.id, time)}
-                                                    className="flex-1 min-w-[90px] border-r border-zinc-200/30 dark:border-zinc-800/20 cursor-crosshair hover:bg-orange-500/[0.04] dark:hover:bg-[#F95700]/[0.02] transition-all duration-300 flex items-center justify-center group/cell"
-                                                    title={`Записать на ${time}`}
-                                                >
-                                                <span className="text-[10px] font-black text-[#F95700] opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    + Запись
-                                                </span>
+                                    <div className="flex-1 flex">
+                                        {hours.map((time, idx) => (
+                                            <div key={idx} className="flex-1 min-w-[90px] border-r border-zinc-200/40 dark:border-zinc-800/50 p-3 text-center text-[11px] font-bold font-mono tracking-wider text-zinc-400 dark:text-zinc-500">
+                                                {time}
                                             </div>
                                         ))}
-
-                                        {/* Placed Appointments */}
-                                        {masterApps.map(app => {
-                                            const start = new Date(app.datetime_start);
-                                            const end = new Date(app.datetime_end);
-                                            
-                                            // Simple positioning calculation (assuming 9:00 start)
-                                            const startHour = start.getHours() + start.getMinutes()/60;
-                                            const endHour = end.getHours() + end.getMinutes()/60;
-                                            
-                                            // Bounds check
-                                            if (endHour <= 9 || startHour >= 20.5) return null;
-                                            
-                                            const safeStart = Math.max(9, startHour);
-                                            const safeEnd = Math.min(20.5, endHour);
-                                            
-                                            const leftPercent = ((safeStart - 9) / 11.5) * 100;
-                                            const widthPercent = ((safeEnd - safeStart) / 11.5) * 100;
-
-                                            const isCompleted = app.status === 'completed';
-                                            const isConfirmed = app.status === 'confirmed';
-                                            const isCancelled = app.status === 'cancelled';
-                                            
-                                            return (
-                                                <div 
-                                                    key={app.id}
-                                                    onClick={() => handleAppointmentClick(app)}
-                                                    className={`absolute top-2 bottom-2 rounded-2xl p-3 border backdrop-blur-sm overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer group/card flex flex-col justify-between hover:-translate-y-[2px] active:scale-[0.98] ${
-                                                        isCompleted 
-                                                        ? 'bg-gradient-to-br from-emerald-500/5 to-teal-500/5 border-emerald-500/20 text-emerald-700 dark:text-emerald-400 hover:shadow-md shadow-emerald-500/5' 
-                                                        : isConfirmed
-                                                        ? 'bg-gradient-to-br from-orange-500 to-[#F95700] border-[#F95700]/10 text-white hover:shadow-lg hover:shadow-orange-500/20 shadow-md shadow-orange-500/10'
-                                                        : isCancelled
-                                                        ? 'bg-zinc-100/50 dark:bg-zinc-900/30 border-zinc-200/50 dark:border-zinc-800/40 text-zinc-450 dark:text-zinc-550 line-through opacity-50 hover:opacity-75'
-                                                        : 'bg-gradient-to-br from-blue-500/5 to-indigo-500/5 border-blue-500/20 text-blue-700 dark:text-blue-400 hover:shadow-md shadow-blue-500/5'
-                                                    }`}
-                                                    style={{ 
-                                                        left: `${leftPercent}%`, 
-                                                        width: `${widthPercent}%`,
-                                                        minWidth: '95px'
-                                                    }}
-                                                >
-                                                    <div className="flex flex-col h-full justify-between space-y-1">
-                                                        <div>
-                                                            <div className="truncate text-xs font-black leading-tight flex items-center gap-1.5 font-['Montserrat']">
-                                                                {isCompleted && <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-500" />}
-                                                                {isConfirmed && <Check className="w-3.5 h-3.5 shrink-0 text-white" />}
-                                                                <span className="truncate">{app.client_name}</span>
-                                                            </div>
-                                                            <div className={`truncate text-[9px] font-bold leading-tight mt-0.5 font-mono tracking-wide ${
-                                                                isCompleted 
-                                                                ? 'text-emerald-600 dark:text-emerald-400/80' 
-                                                                : isConfirmed
-                                                                ? 'text-white/80'
-                                                                : isCancelled 
-                                                                ? 'text-zinc-400 dark:text-zinc-600' 
-                                                                : 'text-blue-600 dark:text-blue-400/80'
-                                                            }`}>
-                                                                {app.service_name}
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Hover button for completion */}
-                                                        {!isCompleted && !isCancelled && (
-                                                            <button 
-                                                                onClick={(e) => { e.stopPropagation(); handleCompleteClick(app.id, app.service_id); }}
-                                                                className="opacity-0 group-hover/card:opacity-100 transition-opacity w-full flex items-center justify-center gap-1 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-xl py-1.5 text-[9px] font-black uppercase tracking-wider"
-                                                            >
-                                                                <CheckCircle2 className="w-3.5 h-3.5" /> Завершить
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
                                     </div>
                                 </div>
-                            );
-                        })}
+
+                                {/* Body: Masters timelines */}
+                                <div className="relative">
+                                    {loading && <div className="absolute inset-0 bg-white/50 dark:bg-zinc-950/50 flex items-center justify-center z-20 font-black text-xs text-[#F95700] backdrop-blur-sm">Загрузка расписания...</div>}
+                                    
+                                    {masters.map(master => {
+                                        const masterApps = getAppointmentsForMaster(master.id);
+                                        return (
+                                            <div key={master.id} className="flex border-b border-zinc-100 dark:border-zinc-800/40 hover:bg-zinc-50/[0.1] dark:hover:bg-zinc-900/[0.1] transition-all duration-300 group relative min-h-[100px]">
+                                                {/* Left Master Column */}
+                                                <div className="w-52 shrink-0 border-r border-zinc-200/60 dark:border-zinc-800/60 p-4 flex items-center gap-3 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm sticky left-0 z-10 shadow-[4px_0_10px_-5px_rgba(0,0,0,0.05)]">
+                                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 text-white border border-zinc-700 flex items-center justify-center font-black text-sm shrink-0">
+                                                        {master.username.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div className="truncate space-y-1">
+                                                        <span className="font-black text-xs text-zinc-900 dark:text-white block truncate font-['Montserrat']">{master.username}</span>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="relative flex h-2 w-2 shrink-0">
+                                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                                            </span>
+                                                            <span className="text-[9px] font-bold text-zinc-500 dark:text-zinc-400 font-mono tracking-wider">НА СМЕНЕ</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="flex-1 flex relative">
+                                                    {/* Background Cells */}
+                                                    {hours.map((time, idx) => (
+                                                        <div 
+                                                            key={idx} 
+                                                            onClick={() => handleCellClick(master.id, time)}
+                                                            className="flex-1 min-w-[90px] border-r border-zinc-200/30 dark:border-zinc-800/20 cursor-crosshair hover:bg-orange-500/[0.04] dark:hover:bg-[#F95700]/[0.02] transition-all duration-300 flex items-center justify-center group/cell"
+                                                            title={`Записать на ${time}`}
+                                                        >
+                                                            <span className="text-[10px] font-black text-[#F95700] opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                + Запись
+                                                            </span>
+                                                        </div>
+                                                    ))}
+
+                                                    {/* Appointments */}
+                                                    {masterApps.map(app => {
+                                                        const start = new Date(app.datetime_start);
+                                                        const end = new Date(app.datetime_end);
+                                                        const startHour = start.getHours() + start.getMinutes()/60;
+                                                        const endHour = end.getHours() + end.getMinutes()/60;
+                                                        
+                                                        if (endHour <= 9 || startHour >= 20.5) return null;
+                                                        
+                                                        const safeStart = Math.max(9, startHour);
+                                                        const safeEnd = Math.min(20.5, endHour);
+                                                        const leftPercent = ((safeStart - 9) / 11.5) * 100;
+                                                        const widthPercent = ((safeEnd - safeStart) / 11.5) * 100;
+
+                                                        const isCompleted = app.status === 'completed';
+                                                        const isConfirmed = app.status === 'confirmed';
+                                                        const isCancelled = app.status === 'cancelled';
+                                                        
+                                                        return (
+                                                            <div 
+                                                                key={app.id}
+                                                                onClick={() => handleAppointmentClick(app)}
+                                                                className={`absolute top-2 bottom-2 rounded-2xl p-3 border backdrop-blur-sm overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer group/card flex flex-col justify-between hover:-translate-y-[2px] active:scale-[0.98] ${
+                                                                    isCompleted 
+                                                                    ? 'bg-gradient-to-br from-emerald-500/5 to-teal-500/5 border-emerald-500/20 text-emerald-700 dark:text-emerald-400 hover:shadow-md shadow-emerald-500/5' 
+                                                                    : isConfirmed
+                                                                    ? 'bg-gradient-to-br from-orange-500 to-[#F95700] border-[#F95700]/10 text-white hover:shadow-lg hover:shadow-orange-500/20 shadow-md shadow-orange-500/10'
+                                                                    : isCancelled
+                                                                    ? 'bg-zinc-100/50 dark:bg-zinc-900/30 border-zinc-200/50 dark:border-zinc-800/40 text-zinc-450 dark:text-zinc-550 line-through opacity-50 hover:opacity-75'
+                                                                    : 'bg-gradient-to-br from-blue-500/5 to-indigo-500/5 border-blue-500/20 text-blue-700 dark:text-blue-400 hover:shadow-md shadow-blue-500/5'
+                                                                }`}
+                                                                style={{ 
+                                                                    left: `${leftPercent}%`, 
+                                                                    width: `${widthPercent}%`,
+                                                                    minWidth: '95px'
+                                                                }}
+                                                            >
+                                                                <div className="flex flex-col h-full justify-between space-y-1">
+                                                                    <div>
+                                                                        <div className="truncate text-xs font-black leading-tight flex items-center gap-1.5 font-['Montserrat']">
+                                                                            {isCompleted && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+                                                                            {isConfirmed && <Check className="w-3.5 h-3.5 text-white" />}
+                                                                            <span className="truncate">{app.client_name}</span>
+                                                                        </div>
+                                                                        <div className={`truncate text-[9px] font-bold leading-tight mt-0.5 font-mono tracking-wide ${isCompleted ? 'text-emerald-600 dark:text-emerald-400/80' : isConfirmed ? 'text-white/80' : isCancelled ? 'text-zinc-400 dark:text-zinc-650' : 'text-blue-600'}`}>
+                                                                            {app.service_name}
+                                                                        </div>
+                                                                    </div>
+                                                                    {!isCompleted && !isCancelled && (
+                                                                        <button 
+                                                                            onClick={(e) => { e.stopPropagation(); handleCompleteClick(app.id, app.service_id); }}
+                                                                            className="opacity-0 group-hover/card:opacity-100 transition-opacity w-full flex items-center justify-center gap-1 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-xl py-1 text-[8px] font-black uppercase tracking-wider"
+                                                                        >
+                                                                            Завершить
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        )}
+
+                        {/* ─── WEEK VIEW MODE ─── */}
+                        {viewMode === 'week' && (
+                            <>
+                                {/* Header: Week Days */}
+                                <div className="flex border-b border-zinc-200/60 dark:border-zinc-800/60 bg-zinc-50/75 dark:bg-zinc-900/75 backdrop-blur-md sticky top-0 z-10">
+                                    <div className="w-52 shrink-0 border-r border-zinc-200/60 dark:border-zinc-800/60 p-4 font-black text-[10px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 flex items-center bg-zinc-50/90 dark:bg-zinc-900/90 backdrop-blur-md font-['Montserrat']">
+                                        Специалисты
+                                    </div>
+                                    <div className="flex-1 flex font-mono font-black text-[10px] uppercase tracking-wider">
+                                        {weekDays.map((dayStr, idx) => (
+                                            <div key={idx} className="flex-1 min-w-[150px] border-r border-zinc-200/40 dark:border-zinc-800/50 p-3.5 text-center text-zinc-450 dark:text-zinc-400">
+                                                {getDayName(dayStr)}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Body: Week scheduling grid */}
+                                <div className="relative">
+                                    {loading && <div className="absolute inset-0 bg-white/50 dark:bg-zinc-950/50 flex items-center justify-center z-20 font-black text-xs text-[#F95700] backdrop-blur-sm">Загрузка недельного расписания...</div>}
+                                    
+                                    {masters.map(master => {
+                                        return (
+                                            <div key={master.id} className="flex border-b border-zinc-105 dark:border-zinc-800/40 min-h-[140px]">
+                                                {/* Left Master Column */}
+                                                <div className="w-52 shrink-0 border-r border-zinc-200/60 dark:border-zinc-800/60 p-4 flex items-center gap-3 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm sticky left-0 z-10 shadow-[4px_0_10px_-5px_rgba(0,0,0,0.05)]">
+                                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 text-white border border-zinc-700 flex items-center justify-center font-black text-sm shrink-0">
+                                                        {master.username.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <span className="font-black text-xs text-zinc-900 dark:text-white block truncate font-['Montserrat']">{master.username}</span>
+                                                        <span className="text-[9px] font-bold text-zinc-400 font-mono tracking-wider">МАСТЕР</span>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="flex-1 flex">
+                                                    {weekDays.map((dateStr, idx) => {
+                                                        const dayApps = appointments.filter(a => a.master_id === master.id && a.datetime_start.startsWith(dateStr));
+                                                        
+                                                        return (
+                                                            <div 
+                                                                key={idx}
+                                                                className="flex-1 min-w-[150px] p-2 border-r border-zinc-200/30 dark:border-zinc-800/20 hover:bg-zinc-50/30 dark:hover:bg-zinc-900/5 transition-colors flex flex-col justify-between group relative space-y-2"
+                                                            >
+                                                                <div className="space-y-1.5 flex-1 overflow-y-auto max-h-[140px] custom-scrollbar">
+                                                                    {dayApps.map(app => {
+                                                                        const appStart = new Date(app.datetime_start).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+                                                                        const isCompleted = app.status === 'completed';
+                                                                        const isConfirmed = app.status === 'confirmed';
+                                                                        const isCancelled = app.status === 'cancelled';
+                                                                        
+                                                                        return (
+                                                                            <div 
+                                                                                key={app.id}
+                                                                                onClick={() => handleAppointmentClick(app)}
+                                                                                className={`p-2 rounded-xl border text-[10px] cursor-pointer transition-all duration-200 hover:-translate-y-[1px] ${
+                                                                                    isCompleted 
+                                                                                    ? 'bg-emerald-550/5 border-emerald-500/10 text-emerald-600' 
+                                                                                    : isConfirmed
+                                                                                    ? 'bg-orange-500/10 border-orange-500/20 text-[#F95700]'
+                                                                                    : isCancelled
+                                                                                    ? 'bg-zinc-100 text-zinc-400 line-through opacity-50'
+                                                                                    : 'bg-blue-500/5 border-blue-500/15 text-blue-600'
+                                                                                }`}
+                                                                            >
+                                                                                <div className="font-bold flex justify-between items-center">
+                                                                                    <span>{appStart}</span>
+                                                                                    <span className="truncate max-w-[70px] font-black">{app.client_name}</span>
+                                                                                </div>
+                                                                                <div className="truncate opacity-80 mt-0.5 font-mono">{app.service_name}</div>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => handleCellClick(master.id, "12:00", dateStr)}
+                                                                    className="w-full py-1.5 bg-zinc-50 hover:bg-orange-500/10 dark:bg-zinc-900/50 text-zinc-400 dark:text-zinc-500 hover:text-[#F95700] rounded-xl text-[9px] font-black uppercase tracking-wider transition-all opacity-0 group-hover:opacity-100 cursor-pointer text-center"
+                                                                >
+                                                                    + Запись
+                                                                </button>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        )}
                         
                         {masters.length === 0 && !loading && (
                             <div className="p-10 text-center text-zinc-500">Нет доступных мастеров.</div>
@@ -498,26 +629,26 @@ export default function AppointmentsChessboard() {
                     </div>
                 </div>
             </div>
-        </div>
 
+            {/* Модальное окно создания записи */}
             <GodTierModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 title={`Новая запись (${currentDate} в ${selectedTimeStr})`}
             >
-                <div className="space-y-5">
+                <div className="space-y-5 text-left">
                     <div>
-                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Имя клиента</label>
+                        <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Имя клиента *</label>
                         <input
                             type="text"
-                            className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white outline-none focus:border-blue-500"
+                            className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white outline-none focus:border-[#F95700]"
                             placeholder="Например: Иван Иванов"
                             value={formData.client_name}
                             onChange={(e) => setFormData({...formData, client_name: e.target.value})}
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Телефон</label>
+                        <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Телефон *</label>
                         <input
                             type="text"
                             className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white outline-none focus:border-[#F95700] transition-colors"
@@ -527,7 +658,7 @@ export default function AppointmentsChessboard() {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Услуга</label>
+                        <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Услуга *</label>
                         <select
                             className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white outline-none focus:border-[#F95700] transition-colors"
                             value={formData.service_id}
@@ -548,7 +679,7 @@ export default function AppointmentsChessboard() {
                     <div className="pt-4 flex justify-end gap-3">
                         <button
                             onClick={() => setIsModalOpen(false)}
-                            className="px-5 py-2.5 rounded-xl font-bold text-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+                            className="px-5 py-2.5 rounded-xl font-bold text-xs text-zinc-650 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
                         >
                             Отмена
                         </button>
@@ -569,7 +700,7 @@ export default function AppointmentsChessboard() {
                 title="Управление записью клиента"
             >
                 {selectedAppointment && (
-                    <div className="space-y-6">
+                    <div className="space-y-6 text-left">
                         {/* Статусные плашки */}
                         <div className="flex gap-2">
                             <span className={`px-3 py-1 rounded-full text-xs font-black uppercase ${
@@ -593,7 +724,7 @@ export default function AppointmentsChessboard() {
                             {selectedAppointment.status !== 'confirmed' && selectedAppointment.status !== 'completed' && (
                                 <button
                                     onClick={() => handleConfirmAppointment(selectedAppointment.id)}
-                                    className="flex items-center justify-center gap-1 bg-orange-500 hover:bg-orange-600 text-white rounded-xl py-2 text-xs font-bold transition shadow-sm shadow-orange-500/10 cursor-pointer"
+                                    className="flex items-center justify-center gap-1 bg-[#F95700] hover:bg-orange-600 text-white rounded-xl py-2 text-xs font-bold transition shadow-sm shadow-orange-500/10 cursor-pointer"
                                 >
                                     <Check className="w-3.5 h-3.5" /> Подтвердить
                                 </button>
@@ -609,7 +740,7 @@ export default function AppointmentsChessboard() {
                             {selectedAppointment.status !== 'cancelled' && selectedAppointment.status !== 'completed' && (
                                 <button
                                     onClick={() => handleCancelAppointment(selectedAppointment.id)}
-                                    className="flex items-center justify-center gap-1 bg-zinc-250 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-xl py-2 text-xs font-bold transition cursor-pointer"
+                                    className="flex items-center justify-center gap-1 bg-zinc-250 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-750 dark:text-zinc-300 rounded-xl py-2 text-xs font-bold transition cursor-pointer"
                                 >
                                     <X className="w-3.5 h-3.5" /> Отменить
                                 </button>
@@ -631,7 +762,7 @@ export default function AppointmentsChessboard() {
                                     </label>
                                     <input
                                         type="text"
-                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:border-[#F95700] focus:ring-2 focus:ring-[#F95700]/20 transition-colors"
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:border-[#F95700] transition-colors"
                                         value={manageFormData.client_name}
                                         onChange={(e) => setManageFormData({...manageFormData, client_name: e.target.value})}
                                     />
@@ -642,7 +773,7 @@ export default function AppointmentsChessboard() {
                                     </label>
                                     <input
                                         type="text"
-                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:border-[#F95700] focus:ring-2 focus:ring-[#F95700]/20 transition-colors"
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:border-[#F95700] transition-colors"
                                         value={manageFormData.client_phone}
                                         onChange={(e) => setManageFormData({...manageFormData, client_phone: e.target.value})}
                                     />
@@ -653,7 +784,7 @@ export default function AppointmentsChessboard() {
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-black text-zinc-700 dark:text-zinc-300">Специалист</label>
                                     <select
-                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:border-[#F95700] focus:ring-2 focus:ring-[#F95700]/20 transition-colors"
+                                        className="w-full bg-zinc-50 dark:bg-zinc-955 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:border-[#F95700] transition-colors"
                                         value={manageFormData.master_id}
                                         onChange={(e) => setManageFormData({...manageFormData, master_id: Number(e.target.value)})}
                                     >
@@ -665,7 +796,7 @@ export default function AppointmentsChessboard() {
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-black text-zinc-700 dark:text-zinc-300">Услуга</label>
                                     <select
-                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:border-[#F95700] focus:ring-2 focus:ring-[#F95700]/20 transition-colors"
+                                        className="w-full bg-zinc-50 dark:bg-zinc-955 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:border-[#F95700] transition-colors"
                                         value={manageFormData.service_id}
                                         onChange={(e) => setManageFormData({...manageFormData, service_id: Number(e.target.value)})}
                                     >
@@ -683,7 +814,7 @@ export default function AppointmentsChessboard() {
                                     </label>
                                     <input
                                         type="datetime-local"
-                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:border-[#F95700] focus:ring-2 focus:ring-[#F95700]/20 transition-colors"
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:border-[#F95700] transition-colors"
                                         value={manageFormData.datetime_start}
                                         onChange={(e) => setManageFormData({...manageFormData, datetime_start: e.target.value})}
                                     />
@@ -694,7 +825,7 @@ export default function AppointmentsChessboard() {
                                     </label>
                                     <input
                                         type="datetime-local"
-                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:border-[#F95700] focus:ring-2 focus:ring-[#F95700]/20 transition-colors"
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white text-xs font-bold focus:outline-none focus:border-[#F95700] transition-colors"
                                         value={manageFormData.datetime_end}
                                         onChange={(e) => setManageFormData({...manageFormData, datetime_end: e.target.value})}
                                     />
@@ -711,7 +842,7 @@ export default function AppointmentsChessboard() {
                             </button>
                             <button
                                 onClick={handleUpdateAppointment}
-                                className="px-5 py-2.5 rounded-xl font-bold text-xs bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 transition"
+                                className="px-5 py-2.5 rounded-xl font-bold text-xs bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-850 transition"
                             >
                                 Сохранить изменения
                             </button>
@@ -727,7 +858,7 @@ export default function AppointmentsChessboard() {
                 title="Списание материалов"
                 maxWidth="md"
             >
-                <div className="space-y-5">
+                <div className="space-y-5 text-left">
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed">
                         Ниже указан список расходных материалов, привязанных к данной услуге. Вы можете изменить объём списания ТМЦ или удалить материал из списка перед подтверждением.
                     </p>
@@ -788,7 +919,7 @@ export default function AppointmentsChessboard() {
                     <div className="pt-4 flex justify-end gap-3 border-t border-zinc-100 dark:border-zinc-800">
                         <button
                             onClick={() => setIsDeductionModalOpen(false)}
-                            className="px-5 py-2.5 rounded-xl font-bold text-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+                            className="px-5 py-2.5 rounded-xl font-bold text-xs text-zinc-650 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
                         >
                             Назад
                         </button>
