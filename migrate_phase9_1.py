@@ -1,7 +1,7 @@
 import os
 import sys
 
-# Добавляем корневую директорию SPHERA в sys.path
+# Добавляем корневую директорию SFERUM в sys.path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from backend.app.database import engine, Base

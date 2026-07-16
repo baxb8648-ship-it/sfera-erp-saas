@@ -321,7 +321,7 @@ export const SaaSLanding: React.FC = () => {
                 С
               </div>
               <span className="text-sm font-black tracking-tight text-white">
-                СФЕРА<span className="text-[#F95700]">.</span>
+                СФЕРУМ<span className="text-[#F95700]">.</span>
               </span>
             </button>
 
@@ -414,7 +414,7 @@ export const SaaSLanding: React.FC = () => {
                 <PillBadge color="orange">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#F95700]"
                     style={{ animation: 'ping-slow 2s ease-in-out infinite' }} />
-                  СФЕРА ERP 2.0 · Мультитенантная SaaS
+                  СФЕРУМ 2.0 · Мультитенантная SaaS
                 </PillBadge>
               </motion.div>
 
@@ -601,7 +601,7 @@ export const SaaSLanding: React.FC = () => {
                     Мгновенный старт по ИНН
                   </h2>
                   <p className="text-zinc-400 text-sm leading-relaxed">
-                    Введите 10 или 12 цифр ИНН вашей организации — СФЕРА автоматически
+                    Введите 10 или 12 цифр ИНН вашей организации — СФЕРУМ автоматически
                     загрузит данные из реестра ЕГРЮЛ/ЕГРИП ФНС и подготовит профиль компании.
                   </p>
                 </div>
@@ -724,7 +724,7 @@ export const SaaSLanding: React.FC = () => {
             </Reveal>
             <Reveal delay={0.1}>
               <p className="text-zinc-400 text-sm max-w-sm leading-relaxed">
-                СФЕРА адаптирует интерфейс и модули под тип бизнеса сразу после регистрации.
+                СФЕРУМ адаптирует интерфейс и модули под тип бизнеса сразу после регистрации.
               </p>
             </Reveal>
           </div>
@@ -1187,7 +1187,7 @@ export const SaaSLanding: React.FC = () => {
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white font-black text-xs"
                     style={{ background: 'linear-gradient(135deg,#F95700,#c94400)' }}>С</div>
-                  <span className="text-base font-black text-white">СФЕРА<span className="text-[#F95700]">.</span></span>
+                  <span className="text-base font-black text-white">СФЕРУМ<span className="text-[#F95700]">.</span></span>
                 </div>
                 <p className="text-xs text-zinc-600 leading-relaxed max-w-xs">
                   Мультитенантная SaaS-платформа для автоматизации B2B-бизнеса. Строительство, агропром, производство, услуги.
@@ -1222,7 +1222,7 @@ export const SaaSLanding: React.FC = () => {
             </div>
 
             <div className="border-t border-white/[0.04] pt-6 flex flex-col md:flex-row justify-between items-center gap-3">
-              <p className="text-xs text-zinc-700">© 2026 СФЕРА ERP. Все права защищены.</p>
+              <p className="text-xs text-zinc-700">© 2026 СФЕРУМ. Все права защищены.</p>
               <p className="text-xs text-zinc-700" style={{ fontFamily: 'var(--font-mono)' }}>v2.0.0 · Neon PostgreSQL · eu-central-1</p>
             </div>
           </div>

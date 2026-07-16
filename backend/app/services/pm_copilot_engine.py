@@ -392,7 +392,7 @@ def run_simulation_test():
         pass
 
     print("=" * 80)
-    print("🤖 ЗАПУСК ТЕСТОВОЙ СИМУЛЯЦИИ: СФЕРА PM COPILOT & TELEGRAM HITL (Модули 5.2 и 5.3)")
+    print("🤖 ЗАПУСК ТЕСТОВОЙ СИМУЛЯЦИИ: СФЕРУМ PM COPILOT & TELEGRAM HITL (Модули 5.2 и 5.3)")
     print("=" * 80)
 
     copilot = PMCopilotEngine()
@@ -402,7 +402,7 @@ def run_simulation_test():
     try:
         if SessionLocal:
             db = SessionLocal()
-            logger.info("Подключено к базе данных СФЕРА ERP.")
+            logger.info("Подключено к базе данных СФЕРУМ.")
     except Exception:
         logger.info("База данных недоступна, запуск на симуляционных данных.")
 

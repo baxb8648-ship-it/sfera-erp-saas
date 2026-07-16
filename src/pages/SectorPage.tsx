@@ -44,7 +44,7 @@ export const SectorPage: React.FC = () => {
     "description": sector.heroDesc,
     "provider": {
       "@type": "LocalBusiness",
-      "name": "СФЕРА ПРОМ",
+      "name": "СФЕРУМ ПРОМ",
       "image": "https://sphera.pro/logo.png"
     },
     "areaServed": "Россия"
@@ -53,9 +53,9 @@ export const SectorPage: React.FC = () => {
   return (
     <>
       <Helmet>
-        <title>{sector.title} | АКЗ, Огнезащита и Теплоизоляция | СФЕРА ПРОМ</title>
+        <title>{sector.title} | АКЗ, Огнезащита и Теплоизоляция | СФЕРУМ ПРОМ</title>
         <meta name="description" content={sector.heroDesc} />
-        <meta property="og:title" content={`${sector.title} | СФЕРА ПРОМ`} />
+        <meta property="og:title" content={`${sector.title} | СФЕРУМ ПРОМ`} />
         <meta property="og:description" content={sector.heroDesc} />
         <meta property="og:type" content="website" />
         <script type="application/ld+json">

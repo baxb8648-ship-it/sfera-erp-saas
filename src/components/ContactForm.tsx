@@ -152,7 +152,7 @@ export const ContactForm: React.FC = () => {
           if (formMode === 'quiz') {
             messageText = `🔔 *Новый расчет стоимости АКЗ с квиза!*\n\n🏢 *Организация:* ${org}\n📞 *Телефон:* ${phone}\n✉️ *Email:* ${email || 'Не указан'}\n\n🏗️ *Тип конструкции:* ${objectType}\n📐 *Площадь окраски:* ${area.toLocaleString('ru-RU')} м²\n🔧 *Состояние поверхности:* ${condition}\n💰 *Предварительный расчет:* ~ ${calculatedPrice.toLocaleString('ru-RU')} ₽`;
           } else {
-            messageText = `🔔 *Новая заявка с сайта СФЕРА!*\n\n🏢 *Организация:* ${org}\n📞 *Телефон:* ${phone}\n\n📝 *Описание объекта:* ${message || 'Не указано'}`;
+            messageText = `🔔 *Новая заявка с сайта СФЕРУМ!*\n\n🏢 *Организация:* ${org}\n📞 *Телефон:* ${phone}\n\n📝 *Описание объекта:* ${message || 'Не указано'}`;
           }
           
           await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
@@ -255,7 +255,7 @@ export const ContactForm: React.FC = () => {
             {/* Legal details card */}
             <div className="p-6 bg-surface border border-border space-y-3 backdrop-blur-md">
               <p className="text-[10px] text-text-muted uppercase font-black mb-4 tracking-widest">
-                Карточка контрагента ООО "СФЕРА"
+                Карточка контрагента ООО "СФЕРУМ"
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2.5 text-[9px] tracking-wider uppercase font-bold text-text-muted">
                 <p>
@@ -316,7 +316,7 @@ export const ContactForm: React.FC = () => {
                     Заявка принята
                   </h3>
                   <p className="text-sm text-text-muted max-w-md leading-relaxed mb-8 font-medium">
-                    Спасибо! Данные успешно переданы в сметно-договорной отдел ООО «СФЕРА».
+                    Спасибо! Данные успешно переданы в сметно-договорной отдел ООО «СФЕРУМ».
                     Наши специалисты подготовят смету и ППР в течение 1 рабочего дня и свяжутся с вами.
                   </p>
                   <button

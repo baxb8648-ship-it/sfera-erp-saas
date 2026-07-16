@@ -236,7 +236,7 @@ export default function BeautyDashboard() {
               </div>
             </div>
 
-            <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest font-mono mt-6 relative z-10">СФЕРА ERP · beauty engine</p>
+            <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest font-mono mt-6 relative z-10">СФЕРУМ · beauty engine</p>
           </div>
         </div>
       </div>

@@ -77,7 +77,7 @@ async def run_client_bot_polling():
 
 
 async def run_sfera_bot_polling():
-    """Цикл Long Polling для глобального СФЕРА-бота (oblakocrmbot)"""
+    """Цикл Long Polling для глобального СФЕРУМ-бота (oblakocrmbot)"""
     logger.info("[Sfera Bot Polling] Loop starting...")
     
     # Считываем токен из переменной окружения

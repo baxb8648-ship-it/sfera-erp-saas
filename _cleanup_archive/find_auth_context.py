@@ -1,6 +1,6 @@
 import os
 
-src_dir = "L:/LEONIKA/Комерческая CRM-ERP (SaaS)/СФЕРА-ЕРП/SPHERA/src"
+src_dir = "L:/LEONIKA/Комерческая CRM-ERP (SaaS)/СФЕРУМ-ЕРП/SFERUM/src"
 found = []
 
 for root, dirs, files in os.walk(src_dir):

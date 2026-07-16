@@ -29,7 +29,7 @@ const DEFAULT_COORDS = [
   { lat: 55.7689, lng: 37.5912, address: 'г. Москва, Тверской бул., ремонт дороги' },
   { lat: 55.7820, lng: 37.6050, address: 'г. Москва, Сущёвский Вал, котлован ЖК' },
   { lat: 55.7324, lng: 37.6540, address: 'г. Москва, Таганская пл., объект #4' },
-  { lat: 55.7915, lng: 37.5580, address: 'г. Москва, Ленинградский пр-т, база СФЕРА' }
+  { lat: 55.7915, lng: 37.5580, address: 'г. Москва, Ленинградский пр-т, база СФЕРУМ' }
 ];
 
 export const FleetGlonassMap: React.FC<FleetGlonassMapProps> = ({
@@ -396,7 +396,7 @@ export const FleetGlonassMap: React.FC<FleetGlonassMapProps> = ({
           <div className="flex items-center gap-3">
             <span className="font-bold text-xs text-[#1a1a1a] dark:text-zinc-100 flex items-center gap-1.5">
               <Compass className="w-4 h-4 text-[#F95700]" />
-              Карта 2ГИС · СФЕРА Телематика
+              Карта 2ГИС · СФЕРУМ Телематика
             </span>
             {selectedVehicle && (
               <span className="hidden sm:inline-block text-[11px] text-gray-500 dark:text-zinc-400 border-l border-gray-200 dark:border-zinc-700 pl-3">
@@ -726,7 +726,7 @@ export const FleetGlonassMap: React.FC<FleetGlonassMapProps> = ({
                     FAQ: Инструкция интеграции ГЛОНАСС и 2ГИС
                   </h3>
                   <p className="text-xs text-gray-500 dark:text-zinc-400">
-                    Как подключить автопарк к онлайн-телеметрии СФЕРА ERP
+                    Как подключить автопарк к онлайн-телеметрии СФЕРУМ
                   </p>
                 </div>
               </div>
@@ -762,7 +762,7 @@ export const FleetGlonassMap: React.FC<FleetGlonassMapProps> = ({
               <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800 space-y-2">
                 <h4 className="font-bold text-[#1a1a1a] dark:text-white flex items-center gap-2">
                   <span className="w-6 h-6 rounded-lg bg-[#F95700] text-white text-xs flex items-center justify-center font-bold">3</span>
-                  Как настроить ретрансляцию данных на сервер СФЕРА ERP?
+                  Как настроить ретрансляцию данных на сервер СФЕРУМ?
                 </h4>
                 <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed">
                   В личном кабинете вашей телематической платформы (Wialon, Omnicomm или StarLine) укажите адрес ретранслятора (Webhook):

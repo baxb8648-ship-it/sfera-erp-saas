@@ -74,7 +74,7 @@ def export_markdown(db: Session = Depends(get_db)):
     """
     records = db.query(DecisionLog).order_by(DecisionLog.created_at.asc()).all()
     lines = [
-        "# Decision Log — СФЕРА/ERP\n",
+        "# Decision Log — СФЕРУМ/ERP\n",
         f"_Обновлено: {datetime.utcnow().strftime('%Y-%m-%d')}_\n",
         f"_Всего решений: {len(records)}_\n",
     ]

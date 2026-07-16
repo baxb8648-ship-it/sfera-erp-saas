@@ -43,7 +43,7 @@ export const StandardPage: React.FC = () => {
             <div className="flex items-center gap-4 mb-4">
               <Award className="w-10 h-10 text-primary" />
               <span className="text-xs font-bold text-primary tracking-widest uppercase bg-[#F95700]/10 px-3 py-1">
-                Система Контроля Качества СФЕРА
+                Система Контроля Качества СФЕРУМ
               </span>
             </div>
             <h1 className="text-4xl sm:text-6xl font-black text-text uppercase tracking-tight mb-2">

@@ -1,5 +1,5 @@
 """
-Pinecone RAG Service для СФЕРА ERP SaaS
+Pinecone RAG Service для СФЕРУМ SaaS
 Векторная база знаний с изоляцией по тенантам (namespace per tenant)
 """
 import os

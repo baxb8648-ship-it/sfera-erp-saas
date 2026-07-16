@@ -108,7 +108,7 @@ export const TmaKanban: React.FC = () => {
       color: tg?.themeParams?.text_color || '#ffffff'
     }}>
       <Helmet>
-        <title>CRM Mini App | СФЕРА</title>
+        <title>CRM Mini App | СФЕРУМ</title>
       </Helmet>
 
       {/* Header Info Banner */}
@@ -119,7 +119,7 @@ export const TmaKanban: React.FC = () => {
           </div>
           <div>
             <h1 className="text-sm font-black tracking-tight uppercase font-['Montserrat']">
-              СФЕРА
+              СФЕРУМ
             </h1>
             <p className="text-[10px] text-zinc-400 font-medium">
               Telegram Mini App • Задачи

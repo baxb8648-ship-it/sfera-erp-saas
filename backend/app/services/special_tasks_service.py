@@ -252,7 +252,7 @@ def generate_custom_commercial_offer(customer_name: str, tender_title: str, offe
     """
     Генерирует коммерческое предложение на основе контекста, введенного пользователем.
     """
-    prompt = f"""Составь деловое коммерческое предложение от компании ООО «СФЕРА» для заказчика {customer_name}.
+    prompt = f"""Составь деловое коммерческое предложение от компании ООО «СФЕРУМ» для заказчика {customer_name}.
 Проект / тендер: "{tender_title}".
 
 Суть предложения и условия (контекст):
@@ -266,10 +266,10 @@ def generate_custom_commercial_offer(customer_name: str, tender_title: str, offe
     if not response:
         response = (
             f"Уважаемые коллеги из {customer_name}!\n\n"
-            f"ООО «СФЕРА» предлагает Вам рассмотреть наше предложение по проекту \"{tender_title}\".\n\n"
+            f"ООО «СФЕРУМ» предлагает Вам рассмотреть наше предложение по проекту \"{tender_title}\".\n\n"
             f"Наши условия:\n{offer_context}\n\n"
             f"Контакты для связи: info@леоника56.рф\n"
-            f"С уважением, ООО «СФЕРА»"
+            f"С уважением, ООО «СФЕРУМ»"
         )
     return response
 

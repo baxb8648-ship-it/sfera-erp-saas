@@ -498,7 +498,7 @@ def process_telegram_update_internal(update: dict, db: Session, token: str):
                     if role != "internal_copilot":
                         send_telegram_reply_message(
                             token, chat_id,
-                            "⚠️ <b>Доступ ограничен</b>\nЭта команда предназначена только для внутренних разработчиков платформы СФЕРА.",
+                            "⚠️ <b>Доступ ограничен</b>\nЭта команда предназначена только для внутренних разработчиков платформы СФЕРУМ.",
                             reply_to_message_id=message.get("message_id"),
                             thread_id=message.get("message_thread_id")
                         )
@@ -508,7 +508,7 @@ def process_telegram_update_internal(update: dict, db: Session, token: str):
                 if cmd_base in ["/help", "/команны", "/справка", "/команды"]:
                     if role == "internal_copilot":
                         help_msg = (
-                            "📖 <b>Справка по командам СФЕРА</b>\n\n"
+                            "📖 <b>Справка по командам СФЕРУМ</b>\n\n"
                             "👤 <b>Пользовательские команды:</b>\n"
                             "• /start, /crm — открыть Mini App\n"
                             "• /мои_задачи — список ваших активных задач\n"
@@ -802,7 +802,7 @@ def process_telegram_update_internal(update: dict, db: Session, token: str):
                         total_clients = _db2.query(Client).count()
                         
                         msg_text = (
-                            f"📊 <b>СФЕРА — сводка</b>\n"
+                            f"📊 <b>СФЕРУМ — сводка</b>\n"
                             f"<i>на {datetime.now().strftime('%d.%m.%Y %H:%M')}</i>\n"
                             f"━━━━━━━━━━━━━━━━━━━━\n"
                             f"📁 <b>Задачи:</b> {total_tasks} активных (🔴 {overdue_tasks} просрочено)\n"
@@ -895,7 +895,7 @@ def process_telegram_update_internal(update: dict, db: Session, token: str):
                 elif cmd_base in ["/start", "/tma", "/crm"]:
 
                     welcome_text = (
-                        "👋 <b>Добро пожаловать в СФЕРА!</b>\n\n"
+                        "👋 <b>Добро пожаловать в СФЕРУМ!</b>\n\n"
                         "Здесь вы можете управлять задачами компании прямо в Telegram.\n"
                         "Нажмите на кнопку ниже, чтобы открыть Mini App с Kanban-доской."
                     )
@@ -1184,7 +1184,7 @@ def handle_telegram_tender_ai_analysis(token: str, chat_id: int, tender_id: int,
             
         clean_desc = re.sub(r'<[^>]*>', '', tender.description or "")[:3000]
         prompt = (
-            "Ты — ИИ-Копилот, технический эксперт компании ООО СФЕРА по антикоррозийной защите (АКЗ), "
+            "Ты — ИИ-Копилот, технический эксперт компании ООО СФЕРУМ по антикоррозийной защите (АКЗ), "
             "огнезащите металлоконструкций, подготовке поверхностей (Sa 2.5, Sa 3, ГОСТ 9.402) и покраске ЛКМ.\n"
             "Проведи краткий экспресс-анализ этой закупки.\n\n"
             f"Название: {tender.title}\n"

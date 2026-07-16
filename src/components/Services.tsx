@@ -193,7 +193,7 @@ export const Services: React.FC = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16">
           <div>
             <h2 className="text-3xl sm:text-4xl text-text font-black mb-4 uppercase tracking-tight">
-              Услуги группы <span className="text-primary">СФЕРА</span>
+              Услуги группы <span className="text-primary">СФЕРУМ</span>
             </h2>
             <p className="max-w-xl text-text-muted font-medium">
               Мы не просто красим — мы создаем долговечный защитный барьер, применяя профессиональное промышленное оборудование высокого давления.

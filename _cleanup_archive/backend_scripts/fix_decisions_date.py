@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime
 
-DB = r'l:\SPHERA\АКЗ\АКЗ\АКЗ\backend\sphera_crm.db'
+DB = r'l:\SFERUM\АКЗ\АКЗ\АКЗ\backend\sphera_crm.db'
 conn = sqlite3.connect(DB)
 cur = conn.cursor()
 

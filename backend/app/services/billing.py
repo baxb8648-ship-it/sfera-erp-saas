@@ -9,9 +9,9 @@ from sqlalchemy.orm import Session
 
 from ..models import Tenant, Invoice, Organization
 
-# Реквизиты по умолчанию для владельца платформы СФЕРА (Поставщик)
+# Реквизиты по умолчанию для владельца платформы СФЕРУМ (Поставщик)
 PROVIDER_REQUISITES = {
-    "name": "ООО 'СФЕРА ТЕХНОЛОГИИ'",
+    "name": "ООО 'СФЕРУМ ТЕХНОЛОГИИ'",
     "inn": "5610248560",
     "kpp": "561001001",
     "address": "Россия, Оренбургская обл., г. Оренбург, ул. Мира, д. 12",
@@ -124,7 +124,7 @@ def generate_invoice_docx(invoice_id: int, tenant: Tenant, amount: float, output
     table_bank = doc.add_table(rows=4, cols=4)
     table_bank.style = 'Table Grid'
     
-    # Заполняем реквизиты банка поставщика (СФЕРА)
+    # Заполняем реквизиты банка поставщика (СФЕРУМ)
     hdr_cells = table_bank.rows[0].cells
     hdr_cells[0].text = PROVIDER_REQUISITES["bank_name"]
     hdr_cells[2].text = "БИК"
@@ -196,7 +196,7 @@ def generate_invoice_docx(invoice_id: int, tenant: Tenant, amount: float, output
     # Сама позиция
     item_row = table_items.rows[1].cells
     item_row[0].text = "1"
-    item_row[1].text = f"Лицензия на использование ПО 'СФЕРА-ЕРП' (Тариф '{tenant.sphere.capitalize()}', подписка 1 мес.)"
+    item_row[1].text = f"Лицензия на использование ПО 'СФЕРУМ-ЕРП' (Тариф '{tenant.sphere.capitalize()}', подписка 1 мес.)"
     item_row[2].text = "1"
     item_row[3].text = "мес."
     item_row[4].text = f"{amount:.2f}"

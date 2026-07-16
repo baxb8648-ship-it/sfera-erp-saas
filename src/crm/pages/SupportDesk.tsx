@@ -251,7 +251,7 @@ export default function SupportDesk() {
             <p className="text-sm text-gray-500 dark:text-zinc-400">
               {isSupportStaff 
                 ? 'Реестр обращений со всех тенантов и телеметрия серверов (Zero-MRR Access)'
-                : 'Оперативная связь с инженерами платформы СФЕРА ERP и решение вопросов'}
+                : 'Оперативная связь с инженерами платформы СФЕРУМ и решение вопросов'}
             </p>
           </div>
         </div>
@@ -362,7 +362,7 @@ export default function SupportDesk() {
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <Server className="w-5 h-5 text-indigo-500" />
-                  Мониторинг узлов СФЕРА ERP (Zero-MRR Health Check)
+                  Мониторинг узлов СФЕРУМ (Zero-MRR Health Check)
                 </h3>
                 <p className="text-xs text-gray-500 dark:text-zinc-400 mt-1">
                   Специалисты поддержки отслеживают состояние серверов без доступа к финансовой аналитике платформы.
@@ -697,7 +697,7 @@ export default function SupportDesk() {
               </div>
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Новое обращение в техподдержку</h3>
-                <p className="text-xs text-gray-500 dark:text-zinc-400">Специалисты СФЕРА ERP ответят в течение 15 минут</p>
+                <p className="text-xs text-gray-500 dark:text-zinc-400">Специалисты СФЕРУМ ответят в течение 15 минут</p>
               </div>
             </div>
 

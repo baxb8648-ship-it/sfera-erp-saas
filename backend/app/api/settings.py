@@ -9,9 +9,9 @@ from .auth import get_current_user
 router = APIRouter(prefix="/settings", tags=["Settings"])
 
 DEFAULT_SETTINGS = {
-    "company_name": "СФЕРА",
+    "company_name": "СФЕРУМ",
     "company_subtitle": "Промышленная группа",
-    "company_legal_name": "ООО \"СФЕРА\"",
+    "company_legal_name": "ООО \"СФЕРУМ\"",
     "company_inn": "5610234567",
     "company_kpp": "561001001",
     "company_address": "г. Оренбург, ул. Монтажников, д. 22",
@@ -38,7 +38,7 @@ DEFAULT_SETTINGS = {
     "telegram_bot_token": "",
     "telegram_channel_id": "",
     "tender_sync_mode": "demo",
-    "brand_name": "СФЕРА ERP",
+    "brand_name": "СФЕРУМ",
     "brand_color": "#F95700",
     "brand_logo_url": "",
     "email_template_contract": "Здравствуйте, {{client_contact}}!\n\nВо вложении к этому письму находится Договор подряда на объект {{object_name}}.\nПожалуйста, ознакомьтесь и подпишите его со своей стороны.\n\nС уважением,\n{{company_name}}\nТел.: {{company_phone}}",
@@ -111,7 +111,7 @@ def ensure_active_organization(db: Session, tenant_id: int = None) -> Organizati
         
     new_org = Organization(
         tenant_id=tenant_id,
-        name=org_data.get("company_name", "СФЕРА"),
+        name=org_data.get("company_name", "СФЕРУМ"),
         subtitle=org_data.get("company_subtitle"),
         legal_name=org_data.get("company_legal_name"),
         inn=org_data.get("company_inn"),
@@ -250,9 +250,9 @@ def test_smtp(payload: SMTPTestSchema, db: Session = Depends(get_db), current_us
         msg = MIMEMultipart()
         msg['From'] = payload.smtp_user
         msg['To'] = payload.smtp_user
-        msg['Subject'] = "Тестовое сообщение от СФЕРА"
+        msg['Subject'] = "Тестовое сообщение от СФЕРУМ"
         
-        body = "Приветствуем! Это тестовое сообщение, подтверждающее успешную настройку интеграции SMTP в вашей СФЕРА."
+        body = "Приветствуем! Это тестовое сообщение, подтверждающее успешную настройку интеграции SMTP в вашей СФЕРУМ."
         msg.attach(MIMEText(body, 'plain', 'utf-8'))
         
         if payload.smtp_use_ssl == 1:
@@ -291,7 +291,7 @@ def test_telegram(payload: TelegramTestSchema, db: Session = Depends(get_db), cu
         url = f"https://api.telegram.org/bot{token}/sendMessage"
         telegram_payload = {
             "chat_id": chat_id,
-            "text": "🔔 Тестовое уведомление из СФЕРА ERP/CRM. Настройки интеграции верны!",
+            "text": "🔔 Тестовое уведомление из СФЕРУМ/CRM. Настройки интеграции верны!",
             "parse_mode": "HTML"
         }
         

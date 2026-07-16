@@ -145,7 +145,7 @@ def create_listing(
             f"📌 <b>Заголовок:</b> {data.title}\n"
             f"🏷️ <b>Категория:</b> {data.category}\n"
             f"💰 <b>Бюджет:</b> {data.budget or 'Договорная'} {data.currency}\n\n"
-            f"Откликнуться можно в разделе «Биржа Заказов» в СФЕРА ERP."
+            f"Откликнуться можно в разделе «Биржа Заказов» в СФЕРУМ."
         )
         send_telegram_notification(msg, db)
     

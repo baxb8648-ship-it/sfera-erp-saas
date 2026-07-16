@@ -1,6 +1,6 @@
 import os
 
-root_dir = "L:/SPHERA/Комерческая CRM-ERP (SaaS)/СФЕРА-ЕРП/SPHERA"
+root_dir = "L:/SFERUM/Комерческая CRM-ERP (SaaS)/СФЕРУМ-ЕРП/SFERUM"
 found = []
 
 # Расширения файлов для поиска жестких путей

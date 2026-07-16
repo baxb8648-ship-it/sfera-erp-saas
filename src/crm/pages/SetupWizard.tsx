@@ -70,7 +70,7 @@ export const SetupWizard: React.FC = () => {
         });
       }
       await refetchUser();
-      toast.showToast(`Компания «${companyName}» успешно настроена! Добро пожаловать в СФЕРА ERP.`, 'success');
+      toast.showToast(`Компания «${companyName}» успешно настроена! Добро пожаловать в СФЕРУМ.`, 'success');
       navigate('/crm');
     } catch (e: any) {
       console.error(e);

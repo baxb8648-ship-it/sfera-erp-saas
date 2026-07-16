@@ -410,7 +410,7 @@ export const AdminSettings: React.FC = () => {
   return (
     <div className="space-y-6 font-['Inter']">
       <Helmet>
-        <title>Администрирование | СФЕРА</title>
+        <title>Администрирование | СФЕРУМ</title>
       </Helmet>
       <div>
         <h1 className="text-2xl font-bold font-['Montserrat'] text-[#1a1a1a] dark:text-white">Панель администрирования</h1>
@@ -490,7 +490,7 @@ export const AdminSettings: React.FC = () => {
                   <CreditCard className="w-5 h-5 text-[#F95700]" /> Биллинг и Управление подпиской
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-zinc-400 mt-1">
-                  Контроль статуса платформы СФЕРА ERP, выставление и оплата B2B-счетов
+                  Контроль статуса платформы СФЕРУМ, выставление и оплата B2B-счетов
                 </p>
               </div>
               <button
@@ -514,7 +514,7 @@ export const AdminSettings: React.FC = () => {
                 <div className="space-y-4">
                   <div className="flex justify-between items-start">
                     <span className="text-xs font-bold uppercase tracking-wider bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm">
-                      Текущий тариф: СФЕРА ERP b2b
+                      Текущий тариф: СФЕРУМ b2b
                     </span>
                     <Sparkles className="w-5 h-5 text-orange-200" />
                   </div>
@@ -1111,7 +1111,7 @@ export const AdminSettings: React.FC = () => {
                   <Gift className="w-5 h-5 text-emerald-500" /> Партнерская и Реферальная Программа
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-zinc-400 mt-1">
-                  Приглашайте компании в СФЕРА ERP, получайте бесплатные месяцы подписки и до 30% партнерского вознаграждения.
+                  Приглашайте компании в СФЕРУМ, получайте бесплатные месяцы подписки и до 30% партнерского вознаграждения.
                 </p>
               </div>
             </div>
@@ -1138,12 +1138,12 @@ export const AdminSettings: React.FC = () => {
                     <input 
                       type="text" 
                       readOnly 
-                      value={`https://сфера-ерп.рф/register?ref=SPHERA-TENANT-${billingStatus?.id || '101'}-PRO`}
+                      value={`https://сфера-ерп.рф/register?ref=SFERUM-TENANT-${billingStatus?.id || '101'}-PRO`}
                       className="flex-1 bg-transparent px-3 py-2 text-sm font-mono text-white focus:outline-none truncate"
                     />
                     <button
                       onClick={() => {
-                        navigator.clipboard.writeText(`https://сфера-ерп.рф/register?ref=SPHERA-TENANT-${billingStatus?.id || '101'}-PRO`);
+                        navigator.clipboard.writeText(`https://сфера-ерп.рф/register?ref=SFERUM-TENANT-${billingStatus?.id || '101'}-PRO`);
                         setCopiedRef(true);
                         setTimeout(() => setCopiedRef(false), 3000);
                       }}

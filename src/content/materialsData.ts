@@ -204,7 +204,7 @@ export const materialsData: Record<string, MaterialDetail> = {
     pdfName: 'Технический регламент и паспорт качества на Полимочевину (PDF)',
     pdfPath: '/brochure_sphera.pdf',
     specLabel: 'ТУ 20.16.56-012-18247382',
-    manufacturer: 'ООО «СФЕРА ПРОМ»'
+    manufacturer: 'ООО «СФЕРУМ ПРОМ»'
   },
   ppu: {
     id: 'ppu',

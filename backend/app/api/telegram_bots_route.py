@@ -66,7 +66,7 @@ def add_bot(payload: BotCreate, request: Request, db: Session = Depends(get_db),
         if not data.get("ok"):
             raise HTTPException(status_code=400, detail=f"Ошибка Telegram API (webhook): {data.get('description')}")
             
-        # Настройка кнопки Menu Button (СФЕРА ERP) для бота
+        # Настройка кнопки Menu Button (СФЕРУМ) для бота
         frontend_host = "https://sferum.space"
         if "localhost" in WEBHOOK_HOST or "127.0.0.1" in WEBHOOK_HOST:
             frontend_host = "http://localhost:5173"
@@ -78,7 +78,7 @@ def add_bot(payload: BotCreate, request: Request, db: Session = Depends(get_db),
         menu_payload = {
             "menu_button": {
                 "type": "web_app",
-                "text": "СФЕРА ERP",
+                "text": "СФЕРУМ",
                 "web_app": {
                     "url": menu_url
                 }

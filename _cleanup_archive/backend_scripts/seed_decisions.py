@@ -4,7 +4,7 @@
 """
 import sqlite3
 
-DB = r'l:\SPHERA\АКЗ\АКЗ\АКЗ\backend\sphera_crm.db'
+DB = r'l:\SFERUM\АКЗ\АКЗ\АКЗ\backend\sphera_crm.db'
 
 DECISIONS = [
     {

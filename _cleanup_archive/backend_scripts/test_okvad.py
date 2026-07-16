@@ -276,7 +276,7 @@ def print_summary(companies: list):
 if __name__ == "__main__":
     print()
     print("=" * 60)
-    print("  ТЕСТ ОКВЭД-ПАРСЕРА — СФЕРА")
+    print("  ТЕСТ ОКВЭД-ПАРСЕРА — СФЕРУМ")
     print(f"  Ключевое слово: {KEYWORD}")
     print(f"  Регион:         {REGION_NAMES[REGION_CODE]}")
     print(f"  Лимит:          {LIMIT} компаний")

@@ -397,7 +397,7 @@ def run_telemetry_simulation_demo():
     - Реальная попытка ночного слива топлива с выключенным зажиганием.
     """
     print("=" * 80)
-    print("📡 ЗАПУСК ТЕСТОВОЙ СИМУЛЯЦИИ: СФЕРА ГЛОНАСС/GPS ТЕЛЕМЕТРИЯ (Модуль 4.3)")
+    print("📡 ЗАПУСК ТЕСТОВОЙ СИМУЛЯЦИИ: СФЕРУМ ГЛОНАСС/GPS ТЕЛЕМЕТРИЯ (Модуль 4.3)")
     print("=" * 80)
 
     engine = TelemetryAnomaliesFilter(max_realistic_speed_kmh=90.0, fuel_tank_capacity_liters=250.0)

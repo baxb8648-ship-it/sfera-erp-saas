@@ -101,7 +101,7 @@ export const Inventory: React.FC = () => {
     printWin.document.write(`
       <html>
         <head>
-          <title>Инвентаризационная опись ИНВ-3 • СФЕРА ERP</title>
+          <title>Инвентаризационная опись ИНВ-3 • СФЕРУМ</title>
           <style>
             body { font-family: sans-serif; padding: 24px; color: #111; }
             h1 { font-size: 20px; margin-bottom: 4px; }
@@ -113,7 +113,7 @@ export const Inventory: React.FC = () => {
         </head>
         <body onload="window.print(); window.close();">
           <h1>ИНВЕНТАРИЗАЦИОННАЯ СЛИЧИТЕЛЬНАЯ ВЕДОМОСТЬ (ИНВ-3)</h1>
-          <p>Дата формирования: ${new Date().toLocaleDateString('ru-RU')} • Склад: Основной склад СФЕРА ERP</p>
+          <p>Дата формирования: ${new Date().toLocaleDateString('ru-RU')} • Склад: Основной склад СФЕРУМ</p>
           <table>
             <thead>
               <tr>
@@ -223,7 +223,7 @@ export const Inventory: React.FC = () => {
         <body onload="window.print(); window.close();">
           <div class="container">
             <img src="${qrDataUrl}" />
-            <h2>СФЕРА ERP</h2>
+            <h2>СФЕРУМ</h2>
             <p>${qrItem.name} (${qrItem.category || ''})</p>
           </div>
         </body>
@@ -693,7 +693,7 @@ export const Inventory: React.FC = () => {
 
     let textOrder = `
 ========================================
-ЗАЯВКА НА ПОПОЛНЕНИЕ СКЛАДА: СФЕРА ERP
+ЗАЯВКА НА ПОПОЛНЕНИЕ СКЛАДА: СФЕРУМ
 ========================================
 Дата: ${new Date().toLocaleDateString('ru-RU')}
 Склад: Основной склад компании (SaaS)
@@ -728,7 +728,7 @@ export const Inventory: React.FC = () => {
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-12 p-1 text-left font-['Inter']">
       <Helmet>
-        <title>Склад | СФЕРА</title>
+        <title>Склад | СФЕРУМ</title>
       </Helmet>
 
       {/* Top statistics overview cards - DOUBLE BEZEL & GEIST MONO */}
@@ -784,7 +784,7 @@ export const Inventory: React.FC = () => {
               Голосовое списание ТМЦ в Telegram-боте
             </h4>
             <p className="text-xs text-zinc-405 mt-1 leading-relaxed max-w-3xl">
-              Ваши прорабы и мастера цеха могут просто наговаривать списание материалов голосом прямо на объекте. ИИ-ассистент платформы СФЕРА автоматически распознает аудиосообщение, найдет позицию, рассчитает расход и скорректирует складской остаток.
+              Ваши прорабы и мастера цеха могут просто наговаривать списание материалов голосом прямо на объекте. ИИ-ассистент платформы СФЕРУМ автоматически распознает аудиосообщение, найдет позицию, рассчитает расход и скорректирует складской остаток.
             </p>
           </div>
         </div>

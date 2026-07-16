@@ -26,9 +26,9 @@ export const BusinessCardPage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
 
   const defaultCardData: CardData = {
-    companyName: 'СФЕРА',
+    companyName: 'СФЕРУМ',
     companySubtitle: 'Промышленная группа',
-    legalName: 'ООО "СФЕРА"',
+    legalName: 'ООО "СФЕРУМ"',
     tagline: 'Промышленная защита и изоляция',
     phone1: '+7 (963) 600-63-46',
     phone2: '+7 (987) 341-21-39',
@@ -423,12 +423,12 @@ export const BusinessCardPage: React.FC = () => {
 
   const downloadSvgFront = () => {
     const content = getSvgFrontContent();
-    triggerDownload(content, 'СФЕРА_BusinessCard_Front.svg');
+    triggerDownload(content, 'СФЕРУМ_BusinessCard_Front.svg');
   };
 
   const downloadSvgBack = () => {
     const content = getSvgBackContent();
-    triggerDownload(content, 'СФЕРА_BusinessCard_Back.svg');
+    triggerDownload(content, 'СФЕРУМ_BusinessCard_Back.svg');
   };
 
   const triggerPngDownload = (svgContent: string, fileName: string) => {
@@ -496,16 +496,16 @@ export const BusinessCardPage: React.FC = () => {
 
   const downloadPngFront = () => {
     const content = getSvgFrontContent();
-    triggerPngDownload(content, 'СФЕРА_BusinessCard_Front.png');
+    triggerPngDownload(content, 'СФЕРУМ_BusinessCard_Front.png');
   };
 
   const downloadPngBack = () => {
     const content = getSvgBackContent();
-    triggerPngDownload(content, 'СФЕРА_BusinessCard_Back.png');
+    triggerPngDownload(content, 'СФЕРУМ_BusinessCard_Back.png');
   };
 
-  const downloadPdfFront = () => triggerPdfDownload(getSvgFrontContent(), 'СФЕРА_BusinessCard_Front.pdf');
-  const downloadPdfBack = () => triggerPdfDownload(getSvgBackContent(), 'СФЕРА_BusinessCard_Back.pdf');
+  const downloadPdfFront = () => triggerPdfDownload(getSvgFrontContent(), 'СФЕРУМ_BusinessCard_Front.pdf');
+  const downloadPdfBack = () => triggerPdfDownload(getSvgBackContent(), 'СФЕРУМ_BusinessCard_Back.pdf');
 
   return (
     <div className="min-h-screen bg-bg text-text-muted py-12 md:py-20 relative overflow-hidden">
@@ -524,7 +524,7 @@ export const BusinessCardPage: React.FC = () => {
             ← Назад на сайт
           </Link>
           <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
-            СФЕРА • БРЕНДБУК
+            СФЕРУМ • БРЕНДБУК
           </span>
         </div>
 
@@ -534,7 +534,7 @@ export const BusinessCardPage: React.FC = () => {
             Дизайн визитной карточки
           </h1>
           <p className="text-sm md:text-base text-text-muted max-w-2xl">
-            Интерактивный макет визитки ООО «СФЕРА» в фирменном стиле промышленной группы. 
+            Интерактивный макет визитки ООО «СФЕРУМ» в фирменном стиле промышленной группы. 
             Здесь вы можете изменить данные в реальном времени, выбрать цветовую схему и отправить карту в печать в оригинальном размере.
           </p>
         </div>
@@ -1370,14 +1370,14 @@ export const BusinessCardPage: React.FC = () => {
               <div className="space-y-3">
                 <a
                   href="/business_card_front.png"
-                  download="СФЕРА_BusinessCard_Front_Mockup.png"
+                  download="СФЕРУМ_BusinessCard_Front_Mockup.png"
                   className="w-full py-3 bg-[#0F0F11] border border-zinc-800 hover:border-zinc-700 text-white text-[11px] font-bold uppercase tracking-widest transition flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5 text-primary" /> Лицевая сторона (Mockup)
                 </a>
                 <a
                   href="/business_card_back.png"
-                  download="СФЕРА_BusinessCard_Back_Mockup.png"
+                  download="СФЕРУМ_BusinessCard_Back_Mockup.png"
                   className="w-full py-3 bg-[#0F0F11] border border-zinc-800 hover:border-zinc-700 text-white text-[11px] font-bold uppercase tracking-widest transition flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5 text-primary" /> Обратная сторона (Mockup)

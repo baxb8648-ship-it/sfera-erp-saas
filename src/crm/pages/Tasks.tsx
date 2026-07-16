@@ -518,7 +518,7 @@ export const Tasks: React.FC = () => {
       isChatOpen ? 'gap-6' : 'gap-0'
     }`}>
       <Helmet>
-        <title>Задачи и Командный Чат | СФЕРА</title>
+        <title>Задачи и Командный Чат | СФЕРУМ</title>
       </Helmet>
 
       {/* Mobile Tab Selector */}

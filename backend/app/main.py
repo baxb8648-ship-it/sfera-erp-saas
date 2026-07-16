@@ -236,7 +236,7 @@ from .api import (tts_route, clients, auth, objects, finance, documents, invento
 # Create tables if they don't exist
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="СФЕРА API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="СФЕРУМ API", version="1.0.0", lifespan=lifespan)
 
 # Middleware для автоматической простановки HTTP-заголовков безопасности и защиты от CSRF (Режим 10)
 @app.middleware("http")
@@ -375,4 +375,4 @@ app.include_router(tts_route.router)
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to СФЕРА API"}
+    return {"message": "Welcome to СФЕРУМ API"}

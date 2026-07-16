@@ -446,7 +446,7 @@ if __name__ == "__main__":
         except Exception:
             pass
     print("=" * 75)
-    print("🪚 СФЕРА ERP — ДЕМОНСТРАЦИЯ РАСКРОЯ МЕБЕЛИ (Модуль 4.2: Raskroy Engine)")
+    print("🪚 СФЕРУМ — ДЕМОНСТРАЦИЯ РАСКРОЯ МЕБЕЛИ (Модуль 4.2: Raskroy Engine)")
     print("   Вдохновлено профессиональными стандартами SketchCut Pro")
     print("=" * 75)
 

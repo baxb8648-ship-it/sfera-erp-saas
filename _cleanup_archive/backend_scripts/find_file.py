@@ -1,6 +1,6 @@
 import os
 
-root_dir = "l:/SPHERA/АКЗ/АКЗ"
+root_dir = "l:/SFERUM/АКЗ/АКЗ"
 found = []
 for root, dirs, files in os.walk(root_dir):
     for file in files:

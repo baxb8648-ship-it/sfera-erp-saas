@@ -167,7 +167,7 @@ def send_kp_to_lead(
         kp_text = payload.custom_text
     else:
         prompt = (
-            f"Составь деловое коммерческое предложение от ООО «СФЕРА» для {lead.name}.\n"
+            f"Составь деловое коммерческое предложение от ООО «СФЕРУМ» для {lead.name}.\n"
             f"Деятельность компании: {lead.okvad_name or 'строительство и производство'}.\n\n"
             f"Суть предложения:\n{payload.offer_context}\n\n"
             f"Напиши лаконичное деловое письмо с выгодами и призывом к действию.\n\nПисьмо:"
@@ -176,11 +176,11 @@ def send_kp_to_lead(
         if not kp_text:
             kp_text = (
                 f"Уважаемые коллеги из {lead.name}!\n\n"
-                f"ООО «СФЕРА» предлагает Вам:\n{payload.offer_context}\n\n"
-                f"Свяжитесь с нами: info@леоника56.рф\nС уважением, ООО «СФЕРА»"
+                f"ООО «СФЕРУМ» предлагает Вам:\n{payload.offer_context}\n\n"
+                f"Свяжитесь с нами: info@леоника56.рф\nС уважением, ООО «СФЕРУМ»"
             )
 
-    subject = f"Коммерческое предложение для {lead.name} от ООО «СФЕРА»"
+    subject = f"Коммерческое предложение для {lead.name} от ООО «СФЕРУМ»"
     send_email_notification(lead.email, subject, kp_text, db)
 
     lead.kp_sent = 1

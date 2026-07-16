@@ -83,7 +83,7 @@ export const LeadsDatabase: React.FC<LeadsDatabaseProps> = ({ taskId, taskName, 
   useEffect(() => { fetchLeads(); }, [fetchLeads]);
 
   const handleExportCSV = () => {
-    // BUG-001 FIX: использовать порт 8001 (СФЕРА ERP), а не 8000
+    // BUG-001 FIX: использовать порт 8001 (СФЕРУМ), а не 8000
     const url = `${import.meta.env.VITE_API_URL || 'http://localhost:8001'}/leads/export/csv?task_id=${taskId}`;
     window.open(url, '_blank');
     toast.success('CSV-файл загружается...');

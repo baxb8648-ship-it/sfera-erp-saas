@@ -145,10 +145,10 @@ export const CRMLayout: React.FC = () => {
       .replace(/\{\{client_contact\}\}/g, contactName)
       .replace(/\{\{doc_name\}\}/g, docName)
       .replace(/\{\{object_name\}\}/g, objectName)
-      .replace(/\{\{company_name\}\}/g, settings.company_name || 'СФЕРА')
+      .replace(/\{\{company_name\}\}/g, settings.company_name || 'СФЕРУМ')
       .replace(/\{\{company_phone\}\}/g, settings.company_phone || '');
 
-    setEmailSubject(docName || 'Документ от СФЕРА');
+    setEmailSubject(docName || 'Документ от СФЕРУМ');
     setEmailBody(repText);
   };
 
@@ -184,7 +184,7 @@ export const CRMLayout: React.FC = () => {
     setEmailError('');
     setEmailSuccess(null);
     try {
-      // BUG-001 FIX: использовать порт 8001 (СФЕРА ERP), а не 8000 (устаревший порт ЛЕОНИКА CRM)
+      // BUG-001 FIX: использовать порт 8001 (СФЕРУМ), а не 8000 (устаревший порт ЛЕОНИКА CRM)
       const response = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8001') + '/documents/send-email', {
         method: 'POST',
         headers: {
@@ -372,7 +372,7 @@ export const CRMLayout: React.FC = () => {
   }, [recalculateCounts]);
 
   React.useEffect(() => {
-    const defaultTitle = 'СФЕРА';
+    const defaultTitle = 'СФЕРУМ';
     if (unreadTasksCount > 0) {
       document.title = `(${unreadTasksCount}) ${defaultTitle}`;
     } else {
@@ -524,7 +524,7 @@ export const CRMLayout: React.FC = () => {
     if (item.isSuperadminOnly) return permissions?.is_superadmin;
     if (!item.module) return true;
     
-    // Администраторы тенанта и супер-админы видят все доступные отраслевые модули СФЕРА ERP (включая Автопарк, Агро и др.)
+    // Администраторы тенанта и супер-админы видят все доступные отраслевые модули СФЕРУМ (включая Автопарк, Агро и др.)
     if (userRole === 'admin' || permissions?.is_superadmin || permissions?.role === 'admin') {
       return true;
     }
@@ -659,7 +659,7 @@ export const CRMLayout: React.FC = () => {
   return (
     <>
       <Helmet>
-        <title>{document.title || settings?.company_name || 'СФЕРА'}</title>
+        <title>{document.title || settings?.company_name || 'СФЕРУМ'}</title>
       </Helmet>
 
       {user && user.is_onboarded === false && <SetupWizard />}
@@ -689,7 +689,7 @@ export const CRMLayout: React.FC = () => {
               {(settings as any).brand_name ? (
                 <span style={{ color: (settings as any).brand_color || '#F95700' }}>{(settings as any).brand_name}</span>
               ) : (
-                <>СФЕРА <span style={{ color: (settings as any).brand_color || '#F95700' }}>ERP</span></>
+                <>СФЕРУМ <span style={{ color: (settings as any).brand_color || '#F95700' }}>ERP</span></>
               )}
             </h1>
           </Link>
@@ -935,7 +935,7 @@ export const CRMLayout: React.FC = () => {
             </div>
           </div>
           <div className="text-[10px] text-gray-400 dark:text-zinc-550 mt-1 flex justify-between items-center font-semibold font-mono">
-            <span>СФЕРА ERP</span>
+            <span>СФЕРУМ</span>
             <span>v{packageJson.version}</span>
           </div>
         </div>

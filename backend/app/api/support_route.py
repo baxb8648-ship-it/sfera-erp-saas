@@ -181,7 +181,7 @@ def get_default_tickets() -> List[Dict[str, Any]]:
                     "time": "11:45",
                     "is_support": True,
                     "attachment": {
-                        "name": "Акт_сверки_СФЕРА_ERP_июнь_2026.pdf",
+                        "name": "Акт_сверки_СФЕРУМ_ERP_июнь_2026.pdf",
                         "url": "#",
                         "type": "document"
                     }
@@ -236,7 +236,7 @@ def get_default_tickets() -> List[Dict[str, Any]]:
                     "is_support": False
                 },
                 {
-                    "sender": "Инженер СФЕРА",
+                    "sender": "Инженер СФЕРУМ",
                     "text": "Спасибо за предложение! Мы добавили поддержку аудиофайлов в реестр документов.",
                     "time": "18:10",
                     "is_support": True

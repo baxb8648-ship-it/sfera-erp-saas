@@ -1,6 +1,6 @@
 import sqlite3
 
-db_path = r'l:\SPHERA\АКЗ\АКЗ\АКЗ\backend\sphera_crm.db'
+db_path = r'l:\SFERUM\АКЗ\АКЗ\АКЗ\backend\sphera_crm.db'
 key = 'ops_monitor_chat_id'
 chat_id = '185796859'
 

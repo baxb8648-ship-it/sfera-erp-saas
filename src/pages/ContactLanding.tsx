@@ -41,7 +41,7 @@ export const ContactLanding: React.FC = () => {
     if (!settings) return;
 
     const directorName = settings.company_director || "Леонтьев А.В.";
-    const orgName = settings.company_legal_name || 'ООО "СФЕРА"';
+    const orgName = settings.company_legal_name || 'ООО "СФЕРУМ"';
     const phone = settings.company_phone || '+7 (3532) 99-88-77';
     const email = settings.company_email || 'info@sphera-akz.ru';
     const url = settings.company_website_url || 'https://леоника56.рф';
@@ -106,7 +106,7 @@ export const ContactLanding: React.FC = () => {
     );
   }
 
-  const brandName = settings.company_name || "СФЕРА";
+  const brandName = settings.company_name || "СФЕРУМ";
   const slogan = settings.company_subtitle || "Промышленная группа";
 
   return (

@@ -34,7 +34,7 @@ export const PublicMarketplace: React.FC = () => {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="text-xl font-black font-['Montserrat'] text-white">
-              СФЕРА<span className="text-cyan-500">.</span>Маркетплейс
+              СФЕРУМ<span className="text-cyan-500">.</span>Маркетплейс
             </div>
           </div>
           <button onClick={handleLogin} className="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-bold rounded-xl transition-colors shadow-lg shadow-cyan-600/20">

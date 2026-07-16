@@ -53,7 +53,7 @@ export const PresentationDeck: React.FC = () => {
   // ==========================================
   const slideVision: Slide = {
     id: 1,
-    title: `СФЕРА ERP SaaS: ${INDUSTRY_NAMES[activeDeck]}`,
+    title: `СФЕРУМ SaaS: ${INDUSTRY_NAMES[activeDeck]}`,
     subtitle: 'Автономная Облачная Операционная Система Предприятия с ИИ-Агентами и B2B-Биржей',
     badge: `STRATEGY & VISION — ${activeDeck.toUpperCase()}`,
     content: (
@@ -187,7 +187,7 @@ export const PresentationDeck: React.FC = () => {
           <div>
             <div className="flex items-center justify-between mb-3">
               <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-black uppercase tracking-wider">
-                РЕШЕНИЕ СФЕРА ERP SaaS
+                РЕШЕНИЕ СФЕРУМ SaaS
               </span>
               <Check size={20} className="text-emerald-500" weight="bold" />
             </div>
@@ -207,11 +207,11 @@ export const PresentationDeck: React.FC = () => {
   };
 
   // ==========================================
-  // 3. СЛАЙД 3: ИИ-ШТАТ СФЕРА
+  // 3. СЛАЙД 3: ИИ-ШТАТ СФЕРУМ
   // ==========================================
   const slideAIEmployees: Slide = {
     id: 3,
-    title: 'Единый ИИ-Центр СФЕРА (Цифровой Штат 24/7)',
+    title: 'Единый ИИ-Центр СФЕРУМ (Цифровой Штат 24/7)',
     subtitle: 'Нейросети, обученные на регламентах вашей компании через Pinecone RAG и QLoRA',
     badge: 'AI ORCHESTRATION 24/7',
     content: (
@@ -511,7 +511,7 @@ export const PresentationDeck: React.FC = () => {
   const slideNextSteps: Slide = {
     id: 5,
     title: 'Быстрый старт за 30 секунд по ИНН',
-    subtitle: 'Мгновенное развертывание облачного тенанта СФЕРА ERP SaaS под ваши реквизиты',
+    subtitle: 'Мгновенное развертывание облачного тенанта СФЕРУМ SaaS под ваши реквизиты',
     badge: 'ONBOARDING & NEXT STEPS',
     content: (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-auto">
@@ -739,7 +739,7 @@ export const PresentationDeck: React.FC = () => {
           <div>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F95700]/15 text-[#F95700] text-xs font-mono font-bold uppercase tracking-wider border border-[#F95700]/30 mb-3">
               <span className="w-1.5 h-1.5 rounded-full bg-[#F95700] animate-pulse" />
-              {currentSlide.badge || 'SPHERA ERP SAAS DECK'}
+              {currentSlide.badge || 'SFERUM ERP SAAS DECK'}
             </span>
             <h1 className={`text-2xl sm:text-4xl font-black tracking-tight font-['Montserrat'] ${
               isLight ? 'text-gray-900' : 'text-white'
@@ -757,7 +757,7 @@ export const PresentationDeck: React.FC = () => {
               0{currentSlide.id} / 05
             </div>
             <div className={`text-[10px] font-mono uppercase tracking-widest mt-0.5 ${isLight ? 'text-gray-500' : 'text-gray-400'}`}>
-              SPHERA ERP v1.5
+              SFERUM ERP v1.5
             </div>
           </div>
         </div>
@@ -770,7 +770,7 @@ export const PresentationDeck: React.FC = () => {
         {/* Подвал и навигация */}
         <div className="flex items-center justify-between border-t border-gray-200 dark:border-zinc-800 pt-5 text-xs text-gray-500 relative z-10">
           <div className="font-semibold tracking-wide">
-            © 2026 СФЕРА ERP SaaS — Мультитенантная Облачная Операционная Система
+            © 2026 СФЕРУМ SaaS — Мультитенантная Облачная Операционная Система
           </div>
           <div className="flex items-center gap-2">
             {funnelSlides.map((s, idx) => (
@@ -800,7 +800,7 @@ export const PresentationDeck: React.FC = () => {
             <div className="flex items-start justify-between border-b border-gray-200 pb-4">
               <div>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F95700]/10 text-[#F95700] text-[10px] font-mono font-bold uppercase tracking-wider border border-[#F95700]/20 mb-2">
-                  {slide.badge || 'SPHERA ERP SAAS DECK'}
+                  {slide.badge || 'SFERUM ERP SAAS DECK'}
                 </span>
                 <h1 className="text-2xl font-black text-gray-900 tracking-tight font-['Montserrat']">
                   {slide.title}
@@ -828,10 +828,10 @@ export const PresentationDeck: React.FC = () => {
             <div className="flex items-center justify-between border-t border-gray-200 pt-3 text-[11px] text-gray-600">
               <div className="font-semibold flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-[#F95700]" />
-                © 2026 СФЕРА ERP SaaS — Мультитенантная Облачная Операционная Система
+                © 2026 СФЕРУМ SaaS — Мультитенантная Облачная Операционная Система
               </div>
               <div className="font-mono font-bold text-[#F95700] tracking-wider">
-                WWW.СФЕРА-ЕРП.РФ • DEMO ACCESS
+                WWW.СФЕРУМ.РФ • DEMO ACCESS
               </div>
             </div>
           </div>

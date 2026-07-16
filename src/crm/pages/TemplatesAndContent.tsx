@@ -445,13 +445,13 @@ export const TemplatesAndContent: React.FC = () => {
       .replace(/\{\{client_contact\}\}/g, contactName)
       .replace(/\{\{doc_name\}\}/g, doc.name || '')
       .replace(/\{\{object_name\}\}/g, objectName)
-      .replace(/\{\{company_name\}\}/g, settings.company_name || 'СФЕРА')
+      .replace(/\{\{company_name\}\}/g, settings.company_name || 'СФЕРУМ')
       .replace(/\{\{company_phone\}\}/g, settings.company_phone || '');
 
     setEmailDocId(doc.id);
     setEmailDocName(doc.name);
     setEmailRecipient(clientEmail || '');
-    setEmailSubject(doc.name || 'Документ от СФЕРА');
+    setEmailSubject(doc.name || 'Документ от СФЕРУМ');
     setEmailBody(repText);
     setEmailSuccess(null);
     setEmailError('');
@@ -969,8 +969,8 @@ export const TemplatesAndContent: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const downloadSvgFront = () => triggerDownload(getSvgFrontContent(), 'СФЕРА_Card_Front.svg');
-  const downloadSvgBack = () => triggerDownload(getSvgBackContent(), 'СФЕРА_Card_Back.svg');
+  const downloadSvgFront = () => triggerDownload(getSvgFrontContent(), 'СФЕРУМ_Card_Front.svg');
+  const downloadSvgBack = () => triggerDownload(getSvgBackContent(), 'СФЕРУМ_Card_Back.svg');
 
   const triggerPngDownload = (svgContent: string, fileName: string) => {
     const svgBlob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
@@ -1033,10 +1033,10 @@ export const TemplatesAndContent: React.FC = () => {
     img.src = url;
   };
 
-  const downloadPngFront = () => triggerPngDownload(getSvgFrontContent(), 'СФЕРА_Card_Front.png');
-  const downloadPngBack = () => triggerPngDownload(getSvgBackContent(), 'СФЕРА_Card_Back.png');
-  const downloadPdfFront = () => triggerPdfDownload(getSvgFrontContent(), 'СФЕРА_Card_Front.pdf');
-  const downloadPdfBack = () => triggerPdfDownload(getSvgBackContent(), 'СФЕРА_Card_Back.pdf');
+  const downloadPngFront = () => triggerPngDownload(getSvgFrontContent(), 'СФЕРУМ_Card_Front.png');
+  const downloadPngBack = () => triggerPngDownload(getSvgBackContent(), 'СФЕРУМ_Card_Back.png');
+  const downloadPdfFront = () => triggerPdfDownload(getSvgFrontContent(), 'СФЕРУМ_Card_Front.pdf');
+  const downloadPdfBack = () => triggerPdfDownload(getSvgBackContent(), 'СФЕРУМ_Card_Back.pdf');
 
   const filteredDocuments = documents.filter(doc => {
     const matchSearch = searchQuery
@@ -1060,7 +1060,7 @@ export const TemplatesAndContent: React.FC = () => {
   return (
     <div className="flex flex-col font-['Inter'] space-y-6">
       <Helmet>
-        <title>Настройки и Шаблоны | СФЕРА</title>
+        <title>Настройки и Шаблоны | СФЕРУМ</title>
       </Helmet>
       <div className="print:hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
         <div>
@@ -1080,7 +1080,7 @@ export const TemplatesAndContent: React.FC = () => {
         <span className="text-lg">👑</span>
         <div className="text-xs leading-relaxed text-amber-900 dark:text-amber-200">
           <strong className="font-bold uppercase tracking-wider block mb-0.5">SaaS Изоляция Шаблонов (RLS):</strong>
-          Эталонные презентации и мастер-шаблоны зарезервированы за платформой СФЕРА (Супер-Админом). Каждая зарегистрированная компания создаёт собственные шаблоны или может в 1 клик сгенерировать стартовый персональный пакет документов под свои реквизиты.
+          Эталонные презентации и мастер-шаблоны зарезервированы за платформой СФЕРУМ (Супер-Админом). Каждая зарегистрированная компания создаёт собственные шаблоны или может в 1 клик сгенерировать стартовый персональный пакет документов под свои реквизиты.
         </div>
       </div>
 
@@ -1189,7 +1189,7 @@ export const TemplatesAndContent: React.FC = () => {
                   type="text"
                   value={settings.company_name}
                   onChange={(e) => setSettings({ ...settings, company_name: e.target.value })}
-                  placeholder="СФЕРА"
+                  placeholder="СФЕРУМ"
                   className="w-full px-3 py-2 border border-gray-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F95700]/50"
                   required
                 />
@@ -1212,7 +1212,7 @@ export const TemplatesAndContent: React.FC = () => {
                   type="text"
                   value={settings.company_legal_name}
                   onChange={(e) => setSettings({ ...settings, company_legal_name: e.target.value })}
-                  placeholder="ООО СФЕРА"
+                  placeholder="ООО СФЕРУМ"
                   className="w-full px-3 py-2 border border-gray-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F95700]/50"
                   required
                 />
@@ -1491,7 +1491,7 @@ export const TemplatesAndContent: React.FC = () => {
                       <>
                         <div className="flex justify-between items-start z-10">
                           <div>
-                            <span className="font-black tracking-tight block text-2xl uppercase font-['Montserrat']">{settings.company_name || 'СФЕРА'}</span>
+                            <span className="font-black tracking-tight block text-2xl uppercase font-['Montserrat']">{settings.company_name || 'СФЕРУМ'}</span>
                             <span className="tracking-[0.2em] font-bold block text-[8px] mt-0.5" style={{ color: accentColor }}>{settings.company_subtitle || 'ПРОМЫШЛЕННАЯ ГРУППА'}</span>
                           </div>
                           <div className="text-[8px] font-bold tracking-wider uppercase px-2.5 py-1 border" style={{ backgroundColor: `${accentColor}10`, borderColor: `${accentColor}25` }}>АКЗ • ИЗОЛЯЦИЯ</div>
@@ -1522,7 +1522,7 @@ export const TemplatesAndContent: React.FC = () => {
                       <div className="flex flex-col items-center justify-between h-full text-center z-10 w-full py-1">
                         <div className="text-[8px] font-bold tracking-widest uppercase px-2 py-0.5 border" style={{ backgroundColor: `${accentColor}10`, borderColor: `${accentColor}25` }}>АКЗ • ИЗОЛЯЦИЯ</div>
                         <div className="leading-none mt-1">
-                          <span className="font-black tracking-tight block text-2xl uppercase font-['Montserrat']">{settings.company_name || 'СФЕРА'}</span>
+                          <span className="font-black tracking-tight block text-2xl uppercase font-['Montserrat']">{settings.company_name || 'СФЕРУМ'}</span>
                           <span className="tracking-[0.25em] font-bold block text-[7px] mt-0.5" style={{ color: accentColor }}>{(settings.company_subtitle || 'ПРОМЫШЛЕННАЯ ГРУППА').toUpperCase()}</span>
                         </div>
                         <div className="w-12 h-px" style={{ backgroundColor: `${textColor}20` }} />
@@ -1545,7 +1545,7 @@ export const TemplatesAndContent: React.FC = () => {
                         {/* Left Column (35% width) */}
                         <div className="w-[35%] pr-4 flex flex-col justify-between h-full py-1">
                           <div className="leading-none">
-                            <span className="font-black tracking-tighter block uppercase text-base font-['Montserrat']">{settings.company_name || 'СФЕРА'}</span>
+                            <span className="font-black tracking-tighter block uppercase text-base font-['Montserrat']">{settings.company_name || 'СФЕРУМ'}</span>
                             <span className="tracking-[0.15em] font-bold block mt-1 text-[7px]" style={{ color: accentColor }}>{(settings.company_subtitle || 'ПРОМЫШЛЕННАЯ ГРУППА').toUpperCase()}</span>
                           </div>
 
@@ -1610,7 +1610,7 @@ export const TemplatesAndContent: React.FC = () => {
                         {/* Left side: details */}
                         <div className="flex-1 flex flex-col justify-between h-full py-1 pr-4">
                           <div className="leading-none">
-                            <span className="font-black tracking-tighter block uppercase text-base font-['Montserrat']">{settings.company_name || 'СФЕРА'}</span>
+                            <span className="font-black tracking-tighter block uppercase text-base font-['Montserrat']">{settings.company_name || 'СФЕРУМ'}</span>
                             <span className="tracking-[0.25em] uppercase font-bold block mt-1 text-[8px]" style={{ color: accentColor }}>{(settings.company_subtitle || 'ПРОМЫШЛЕННАЯ ГРУППА').toUpperCase()}</span>
                           </div>
 
@@ -1689,7 +1689,7 @@ export const TemplatesAndContent: React.FC = () => {
                     )}
 
                     <div className="z-10 leading-none">
-                      <span className="font-black tracking-tight block text-2xl uppercase font-['Montserrat']">{settings.company_name || 'СФЕРА'}</span>
+                      <span className="font-black tracking-tight block text-2xl uppercase font-['Montserrat']">{settings.company_name || 'СФЕРУМ'}</span>
                       <span className="tracking-[0.2em] font-bold block text-[8px] mt-0.5" style={{ color: accentColor }}>{(settings.company_subtitle || 'ПРОМЫШЛЕННАЯ ГРУППА').toUpperCase()}</span>
                     </div>
 
@@ -2035,7 +2035,7 @@ export const TemplatesAndContent: React.FC = () => {
                                 </span>
                               ) : (
                                 <span className="text-[#F95700] font-semibold flex items-center gap-1">
-                                  <Settings className="w-3 h-3" /> СФЕРА
+                                  <Settings className="w-3 h-3" /> СФЕРУМ
                                 </span>
                               )}
                             </td>
@@ -2455,7 +2455,7 @@ export const TemplatesAndContent: React.FC = () => {
                   type="text"
                   value={emailSubject}
                   onChange={(e) => setEmailSubject(e.target.value)}
-                  placeholder="Документ от СФЕРА"
+                  placeholder="Документ от СФЕРУМ"
                   className="w-full px-3 py-2 border border-gray-200 dark:border-zinc-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#F95700]/50"
                   required
                 />

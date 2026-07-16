@@ -53,7 +53,7 @@ const QuickStartWidget: React.FC = () => {
           <Building2 className="w-6 h-6 text-[#F95700]" />
         </div>
         <div className="flex-1">
-          <h3 className="text-lg font-black font-['Montserrat'] text-zinc-900 dark:text-white mb-1">Добро пожаловать в СФЕРА ERP!</h3>
+          <h3 className="text-lg font-black font-['Montserrat'] text-zinc-900 dark:text-white mb-1">Добро пожаловать в СФЕРУМ!</h3>
           <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">Для полноценного запуска системы выполните несколько базовых шагов:</p>
           
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -255,7 +255,7 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6 flex flex-col h-full min-h-0 pb-12 sm:pb-16">
       <Helmet>
-        <title>Дашборд | СФЕРА</title>
+        <title>Дашборд | СФЕРУМ</title>
       </Helmet>
 
       {/* Top Executive Dashboard Header */}
@@ -263,7 +263,7 @@ export const Dashboard: React.FC = () => {
         <div className="space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>LIVE · СФЕРА ERP SaaS v1.5.0 · Мультитенантная аналитика</span>
+            <span>LIVE · СФЕРУМ SaaS v1.5.0 · Мультитенантная аналитика</span>
           </div>
           <div>
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight font-['Montserrat'] text-zinc-900 dark:text-white flex items-center gap-3">
@@ -512,7 +512,7 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="pt-3 border-t border-zinc-150 dark:border-zinc-800 text-[9px] uppercase tracking-wider font-bold text-zinc-400 dark:text-zinc-500 text-center mt-2">
-            СФЕРА ERP • Обновлено в реальном времени
+            СФЕРУМ • Обновлено в реальном времени
           </div>
         </div>
 

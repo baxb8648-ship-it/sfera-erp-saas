@@ -9,4 +9,4 @@ def search_in_file(filepath, keywords):
                 print(f"{os.path.basename(filepath)}:{idx+1}: {line.strip()[:100]}")
                 break
 
-search_in_file('l:/SPHERA/АКЗ/АКЗ/АКЗ/src/crm/pages/Tasks.tsx', ['kanban', 'modal', 'card', 'click', 'detail', 'dialog', 'view'])
+search_in_file('l:/SFERUM/АКЗ/АКЗ/АКЗ/src/crm/pages/Tasks.tsx', ['kanban', 'modal', 'card', 'click', 'detail', 'dialog', 'view'])

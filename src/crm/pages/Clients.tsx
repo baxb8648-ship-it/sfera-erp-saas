@@ -287,10 +287,10 @@ export const Clients: React.FC = () => {
       .replace(/\{\{client_contact\}\}/g, contactName)
       .replace(/\{\{doc_name\}\}/g, docName)
       .replace(/\{\{object_name\}\}/g, objectName)
-      .replace(/\{\{company_name\}\}/g, settings.company_name || 'СФЕРА')
+      .replace(/\{\{company_name\}\}/g, settings.company_name || 'СФЕРУМ')
       .replace(/\{\{company_phone\}\}/g, settings.company_phone || '');
 
-    setEmailSubject(docName || 'Документ от СФЕРА');
+    setEmailSubject(docName || 'Документ от СФЕРУМ');
     setEmailBody(repText);
   };
 
@@ -1118,7 +1118,7 @@ export const Clients: React.FC = () => {
   return (
     <div className="space-y-6">
       <Helmet>
-        <title>Клиенты | СФЕРА</title>
+        <title>Клиенты | СФЕРУМ</title>
       </Helmet>
       {/* Топ панель действий */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800">

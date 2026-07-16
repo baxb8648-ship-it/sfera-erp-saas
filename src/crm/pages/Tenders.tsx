@@ -596,7 +596,7 @@ export const Tenders: React.FC = () => {
   return (
     <div className="space-y-6 flex flex-col h-auto sm:h-full min-h-0">
       <Helmet>
-        <title>Тендеры | СФЕРА</title>
+        <title>Тендеры | СФЕРУМ</title>
       </Helmet>
       {/* Header and top buttons - God-Tier Typography & Magnetic CTA */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 shrink-0 pb-4 border-b border-gray-100 dark:border-zinc-800/50">

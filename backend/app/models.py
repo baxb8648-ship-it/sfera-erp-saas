@@ -982,7 +982,7 @@ class ServiceTicket(Base):
     mechanic = relationship("User", foreign_keys=[mechanic_id])
 
 # ═══════════════════════════════════════════════════════
-# ФАЗА 9.1 — СФЕРА УСЛУГ И ОНЛАЙН-ЗАПИСЬ (B2C BOOKING)
+# ФАЗА 9.1 — СФЕРУМ УСЛУГ И ОНЛАЙН-ЗАПИСЬ (B2C BOOKING)
 # ═══════════════════════════════════════════════════════
 
 class BookingCategory(Base):

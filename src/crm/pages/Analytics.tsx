@@ -306,7 +306,7 @@ export const Analytics: React.FC = () => {
   return (
     <div className="space-y-8 flex flex-col h-full min-h-0 pb-12 sm:pb-16">
       <Helmet>
-        <title>Аналитика | СФЕРА</title>
+        <title>Аналитика | СФЕРУМ</title>
       </Helmet>
 
       {/* Title Bar */}

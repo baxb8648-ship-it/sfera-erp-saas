@@ -9,12 +9,12 @@ export const Footer: React.FC = () => {
         <div className="flex flex-col md:flex-row justify-between items-center gap-8">
           {/* Brand/Legal */}
           <div className="flex flex-col items-center md:items-start leading-none text-center md:text-left">
-            <span className="text-text font-black tracking-tighter text-xl block uppercase">СФЕРА</span>
+            <span className="text-text font-black tracking-tighter text-xl block uppercase">СФЕРУМ</span>
             <span className="text-[7px] text-primary font-bold tracking-[0.3em] uppercase mt-1">
               Промышленная группа
             </span>
             <p className="text-[10px] text-text-muted uppercase font-bold mt-4">
-              © {currentYear} ООО «СФЕРА» | ИНН 5629021484 | ОГРН 1225600009480
+              © {currentYear} ООО «СФЕРУМ» | ИНН 5629021484 | ОГРН 1225600009480
             </p>
           </div>
 

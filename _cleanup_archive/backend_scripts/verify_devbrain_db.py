@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, 'l:/SPHERA/АКЗ/АКЗ/АКЗ/backend')
+sys.path.insert(0, 'l:/SFERUM/АКЗ/АКЗ/АКЗ/backend')
 from app.models import Epic, Feature, Bug
 from app.database import engine, Base
 

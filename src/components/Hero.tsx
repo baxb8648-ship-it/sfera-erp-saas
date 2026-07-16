@@ -18,7 +18,7 @@ export const Hero: React.FC = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-[#0F0F11] via-transparent to-transparent z-10"></div>
         <img
           src={heroBg}
-          alt="Industrial СФЕРА Group"
+          alt="Industrial СФЕРУМ Group"
           className="w-full h-full object-cover object-center opacity-30 transform scale-105"
         />
       </div>
@@ -35,7 +35,7 @@ export const Hero: React.FC = () => {
             <span className="w-2 h-2 bg-primary rounded-full animate-ping"></span>
             <span className="w-1.5 h-1.5 bg-primary rounded-full absolute"></span>
             <span className="text-primary font-bold text-[10px] tracking-widest uppercase">
-              Технологический регламент СФЕРА
+              Технологический регламент СФЕРУМ
             </span>
           </motion.div>
 

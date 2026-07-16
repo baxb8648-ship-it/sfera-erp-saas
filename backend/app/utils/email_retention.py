@@ -16,7 +16,7 @@ def get_smtp_settings(db: Session):
     
     # Defaults
     if not settings["company_name"]:
-        settings["company_name"] = "СФЕРА ERP"
+        settings["company_name"] = "СФЕРУМ"
     return settings
 
 def send_email(db: Session, to_email: str, subject: str, body_html: str):
@@ -66,11 +66,11 @@ def send_email(db: Session, to_email: str, subject: str, body_html: str):
 # ==========================================
 
 def send_welcome_email(db: Session, to_email: str, company_name: str, admin_username: str):
-    subject = f"Добро пожаловать в СФЕРА ERP, {company_name}!"
+    subject = f"Добро пожаловать в СФЕРУМ, {company_name}!"
     body = f"""
     <html>
     <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
-        <h2 style="color: #F95700;">Добро пожаловать в СФЕРА ERP!</h2>
+        <h2 style="color: #F95700;">Добро пожаловать в СФЕРУМ!</h2>
         <p>Уважаемый администратор <b>{company_name}</b>,</p>
         <p>Ваша учетная запись (логин: <b>{admin_username}</b>) успешно создана.</p>
         <p>Чтобы получить максимум пользы от платформы, мы рекомендуем выполнить 3 простых шага:</p>
@@ -81,7 +81,7 @@ def send_welcome_email(db: Session, to_email: str, company_name: str, admin_user
         </ol>
         <p>Ваш пробный период (Trial) активирован и продлится 14 дней.</p>
         <br/>
-        <p>С уважением,<br/>Команда СФЕРА ERP</p>
+        <p>С уважением,<br/>Команда СФЕРУМ</p>
     </body>
     </html>
     """
@@ -94,11 +94,11 @@ def send_day7_checkin_email(db: Session, to_email: str, company_name: str):
     <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
         <h2 style="color: #4F46E5;">Как продвигается работа?</h2>
         <p>Здравствуйте!</p>
-        <p>Вы с нами уже 7 дней. Мы надеемся, что СФЕРА ERP помогает вам автоматизировать бизнес-процессы.</p>
+        <p>Вы с нами уже 7 дней. Мы надеемся, что СФЕРУМ помогает вам автоматизировать бизнес-процессы.</p>
         <p>Знаете ли вы, что у нас есть <b>встроенные ИИ-Агенты</b>? Вы можете поручить ИИ анализировать ваши документы (RAG) или искать тендеры.</p>
         <p><a href="https://сфера-erp.рф/crm/ai-agents" style="background: #4F46E5; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Попробовать ИИ-Агентов</a></p>
         <br/>
-        <p>С уважением,<br/>Команда СФЕРА ERP</p>
+        <p>С уважением,<br/>Команда СФЕРУМ</p>
     </body>
     </html>
     """
@@ -116,7 +116,7 @@ def send_trial_ending_alert_email(db: Session, to_email: str, company_name: str,
         <br/>
         <p><a href="https://сфера-erp.рф/crm/admin" style="background: #E11D48; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Перейти к оплате</a></p>
         <br/>
-        <p>С уважением,<br/>Команда СФЕРА ERP</p>
+        <p>С уважением,<br/>Команда СФЕРУМ</p>
     </body>
     </html>
     """

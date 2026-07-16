@@ -19,8 +19,8 @@ interface KBDocument {
 const DEFAULT_DOCUMENTS: KBDocument[] = [
   {
     id: 'doc-1',
-    title: 'Регламент продаж и общения с клиентами СФЕРА 2026',
-    filename: 'Регламент продаж СФЕРА 2026.pdf',
+    title: 'Регламент продаж и общения с клиентами СФЕРУМ 2026',
+    filename: 'Регламент продаж СФЕРУМ 2026.pdf',
     category: 'Регламенты',
     size: '1.4 MB',
     chunks_count: 64,
@@ -114,7 +114,7 @@ export default function KnowledgeBase({ isTab = false }: { isTab?: boolean } = {
             <div className="space-y-3 max-w-3xl">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 dark:bg-orange-500/15 border border-orange-500/30 text-[#F95700] text-xs font-black uppercase tracking-wider">
                 <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-                <span>Корпоративный RAG-Ассистент СФЕРА</span>
+                <span>Корпоративный RAG-Ассистент СФЕРУМ</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-black font-['Montserrat'] text-zinc-900 dark:text-white flex items-center gap-3">
                 <Database className="w-8 h-8 text-[#F95700]" />
@@ -239,7 +239,7 @@ export default function KnowledgeBase({ isTab = false }: { isTab?: boolean } = {
                 Изоляция Tenant RLS
               </span>
               <h3 className="text-base font-black text-zinc-900 dark:text-white leading-snug">
-                Корпоративная защита данных СФЕРА
+                Корпоративная защита данных СФЕРУМ
               </h3>
               <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
                 Загруженные файлы индексируются в изолированном векторном пространстве вашей организации. Ни один фрагмент не передается сторонним компаниям и не используется для публичного обучения моделей.

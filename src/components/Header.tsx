@@ -53,7 +53,7 @@ export const Header: React.FC = () => {
         {/* Logo */}
         <div className="flex items-center space-x-4 cursor-pointer" onClick={handleLogoClick}>
           <div className="flex flex-col leading-none">
-            <span className="text-text font-black tracking-tighter text-2xl md:text-3xl block uppercase">СФЕРА</span>
+            <span className="text-text font-black tracking-tighter text-2xl md:text-3xl block uppercase">СФЕРУМ</span>
             <span className="text-[8px] md:text-[9px] text-primary font-bold tracking-[0.3em] uppercase mt-0.5">
               Промышленная группа
             </span>

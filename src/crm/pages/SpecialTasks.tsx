@@ -244,7 +244,7 @@ export const SpecialTasks: React.FC = () => {
 
   return (
     <div className="space-y-6 flex flex-col h-auto sm:h-full min-h-0">
-      <Helmet><title>Спецзадания (Снайпер-парсер) | СФЕРА</title></Helmet>
+      <Helmet><title>Спецзадания (Снайпер-парсер) | СФЕРУМ</title></Helmet>
 
       {/* Открытие базы лидов */}
       {openLeadsTaskId && currentOkvadTask && (

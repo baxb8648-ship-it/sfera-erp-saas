@@ -340,7 +340,7 @@ export const Marketplace: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       <Helmet>
-        <title>Биржа Заказов (SaaS B2B Маркетплейс) — СФЕРА ERP</title>
+        <title>Биржа Заказов (SaaS B2B Маркетплейс) — СФЕРУМ</title>
       </Helmet>
 
       {/* Top Banner with Stats & Network Effect */}
@@ -356,7 +356,7 @@ export const Marketplace: React.FC = () => {
               Глобальная Биржа B2B-Заказов
             </h1>
             <p className="text-sm sm:text-base text-zinc-300 leading-relaxed">
-              Единое экосистемное пространство для тенантов платформы <span className="text-[#F95700] font-semibold">СФЕРА ERP</span>. 
+              Единое экосистемное пространство для тенантов платформы <span className="text-[#F95700] font-semibold">СФЕРУМ</span>. 
               Сдавайте спецтехнику в аренду в свободные окна, находите надежных субподрядчиков и реализуйте остатки стройматериалов без посредников.
             </p>
           </div>
@@ -606,7 +606,7 @@ export const Marketplace: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="text-lg font-bold">Опубликовать заявку на бирже</h3>
-                    <p className="text-xs text-zinc-300">Ваше предложение увидят все тенанты платформы СФЕРА ERP</p>
+                    <p className="text-xs text-zinc-300">Ваше предложение увидят все тенанты платформы СФЕРУМ</p>
                   </div>
                 </div>
                 <button onClick={() => setIsCreateModalOpen(false)} className="text-zinc-400 hover:text-white transition-colors cursor-pointer">
@@ -932,7 +932,7 @@ export const Marketplace: React.FC = () => {
 
               <div className="p-4 bg-gray-50 dark:bg-zinc-800/60 border-t border-gray-200 dark:border-zinc-800 flex items-center justify-between gap-3">
                 <div className="text-xs text-gray-500 dark:text-zinc-400 hidden sm:block">
-                  Сделка защищена стандартами экосистемы СФЕРА ERP
+                  Сделка защищена стандартами экосистемы СФЕРУМ
                 </div>
                 <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
                   <button

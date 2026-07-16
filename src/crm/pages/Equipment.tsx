@@ -267,7 +267,7 @@ export const Equipment: React.FC = () => {
           <div class="header">
             <div>
               <h1>Акт приёма-передачи оборудования / инструмента</h1>
-              <div style="color: #666; font-size: 13px;">СФЕРА ERP · Строительное управление</div>
+              <div style="color: #666; font-size: 13px;">СФЕРУМ · Строительное управление</div>
             </div>
             <div class="badge">№ АП-EQ-${item.id} от ${today}</div>
           </div>
@@ -292,7 +292,7 @@ export const Equipment: React.FC = () => {
               <tr>
                 <td>#EQ-${item.id}</td>
                 <td><strong>${item.name}</strong></td>
-                <td>${item.barcode || `SPHERA-EQ-${item.id}`}</td>
+                <td>${item.barcode || `SFERUM-EQ-${item.id}`}</td>
                 <td>${item.status}</td>
               </tr>
             </tbody>
@@ -368,7 +368,7 @@ export const Equipment: React.FC = () => {
         <body onload="window.print(); window.close();">
           <div class="container">
             <img src="${qrDataUrl}" />
-            <h2>СФЕРА ERP</h2>
+            <h2>СФЕРУМ</h2>
             <p>${qrItem.name}</p>
           </div>
         </body>
@@ -594,7 +594,7 @@ export const Equipment: React.FC = () => {
   return (
     <div className="space-y-6">
       <Helmet>
-        <title>Оборудование | СФЕРА</title>
+        <title>Оборудование | СФЕРУМ</title>
       </Helmet>
 
 

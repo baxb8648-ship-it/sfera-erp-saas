@@ -304,7 +304,7 @@ export const SaaSTenantModal: React.FC<SaaSTenantModalProps> = ({
             <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 flex items-start gap-3">
               <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
               <div className="text-xs text-gray-700 dark:text-zinc-300 space-y-1">
-                <div className="font-bold text-gray-900 dark:text-white">Архитектурная справка СФЕРА ERP: Изоляция подписчиков</div>
+                <div className="font-bold text-gray-900 dark:text-white">Архитектурная справка СФЕРУМ: Изоляция подписчиков</div>
                 <p>
                   Данный тенант работает в изолированном контуре. Его контрагенты, сделки и объекты из CRM <strong>не пересекаются</strong> с другими компаниями. Документооборот по оплате подписки за эту компанию ведется во вкладке «📄 Документооборот SaaS» и регистрируется в бухгалтерии Владельца платформы.
                 </p>
@@ -390,7 +390,7 @@ export const SaaSTenantModal: React.FC<SaaSTenantModalProps> = ({
                     {activeDocType === 'contract' && `Лицензионный договор № ЛД-${tenant.id}/2026`}
                   </div>
                   <div className="text-gray-500 dark:text-zinc-400 mt-1">
-                    от {currentDateStr} г. • Платформа СФЕРА ERP SaaS
+                    от {currentDateStr} г. • Платформа СФЕРУМ SaaS
                   </div>
                 </div>
                 <div className="text-right space-y-1">
@@ -407,7 +407,7 @@ export const SaaSTenantModal: React.FC<SaaSTenantModalProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-2">
                 <div className="space-y-1.5 bg-gray-50 dark:bg-zinc-900/60 p-4 rounded-xl border border-gray-200 dark:border-zinc-800/80">
                   <span className="text-[11px] font-bold text-[#F95700] uppercase block">Исполнитель (Вендор платформы):</span>
-                  <div className="font-bold text-gray-900 dark:text-white font-sans text-sm">ООО «СФЕРА-ИТ» (Лицензиар)</div>
+                  <div className="font-bold text-gray-900 dark:text-white font-sans text-sm">ООО «СФЕРУМ-ИТ» (Лицензиар)</div>
                   <div>ИНН: 7701234567 • КПП: 770101001</div>
                   <div>р/с: 40702810100000000001 в ПАО Сбербанк</div>
                   <div>к/с: 30101810400000000225 • БИК: 044525225</div>
@@ -441,7 +441,7 @@ export const SaaSTenantModal: React.FC<SaaSTenantModalProps> = ({
                       <tr>
                         <td className="p-3 border border-gray-200 dark:border-zinc-800 text-center">1</td>
                         <td className="p-3 border border-gray-200 dark:border-zinc-800 font-sans font-medium text-gray-900 dark:text-white">
-                          Предоставление неисключительного права на использование программы для ЭВМ «Облачная платформа СФЕРА ERP SaaS» (Тариф Enterprise Cluster, НДС не облагается в связи с применением УСН и включением ПО в Реестр отечественного ПО)
+                          Предоставление неисключительного права на использование программы для ЭВМ «Облачная платформа СФЕРУМ SaaS» (Тариф Enterprise Cluster, НДС не облагается в связи с применением УСН и включением ПО в Реестр отечественного ПО)
                         </td>
                         <td className="p-3 border border-gray-200 dark:border-zinc-800 text-center font-bold">{usersCount}</td>
                         <td className="p-3 border border-gray-200 dark:border-zinc-800 text-center">{invoicePeriod} мес.</td>
@@ -476,7 +476,7 @@ export const SaaSTenantModal: React.FC<SaaSTenantModalProps> = ({
               {activeDocType === 'act' && (
                 <div className="space-y-4 py-2 font-sans text-sm leading-relaxed text-gray-800 dark:text-zinc-200">
                   <p>
-                    <strong>Исполнитель</strong> в лице Генерального директора ООО «СФЕРА-ИТ» передал, а <strong>Заказчик</strong> в лице руководителя {tenant.full_name || tenant.name} принял неисключительные права доступа (простую лицензию) к программе для ЭВМ «СФЕРА ERP SaaS» за период: <strong>Июнь 2026 г.</strong>
+                    <strong>Исполнитель</strong> в лице Генерального директора ООО «СФЕРУМ-ИТ» передал, а <strong>Заказчик</strong> в лице руководителя {tenant.full_name || tenant.name} принял неисключительные права доступа (простую лицензию) к программе для ЭВМ «СФЕРУМ SaaS» за период: <strong>Июнь 2026 г.</strong>
                   </p>
                   <p>
                     Количество активных лицензированных пользователей: <strong>{usersCount} юзеров</strong>. Услуги и права оказаны и переданы в полном объеме, надлежащего качества. Стороны взаимных претензий по объему, качеству и срокам не имеют.
@@ -491,7 +491,7 @@ export const SaaSTenantModal: React.FC<SaaSTenantModalProps> = ({
                 <div className="space-y-4 py-2 font-sans text-sm leading-relaxed text-gray-800 dark:text-zinc-200 max-h-48 overflow-y-auto pr-2 border-l-2 border-[#F95700] pl-4">
                   <p className="font-bold">1. ПРЕДМЕТ ДОГОВОРА</p>
                   <p className="text-xs text-gray-600 dark:text-zinc-400">
-                    1.1. Лицензиар (ООО «СФЕРА-ИТ») обязуется предоставить Лицензиату ({tenant.name}) право использования (простую неисключительную лицензию) программы для ЭВМ «Облачная платформа автоматизации СФЕРА ERP SaaS», размещенной на серверах Лицензиара, а Лицензиат обязуется принять и оплатить предоставленное право согласно выбранному Тарифу.
+                    1.1. Лицензиар (ООО «СФЕРУМ-ИТ») обязуется предоставить Лицензиату ({tenant.name}) право использования (простую неисключительную лицензию) программы для ЭВМ «Облачная платформа автоматизации СФЕРУМ SaaS», размещенной на серверах Лицензиара, а Лицензиат обязуется принять и оплатить предоставленное право согласно выбранному Тарифу.
                   </p>
                   <p className="font-bold">2. ИЗОЛЯЦИЯ ДАННЫХ И БЕЗОПАСНОСТЬ</p>
                   <p className="text-xs text-gray-600 dark:text-zinc-400">
@@ -505,7 +505,7 @@ export const SaaSTenantModal: React.FC<SaaSTenantModalProps> = ({
                 <div>
                   <span className="font-bold block text-gray-900 dark:text-white">От Исполнителя (Вендор):</span>
                   <div className="mt-4 pb-1 border-b border-gray-400 dark:border-zinc-600 text-gray-500 font-mono italic">
-                    / Генеральный директор ООО «СФЕРА-ИТ» /
+                    / Генеральный директор ООО «СФЕРУМ-ИТ» /
                   </div>
                   <span className="text-[10px] text-emerald-600 font-mono font-bold block mt-1">✔ Подписано усиленной КЭП</span>
                 </div>

@@ -98,7 +98,7 @@ def create_public_lead(lead: PublicLeadCreate, background_tasks: BackgroundTasks
             )
         else:
             msg = (
-                f"🔔 <b>Новая заявка с сайта СФЕРА!</b>\n\n"
+                f"🔔 <b>Новая заявка с сайта СФЕРУМ!</b>\n\n"
                 f"🏢 Организация: <b>{db_client.name}</b>\n"
                 f"📞 Телефон: {db_client.phone or '—'}\n"
                 f"✉️ Email: {db_client.email or '—'}\n"

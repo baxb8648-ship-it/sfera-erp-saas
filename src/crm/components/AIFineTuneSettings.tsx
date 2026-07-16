@@ -23,7 +23,7 @@ export const AIFineTuneSettings: React.FC = () => {
   const [status, setStatus] = useState<'idle' | 'training' | 'completed' | 'error'>('idle');
   const [progress, setProgress] = useState<number>(0);
   const [logs, setLogs] = useState<string[]>([
-    '[SYS] 🧠 СФЕРА AI Customization Engine v2.4 готов к работе.',
+    '[SYS] 🧠 СФЕРУМ AI Customization Engine v2.4 готов к работе.',
     '[INFO] 📂 Ожидание старта генерации обучающего датасета тенанта...',
     '[CONFIG] ⚙️ Текущая цель: локальная QLoRA-адаптация весов под отраслевую специфику.'
   ]);
@@ -94,7 +94,7 @@ export const AIFineTuneSettings: React.FC = () => {
 
       if (nextStep.p === 100) {
         setStatus('completed');
-        toast.showToast('✨ Нейросеть СФЕРА успешно дообучена на ваших данных!', 'success');
+        toast.showToast('✨ Нейросеть СФЕРУМ успешно дообучена на ваших данных!', 'success');
       }
     }
   };
@@ -111,7 +111,7 @@ export const AIFineTuneSettings: React.FC = () => {
     setLogs([
       '[SYS] 🚀 Инициализация задачи дообучения...',
       `[CONFIG] Базовая LLM: ${baseModel} | Эпох: ${epochs} | LoRA Rank: ${loraRank}`,
-      '[NET] Отправка POST /ai/finetune/start к бэкенду СФЕРА...'
+      '[NET] Отправка POST /ai/finetune/start к бэкенду СФЕРУМ...'
     ]);
     simulationStepRef.current = 0;
 
@@ -159,7 +159,7 @@ export const AIFineTuneSettings: React.FC = () => {
               Обучение нейросетей на данных компании (QLoRA Fine-Tuning)
             </h2>
             <p className="text-zinc-300 text-sm md:text-base leading-relaxed">
-              Адаптируйте нейросеть СФЕРА ERP под уникальный язык и регламенты вашего бизнеса. ИИ изучит ваши сметы, историю договоров, акты КС-2 и переписку с подрядчиками без передачи данных наружу.
+              Адаптируйте нейросеть СФЕРУМ под уникальный язык и регламенты вашего бизнеса. ИИ изучит ваши сметы, историю договоров, акты КС-2 и переписку с подрядчиками без передачи данных наружу.
             </p>
           </div>
 

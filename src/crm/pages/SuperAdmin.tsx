@@ -464,7 +464,7 @@ export const SuperAdmin: React.FC = () => {
   return (
     <div className="min-h-screen bg-transparent text-[#1a1a1a] dark:text-[#E2E1EB] font-sans pb-24 select-none transition-colors duration-300">
       <Helmet>
-        <title>SaaS Command Center | СФЕРА ERP Platform</title>
+        <title>SaaS Command Center | СФЕРУМ Platform</title>
       </Helmet>
 
       {/* Top Banner Accent Line */}
@@ -1012,7 +1012,7 @@ export const SuperAdmin: React.FC = () => {
                     Сеть продающих менеджеров и IT-интеграторов
                   </h2>
                   <p className="text-sm text-emerald-100/80 leading-relaxed">
-                    Управление агентскими договорами, именными промокодами, процентными ставками и выплатами рекуррентных вознаграждений за привлечение клиентов в СФЕРА ERP.
+                    Управление агентскими договорами, именными промокодами, процентными ставками и выплатами рекуррентных вознаграждений за привлечение клиентов в СФЕРУМ.
                   </p>
                 </div>
                 <button
@@ -1381,7 +1381,7 @@ export const SuperAdmin: React.FC = () => {
               <div className="p-4 bg-gray-50 dark:bg-zinc-950/80 border-b border-gray-200 dark:border-zinc-800 flex items-center justify-between">
                 <div className="font-mono text-xs font-bold uppercase text-gray-700 dark:text-zinc-300 flex items-center gap-2">
                   <FileSpreadsheet className="w-4 h-4 text-purple-500" />
-                  <span>Внутренний реестр бухгалтерии ООО «СФЕРА ТЕХНОЛОГИИ» (Вендор)</span>
+                  <span>Внутренний реестр бухгалтерии ООО «СФЕРУМ ТЕХНОЛОГИИ» (Вендор)</span>
                 </div>
                 <span className="text-[11px] font-mono text-gray-400">Хранилище: /backend/data/invoices/</span>
               </div>

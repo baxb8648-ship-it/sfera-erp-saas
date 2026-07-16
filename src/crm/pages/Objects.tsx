@@ -263,7 +263,7 @@ export const Objects: React.FC = () => {
   return (
     <div className="h-full flex flex-col space-y-6">
       <Helmet>
-        <title>Объекты | СФЕРА</title>
+        <title>Объекты | СФЕРУМ</title>
       </Helmet>
 
       {/* Header and Switcher (Glassmorphism & Bento-ready) */}

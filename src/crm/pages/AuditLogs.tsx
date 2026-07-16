@@ -81,7 +81,7 @@ export const AuditLogs: React.FC<{ isTab?: boolean }> = ({ isTab = false }) => {
     <div className={isTab ? "space-y-6" : "h-full flex flex-col space-y-6"}>
       {!isTab && (
         <Helmet>
-          <title>История изменений | СФЕРА</title>
+          <title>История изменений | СФЕРУМ</title>
         </Helmet>
       )}
 

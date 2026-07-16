@@ -107,7 +107,7 @@ export const Templates: React.FC = () => {
   return (
     <div className="space-y-6">
       <Helmet>
-        <title>Шаблоны | СФЕРА</title>
+        <title>Шаблоны | СФЕРУМ</title>
       </Helmet>
       {/* Header and Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-zinc-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800">
@@ -212,7 +212,7 @@ export const Templates: React.FC = () => {
                         </div>
                         <p className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">
                           {template.file_path === 'system_default'
-                            ? 'Предустановлен системой СФЕРА ERP'
+                            ? 'Предустановлен системой СФЕРУМ'
                             : `Загружен: ${new Date(template.created_at).toLocaleDateString('ru-RU')}`}
                         </p>
                       </div>

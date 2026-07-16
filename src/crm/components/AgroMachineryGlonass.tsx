@@ -904,7 +904,7 @@ export const AgroMachineryGlonass: React.FC<AgroMachineryGlonassProps> = ({ init
           <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 max-w-xl w-full border border-gray-200 dark:border-zinc-800 shadow-2xl space-y-4 text-xs">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-zinc-800 pb-3">
               <h3 className="font-extrabold text-base text-[#1a1a1a] dark:text-white">
-                ❓ FAQ: Сельхозтехника в Агро-домене СФЕРА ERP
+                ❓ FAQ: Сельхозтехника в Агро-домене СФЕРУМ
               </h3>
               <button onClick={() => setIsFaqModalOpen(false)} className="text-gray-400">✕</button>
             </div>

@@ -32,7 +32,7 @@ export function PublicBookingWidget() {
     const [busyAppointments, setBusyAppointments] = useState<BusySlot[]>([]);
     const [loading, setLoading] = useState(true);
     const [successState, setSuccessState] = useState(false);
-    const [tenantName, setTenantName] = useState('СФЕРА');
+    const [tenantName, setTenantName] = useState('СФЕРУМ');
 
     // Form states
     const [step, setStep] = useState(1);
@@ -60,11 +60,11 @@ export function PublicBookingWidget() {
             const [svcRes, mastersRes, tenantRes] = await Promise.all([
                 apiClient.get(`/booking/public/services?tenant_id=${tenantId}`),
                 apiClient.get(`/booking/public/masters?tenant_id=${tenantId}`),
-                apiClient.get(`/booking/public/tenant-info?tenant_id=${tenantId}`).catch(() => ({ name: 'СФЕРА' }))
+                apiClient.get(`/booking/public/tenant-info?tenant_id=${tenantId}`).catch(() => ({ name: 'СФЕРУМ' }))
             ]);
             setServices(Array.isArray(svcRes) ? svcRes : []);
             setMasters(Array.isArray(mastersRes) ? mastersRes : []);
-            setTenantName(tenantRes && tenantRes.name ? tenantRes.name : 'СФЕРА');
+            setTenantName(tenantRes && tenantRes.name ? tenantRes.name : 'СФЕРУМ');
         } catch (err) {
             console.error('Failed to load public booking data:', err);
         } finally {

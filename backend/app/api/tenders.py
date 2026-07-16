@@ -489,7 +489,7 @@ def generate_tender_doc(
             dummy.add_paragraph('Заказчик: {{CUSTOMER_NAME}}')
             dummy.add_paragraph('Сумма (НМЦК): {{PRICE}} руб.')
             dummy.add_paragraph('Дата подачи: {{CURRENT_DATE}}')
-            dummy.add_paragraph('Исполнитель: ООО "СФЕРА"')
+            dummy.add_paragraph('Исполнитель: ООО "СФЕРУМ"')
             dummy.save(template_path)
         
     output_dir = os.path.join("backend", "uploads")
@@ -1198,7 +1198,7 @@ def analyze_tender_ai(
 
     clean_desc = re.sub(r'<[^>]*>', '', db_tender.description or "")[:3000]
     prompt = (
-        "Ты — ИИ-Копилот, технический эксперт компании ООО СФЕРА по антикоррозийной защите (АКЗ), "
+        "Ты — ИИ-Копилот, технический эксперт компании ООО СФЕРУМ по антикоррозийной защите (АКЗ), "
         "огнезащите металлоконструкций, подготовке поверхностей (Sa 2.5, Sa 3, ГОСТ 9.402) и покраске ЛКМ.\n"
         "Проведи краткий экспресс-анализ этой закупки.\n\n"
         f"Название: {db_tender.title}\n"

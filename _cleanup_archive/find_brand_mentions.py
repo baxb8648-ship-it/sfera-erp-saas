@@ -1,8 +1,8 @@
 import os
 
 root_dirs = [
-    "L:/LEONIKA/Комерческая CRM-ERP (SaaS)/СФЕРА-ЕРП/SPHERA/backend/app",
-    "L:/LEONIKA/Комерческая CRM-ERP (SaaS)/СФЕРА-ЕРП/SPHERA/src"
+    "L:/LEONIKA/Комерческая CRM-ERP (SaaS)/СФЕРУМ-ЕРП/SFERUM/backend/app",
+    "L:/LEONIKA/Комерческая CRM-ERP (SaaS)/СФЕРУМ-ЕРП/SFERUM/src"
 ]
 found = []
 
@@ -32,7 +32,7 @@ if found:
     print(f"Found {len(found)} brand mentions:")
     # Покажем первые 50 упоминаний
     for path, line_num, text, kw in found[:50]:
-        rel_path = path.replace("L:/LEONIKA/Комерческая CRM-ERP (SaaS)/СФЕРА-ЕРП/SPHERA/", "")
+        rel_path = path.replace("L:/LEONIKA/Комерческая CRM-ERP (SaaS)/СФЕРУМ-ЕРП/SFERUM/", "")
         print(f"  {rel_path}:{line_num} | Keyword: '{kw}' | Content: {text[:80]}")
 else:
     print("No brand mentions found.")

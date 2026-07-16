@@ -4,7 +4,7 @@ import { apiClient } from '../../api/client';
 
 export const WhiteLabelSettings: React.FC = () => {
   const [settings, setSettings] = useState<any>({
-    brand_name: 'СФЕРА ERP',
+    brand_name: 'СФЕРУМ',
     brand_color: '#F95700',
     brand_logo_url: ''
   });
@@ -13,7 +13,7 @@ export const WhiteLabelSettings: React.FC = () => {
   const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
   const presets = [
-    { name: 'СФЕРА Оранж (По умолчанию)', color: '#F95700' },
+    { name: 'СФЕРУМ Оранж (По умолчанию)', color: '#F95700' },
     { name: 'Изумрудный Про (Green)', color: '#10B981' },
     { name: 'Королевский Синий (Blue)', color: '#3B82F6' },
     { name: 'Кибер Фиолетовый (Purple)', color: '#8B5CF6' },
@@ -31,7 +31,7 @@ export const WhiteLabelSettings: React.FC = () => {
       const data = await apiClient.get('/settings/');
       if (data) {
         const loaded = {
-          brand_name: data.brand_name || 'СФЕРА ERP',
+          brand_name: data.brand_name || 'СФЕРУМ',
           brand_color: data.brand_color || '#F95700',
           brand_logo_url: data.brand_logo_url || ''
         };
@@ -130,7 +130,7 @@ export const WhiteLabelSettings: React.FC = () => {
               type="text"
               value={settings.brand_name}
               onChange={e => setSettings({ ...settings, brand_name: e.target.value })}
-              placeholder="Например: СФЕРА ERP или МойБренд CRM"
+              placeholder="Например: СФЕРУМ или МойБренд CRM"
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 transition-colors"
             />
           </div>
@@ -278,7 +278,7 @@ export const WhiteLabelSettings: React.FC = () => {
                   </div>
                 )}
                 <span className="font-extrabold text-white tracking-tight text-sm truncate max-w-[140px]">
-                  {settings.brand_name || 'СФЕРА ERP'}
+                  {settings.brand_name || 'СФЕРУМ'}
                 </span>
               </div>
               <div className="flex items-center gap-2">

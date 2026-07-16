@@ -1,6 +1,6 @@
 import os
 
-root_dir = "L:/SPHERA/Комерческая CRM-ERP (SaaS)/СФЕРА-ЕРП/АКЗ/backend"
+root_dir = "L:/SFERUM/Комерческая CRM-ERP (SaaS)/СФЕРУМ-ЕРП/АКЗ/backend"
 found = []
 
 for root, dirs, files in os.walk(root_dir):

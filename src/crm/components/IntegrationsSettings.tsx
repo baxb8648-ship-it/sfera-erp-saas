@@ -1153,7 +1153,7 @@ export const IntegrationsSettings: React.FC = () => {
               </h3>
 
               <p className="text-sm text-zinc-400 leading-relaxed mb-6">
-                Вы используете бесплатный тариф платформы <b>СФЕРА ERP SaaS</b>, который ограничивает подключение до 3 Telegram-ботов для предотвращения избыточной нагрузки на сервер.
+                Вы используете бесплатный тариф платформы <b>СФЕРУМ SaaS</b>, который ограничивает подключение до 3 Telegram-ботов для предотвращения избыточной нагрузки на сервер.
               </p>
 
               <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-2xl p-4 text-left mb-6 space-y-2.5">

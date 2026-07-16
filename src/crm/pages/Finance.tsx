@@ -509,7 +509,7 @@ export const Finance: React.FC = () => {
   return (
     <div className="flex flex-col space-y-6 pb-12 max-w-[1600px] mx-auto p-1">
       <Helmet>
-        <title>Финансы | СФЕРА</title>
+        <title>Финансы | СФЕРУМ</title>
       </Helmet>
       
       {/* Header Panel */}

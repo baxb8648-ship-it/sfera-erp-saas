@@ -1,5 +1,5 @@
 """
-Утилиты глубокого RBAC (Role-Based Access Control) для СФЕРА ERP.
+Утилиты глубокого RBAC (Role-Based Access Control) для СФЕРУМ.
 
 Поддерживает два уровня контроля:
 1. Уровень модуля: can_read, can_write, can_delete

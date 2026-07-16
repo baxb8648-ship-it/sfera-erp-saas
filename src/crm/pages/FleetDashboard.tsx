@@ -112,7 +112,7 @@ export const FleetDashboard: React.FC = () => {
         <body onload="window.print();">
           <h1>ДОГОВОР АРЕНДЫ СПЕЦТЕХНИКИ № СФ-${vehicle.id}-${Date.now().toString().slice(-4)}</h1>
           <div class="sub">г. Москва &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; «${today}»</div>
-          <p><strong>ООО «СФЕРА ЕРП ТЕХНОЛОГИИ»</strong> (Арендодатель) и <strong>Заказчик</strong> (Арендатор) заключили настоящий договор о нижеследующем:</p>
+          <p><strong>ООО «СФЕРУМ ЕРП ТЕХНОЛОГИИ»</strong> (Арендодатель) и <strong>Заказчик</strong> (Арендатор) заключили настоящий договор о нижеследующем:</p>
           <p><strong>1. ПРЕДМЕТ ДОГОВОРА</strong><br/>
           Арендодатель предоставляет Арендатору во временное владение и пользование спецтехнику:</p>
           <table>
@@ -129,7 +129,7 @@ export const FleetDashboard: React.FC = () => {
           2.1. Стоимость аренды: <strong>${(vehicle.daily_rate || 0).toLocaleString()} руб.</strong> за машино-смену.<br/>
           2.2. Техника застрахована по ОСАГО (срок: ${vehicle.osago_until || 'по договору'}).</p>
           <div class="sign">
-            <div><strong>Арендодатель:</strong><br/><br/>__________________ / ООО «СФЕРА ЕРП» /</div>
+            <div><strong>Арендодатель:</strong><br/><br/>__________________ / ООО «СФЕРУМ ЕРП» /</div>
             <div><strong>Арендатор:</strong><br/><br/>__________________ / Заказчик /</div>
           </div>
         </body>
@@ -326,7 +326,7 @@ export const FleetDashboard: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       <Helmet>
-        <title>Автопарк и Спецтехника | СФЕРА ERP</title>
+        <title>Автопарк и Спецтехника | СФЕРУМ</title>
       </Helmet>
 
       {/* Hero Баннер */}

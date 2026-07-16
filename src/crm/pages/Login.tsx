@@ -255,8 +255,8 @@ export const Login: React.FC = () => {
   return (
     <div className="min-h-screen flex w-full font-['Inter'] bg-zinc-50 dark:bg-[#0A0D14] transition-colors duration-300">
       <Helmet>
-        <title>{isRegister ? 'Регистрация | СФЕРА ERP' : 'Вход | СФЕРА ERP'}</title>
-        <meta name="description" content="Панель управления СФЕРА ERP" />
+        <title>{isRegister ? 'Регистрация | СФЕРУМ' : 'Вход | СФЕРУМ'}</title>
+        <meta name="description" content="Панель управления СФЕРУМ" />
         <link rel="icon" type="image/svg+xml" href="favicon-crm.svg" />
       </Helmet>
 
@@ -267,7 +267,7 @@ export const Login: React.FC = () => {
 
         <div className="relative z-10 flex items-center justify-between w-full">
           <Link to="/" className="text-3xl font-black font-['Montserrat'] tracking-tight flex items-center gap-2">
-             СФЕРА <span className="text-[#E64D00]">ERP</span>
+             СФЕРУМ <span className="text-[#E64D00]">ERP</span>
           </Link>
           <div className="flex items-center gap-2 text-[10px] font-mono tracking-widest uppercase text-zinc-500 bg-zinc-900 px-3 py-1 border border-zinc-800">
             <Activity className="w-3 h-3 text-emerald-500" />
@@ -297,7 +297,7 @@ export const Login: React.FC = () => {
         </div>
 
         <div className="relative z-10 text-[10px] font-mono text-zinc-600 uppercase">
-          © {new Date().getFullYear()} SPHERA INDUSTRIAL GROUP
+          © {new Date().getFullYear()} SFERUM INDUSTRIAL GROUP
         </div>
       </div>
 
@@ -306,7 +306,7 @@ export const Login: React.FC = () => {
         {/* Mobile Header (Shown only on small screens) */}
         <div className="lg:hidden absolute top-6 left-6 right-6 flex items-center justify-between">
           <Link to="/" className="text-xl font-black font-['Montserrat'] text-zinc-900 dark:text-white">
-            СФЕРА <span className="text-[#E64D00]">ERP</span>
+            СФЕРУМ <span className="text-[#E64D00]">ERP</span>
           </Link>
         </div>
 
@@ -464,7 +464,7 @@ export const Login: React.FC = () => {
                   <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
                     <div>
                       <label className="block text-xs font-mono text-zinc-500 uppercase tracking-widest mb-2">Шаг 2: Идеология и Отрасль</label>
-                      <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">Настройте профиль воркспейса. СФЕРА адаптирует справочники и ИИ-модули под ваш бизнес.</p>
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">Настройте профиль воркспейса. СФЕРУМ адаптирует справочники и ИИ-модули под ваш бизнес.</p>
                       
                       <div className="space-y-6 mt-6 relative">
                         {/* Custom Sphere Dropdown */}

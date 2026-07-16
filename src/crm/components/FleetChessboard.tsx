@@ -90,7 +90,7 @@ const INITIAL_EQUIPMENT: EquipmentItem[] = [
     status: 'reserved',
     operatorName: 'Иванов Алексей П.',
     operatorPhone: '+7 (903) 555-88-99',
-    location: 'База СФЕРА (Одинцово)',
+    location: 'База СФЕРУМ (Одинцово)',
     fuelLevel: 100,
     engineHours: 6150
   },
@@ -160,7 +160,7 @@ const INITIAL_EQUIPMENT: EquipmentItem[] = [
     status: 'available',
     operatorName: 'Белов Николай А.',
     operatorPhone: '+7 (916) 888-00-11',
-    location: 'База СФЕРА (Одинцово)',
+    location: 'База СФЕРУМ (Одинцово)',
     fuelLevel: 95,
     engineHours: 3450
   },
@@ -259,10 +259,10 @@ const INITIAL_BOOKINGS: BookingItem[] = [
   {
     id: 'bk-106',
     equipmentId: 'eq-04',
-    clientName: 'Внутренний сервис СФЕРА',
+    clientName: 'Внутренний сервис СФЕРУМ',
     clientInn: '7700000000',
     objectName: 'Плановое ТО 10 000 м/ч + Гидравлика',
-    objectAddress: 'Сервис-центр СФЕРА, г. Одинцово',
+    objectAddress: 'Сервис-центр СФЕРУМ, г. Одинцово',
     startDate: '2026-07-02',
     endDate: '2026-07-06',
     status: 'maintenance',
@@ -422,9 +422,9 @@ export const FleetChessboard: React.FC = () => {
             plateNumber: v.plate_number || '—',
             dailyRate: v.daily_rate || 20000,
             status: v.status === 'rented' ? 'active' : 'available',
-            operatorName: 'Оператор СФЕРА',
+            operatorName: 'Оператор СФЕРУМ',
             operatorPhone: '+7 (999) 000-00-00',
-            location: 'База СФЕРА',
+            location: 'База СФЕРУМ',
             fuelLevel: 95,
             engineHours: 1200
           }));
@@ -435,7 +435,7 @@ export const FleetChessboard: React.FC = () => {
           const mappedBookings: BookingItem[] = bookingsRes.map((b: any) => ({
             id: String(b.id),
             equipmentId: String(b.vehicle_id),
-            clientName: b.client_name || 'Клиент СФЕРА',
+            clientName: b.client_name || 'Клиент СФЕРУМ',
             clientInn: '7700000000',
             objectName: 'Объект заказчика',
             objectAddress: 'г. Москва',
@@ -594,9 +594,9 @@ export const FleetChessboard: React.FC = () => {
         plateNumber: newVehicleData.plateNumber || '—',
         dailyRate: Number(newVehicleData.dailyRate) || 20000,
         status: newVehicleData.status === 'available' ? 'active' : 'reserved',
-        operatorName: 'Оператор СФЕРА',
+        operatorName: 'Оператор СФЕРУМ',
         operatorPhone: '+7 (999) 000-00-00',
-        location: 'База СФЕРА',
+        location: 'База СФЕРУМ',
         fuelLevel: 100,
         engineHours: 0
       };
@@ -623,9 +623,9 @@ export const FleetChessboard: React.FC = () => {
         plateNumber: newVehicleData.plateNumber || '—',
         dailyRate: Number(newVehicleData.dailyRate) || 20000,
         status: 'active',
-        operatorName: 'Оператор СФЕРА',
+        operatorName: 'Оператор СФЕРУМ',
         operatorPhone: '+7 (999) 000-00-00',
-        location: 'База СФЕРА',
+        location: 'База СФЕРУМ',
         fuelLevel: 100,
         engineHours: 0
       };

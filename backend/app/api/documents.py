@@ -57,10 +57,10 @@ def get_settings_dict(db: Session, tenant_id: int = None) -> dict:
 
 
 def draw_branding_header(c, font_name, font_bold_name, settings, draw_qr=True):
-    # 1. Draw branding header (СФЕРА)
+    # 1. Draw branding header (СФЕРУМ)
     c.setFont(font_bold_name, 22)
     c.setFillColorRGB(0.97, 0.34, 0.0) # #F95700
-    c.drawString(54, 780, settings.get("company_name", "СФЕРА"))
+    c.drawString(54, 780, settings.get("company_name", "СФЕРУМ"))
     
     c.setFont(font_name, 10)
     c.setFillColorRGB(0.3, 0.3, 0.3)
@@ -266,7 +266,7 @@ def generate_document(client_id: int, doc_type: str, object_id: int = None, cust
         replacements = {
             "{{contract_number}}": doc_number,
             "{{date}}": date_str,
-            "{{company_name}}": settings.get("company_name", "СФЕРА"),
+            "{{company_name}}": settings.get("company_name", "СФЕРУМ"),
             "{{company_inn}}": settings.get("company_inn", ""),
             "{{company_address}}": settings.get("company_address", ""),
             "{{company_director}}": settings.get("company_director", ""),
@@ -332,7 +332,7 @@ def generate_document(client_id: int, doc_type: str, object_id: int = None, cust
         c.setFont(font_bold_name, 10)
         c.drawString(54, 570, "Исполнитель:")
         c.setFont(font_name, 10)
-        c.drawString(54, 555, f"Компания: {settings.get('company_legal_name', 'ООО \"СФЕРА\"')}")
+        c.drawString(54, 555, f"Компания: {settings.get('company_legal_name', 'ООО \"СФЕРУМ\"')}")
         c.drawString(54, 540, f"ИНН: {settings.get('company_inn', '5610234567')}")
         
         y = 500
@@ -1607,7 +1607,7 @@ def generate_from_template(
     date_str = custom_date or datetime.now().strftime('%d.%m.%Y')
     doc_number = custom_number or f"{client_id}-{int(datetime.utcnow().timestamp()) % 100000:05d}"
 
-    # Если выбран стартовый системный шаблон СФЕРА, используем встроенный PDF генератор
+    # Если выбран стартовый системный шаблон СФЕРУМ, используем встроенный PDF генератор
     if template.file_path == "system_default" or not os.path.exists(template.file_path):
         doc_type_map = {
             "kp": ("kp", "Коммерческое предложение", create_kp_pdf),

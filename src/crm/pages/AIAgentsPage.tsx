@@ -74,7 +74,7 @@ const PRESET_EMPLOYEES: DigitalEmployee[] = [
   },
   {
     id: 'voice-copilot-bot',
-    name: 'Голосовой ИИ-Управляющий «СФЕРА-Voice»',
+    name: 'Голосовой ИИ-Управляющий «СФЕРУМ-Voice»',
     role: 'Голосовое управление CRM и отчетами',
     description: 'Понимает живую русскую речь и голосовые команды. Создает сделки, ставит задачи сотрудникам, рассчитывает баланс компании и выводит сводки по тендерам напрямую через Telegram-бота.',
     category: 'sales',
@@ -376,7 +376,7 @@ export const AIAgentsPage: React.FC = () => {
           <div className="space-y-3 max-w-3xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 dark:bg-orange-500/15 border border-orange-500/30 text-[#F95700] text-xs font-black uppercase tracking-wider">
               <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-              <span>Единый центр ИИ-Сотрудников и Ботов СФЕРА</span>
+              <span>Единый центр ИИ-Сотрудников и Ботов СФЕРУМ</span>
             </div>
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black font-['Montserrat'] tracking-tight text-zinc-900 dark:text-white leading-tight">
               Ваш цифровой штат 24/7 без программирования
@@ -873,12 +873,12 @@ export const AIAgentsPage: React.FC = () => {
               )}
               </div>
 
-              {/* Правая колонка: Возможности СФЕРА-Voice */}
+              {/* Правая колонка: Возможности СФЕРУМ-Voice */}
               {isVoiceCopilot && (
                 <div className="border-t md:border-t-0 md:border-l border-zinc-200 dark:border-zinc-800/80 pt-6 md:pt-0 md:pl-6 space-y-5">
                   <div>
                     <h4 className="text-xs font-black text-zinc-900 dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-                      <span>🎙️ Возможности СФЕРА-Voice</span>
+                      <span>🎙️ Возможности СФЕРУМ-Voice</span>
                       <span className="px-2 py-0.5 rounded-full bg-orange-500/10 text-[#F95700] text-[9px] font-black">ACTIVE</span>
                     </h4>
                     <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">

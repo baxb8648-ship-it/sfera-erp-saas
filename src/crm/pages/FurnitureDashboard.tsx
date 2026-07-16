@@ -384,7 +384,7 @@ export default function FurnitureDashboard() {
   const handleCopyProposal = () => {
     const textProposal = `
 ========================================
-КОММЕРЧЕСКОЕ ПРЕДЛОЖЕНИЕ: СФЕРА МЕБЕЛЬ
+КОММЕРЧЕСКОЕ ПРЕДЛОЖЕНИЕ: СФЕРУМ МЕБЕЛЬ
 ========================================
 Материал: ${sheet.material_name}
 Габариты листа: ${sheet.width} x ${sheet.height} мм
@@ -399,7 +399,7 @@ export default function FurnitureDashboard() {
 
 Срок изготовления: 10-14 рабочих дней.
 ========================================
-СФЕРА ERP SaaS — Управление мебельным бизнесом.
+СФЕРУМ SaaS — Управление мебельным бизнесом.
 `;
     navigator.clipboard.writeText(textProposal.trim());
     showToast('Коммерческое предложение скопировано в буфер обмена!', 'success');
