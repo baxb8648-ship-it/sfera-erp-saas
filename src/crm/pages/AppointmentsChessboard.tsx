@@ -23,6 +23,7 @@ interface BookingService {
     id: number;
     name: string;
     duration_minutes: number;
+    tech_cards?: any[];
 }
 
 interface Master {
@@ -66,6 +67,11 @@ export default function AppointmentsChessboard() {
         notes: '',
         status: ''
     });
+
+    // Material deduction states
+    const [isDeductionModalOpen, setIsDeductionModalOpen] = useState(false);
+    const [activeCompleteAppId, setActiveCompleteAppId] = useState<number | null>(null);
+    const [deductionItems, setDeductionItems] = useState<any[]>([]);
 
     const handleAppointmentClick = (app: Appointment) => {
         setSelectedAppointment(app);
@@ -211,12 +217,34 @@ export default function AppointmentsChessboard() {
         }
     };
 
-    const handleComplete = async (appId: number) => {
-        if (!window.confirm("Завершить услугу? Это автоматически спишет материалы со склада по техкарте.")) return;
+    const handleCompleteClick = (appId: number, serviceId: number) => {
+        const svc = services.find(s => s.id === serviceId);
+        const techCards = svc?.tech_cards || [];
+        
+        setDeductionItems(techCards.map((tc: any) => ({
+            inventory_id: tc.inventory_id,
+            name: tc.inventory_name || `Материал #${tc.inventory_id}`,
+            unit: tc.inventory_unit || 'ед.',
+            quantity: tc.quantity
+        })));
+        
+        setActiveCompleteAppId(appId);
+        setIsDeductionModalOpen(true);
+    };
+
+    const handleCompleteConfirm = async () => {
+        if (!activeCompleteAppId) return;
         
         try {
-            await apiClient.post(`/booking/appointments/${appId}/complete`);
+            await apiClient.post(`/booking/appointments/${activeCompleteAppId}/complete`, {
+                materials_override: deductionItems.map(item => ({
+                    inventory_id: item.inventory_id,
+                    quantity: Number(item.quantity)
+                }))
+            });
             success('Услуга завершена, ТМЦ успешно списаны со склада');
+            setIsDeductionModalOpen(false);
+            setIsManageModalOpen(false);
             fetchData();
         } catch (err: any) {
             console.error(err);
@@ -449,7 +477,7 @@ export default function AppointmentsChessboard() {
                                                         {/* Hover button for completion */}
                                                         {!isCompleted && !isCancelled && (
                                                             <button 
-                                                                onClick={(e) => { e.stopPropagation(); handleComplete(app.id); }}
+                                                                onClick={(e) => { e.stopPropagation(); handleCompleteClick(app.id, app.service_id); }}
                                                                 className="opacity-0 group-hover/card:opacity-100 transition-opacity w-full flex items-center justify-center gap-1 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-xl py-1.5 text-[9px] font-black uppercase tracking-wider"
                                                             >
                                                                 <CheckCircle2 className="w-3.5 h-3.5" /> Завершить
@@ -572,7 +600,7 @@ export default function AppointmentsChessboard() {
                             )}
                             {selectedAppointment.status !== 'completed' && (
                                 <button
-                                    onClick={() => handleComplete(selectedAppointment.id)}
+                                    onClick={() => handleCompleteClick(selectedAppointment.id, selectedAppointment.service_id)}
                                     className="flex items-center justify-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-2 text-xs font-bold transition shadow-sm shadow-emerald-600/10 cursor-pointer"
                                 >
                                     <CheckCircle2 className="w-3.5 h-3.5" /> Завершить
@@ -690,6 +718,88 @@ export default function AppointmentsChessboard() {
                         </div>
                     </div>
                 )}
+            </GodTierModal>
+
+            {/* Модальное окно интерактивного списания ТМЦ */}
+            <GodTierModal
+                isOpen={isDeductionModalOpen}
+                onClose={() => setIsDeductionModalOpen(false)}
+                title="Списание материалов"
+                maxWidth="md"
+            >
+                <div className="space-y-5">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed">
+                        Ниже указан список расходных материалов, привязанных к данной услуге. Вы можете изменить объём списания ТМЦ или удалить материал из списка перед подтверждением.
+                    </p>
+
+                    {deductionItems.length > 0 ? (
+                        <div className="space-y-3 max-h-[250px] overflow-y-auto pr-1 custom-scrollbar">
+                            {deductionItems.map((item, idx) => (
+                                <div key={idx} className="flex items-center justify-between gap-3 p-3.5 bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200/60 dark:border-zinc-800/60 rounded-2xl">
+                                    <div className="flex-1 min-w-0">
+                                        <span className="text-xs font-bold text-zinc-900 dark:text-white block truncate font-['Montserrat']">
+                                            {item.name}
+                                        </span>
+                                        <span className="text-[9px] text-[#F95700] font-bold font-mono tracking-wider uppercase">
+                                            Расходник
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="number"
+                                            step="any"
+                                            value={item.quantity}
+                                            onChange={(e) => {
+                                                const val = parseFloat(e.target.value) || 0;
+                                                const updated = [...deductionItems];
+                                                updated[idx].quantity = val;
+                                                setDeductionItems(updated);
+                                            }}
+                                            className="w-16 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-2.5 py-1.5 text-xs font-black font-mono text-zinc-950 dark:text-white text-center focus:outline-none focus:border-[#F95700] focus:ring-1 focus:ring-[#F95700]/20"
+                                        />
+                                        <span className="text-xs text-zinc-400 font-bold min-w-[24px]">
+                                            {item.unit}
+                                        </span>
+                                        <button
+                                            onClick={() => {
+                                                const updated = deductionItems.filter((_, i) => i !== idx);
+                                                setDeductionItems(updated);
+                                            }}
+                                            className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition"
+                                            title="Не списывать этот ТМЦ"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-6 px-4 bg-zinc-50 dark:bg-zinc-900/30 border border-zinc-200/60 dark:border-zinc-800/60 rounded-2xl">
+                            <span className="text-xs text-zinc-400 dark:text-zinc-500 font-bold block">
+                                Для этой услуги нет привязанных материалов в техкарте.
+                            </span>
+                            <span className="text-[10px] text-zinc-400 dark:text-zinc-500 block mt-1 font-mono">
+                                Запись завершится без автоматического списания ТМЦ.
+                            </span>
+                        </div>
+                    )}
+
+                    <div className="pt-4 flex justify-end gap-3 border-t border-zinc-100 dark:border-zinc-800">
+                        <button
+                            onClick={() => setIsDeductionModalOpen(false)}
+                            className="px-5 py-2.5 rounded-xl font-bold text-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+                        >
+                            Назад
+                        </button>
+                        <button
+                            onClick={handleCompleteConfirm}
+                            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-600/10 text-white font-bold text-xs rounded-xl hover:scale-[1.01] active:scale-[0.99] transition-all duration-300 cursor-pointer flex items-center gap-1.5"
+                        >
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Завершить и списать
+                        </button>
+                    </div>
+                </div>
             </GodTierModal>
         </div>
     );

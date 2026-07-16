@@ -91,6 +91,13 @@ class AppointmentUpdate(BaseModel):
     notes: Optional[str] = None
     status: Optional[str] = None
 
+class MaterialDeductionOverride(BaseModel):
+    inventory_id: int
+    quantity: float
+
+class CompleteAppointmentRequest(BaseModel):
+    materials_override: Optional[List[MaterialDeductionOverride]] = None
+
 # ----------------- ROUTES -----------------
 
 def _get_tenant_id(current_user: User, tenant_id: Optional[int] = None) -> int:
@@ -170,7 +177,13 @@ def create_appointment(appointment: AppointmentCreate, tenant_id: Optional[int] 
     return db_app
 
 @router.post("/appointments/{appointment_id}/complete")
-def complete_appointment(appointment_id: int, tenant_id: Optional[int] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def complete_appointment(
+    appointment_id: int, 
+    req: Optional[CompleteAppointmentRequest] = None,
+    tenant_id: Optional[int] = None, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
     tid = _get_tenant_id(current_user, tenant_id)
     appointment = db.query(Appointment).filter(Appointment.id == appointment_id, Appointment.tenant_id == tid).first()
     if not appointment:
@@ -181,32 +194,58 @@ def complete_appointment(appointment_id: int, tenant_id: Optional[int] = None, d
         
     appointment.status = "completed"
     
-    tech_cards = db.query(TechCardItem).filter(TechCardItem.service_id == appointment.service_id).all()
-    
     deducted_items = []
-    for card in tech_cards:
-        inv_item = db.query(InventoryItem).filter(InventoryItem.id == card.inventory_id, InventoryItem.tenant_id == tid).first()
-        if inv_item:
-            inv_item.quantity -= card.quantity
-            
-            # Логируем списание в материалах
-            mat_cons = MaterialConsumption(
-                tenant_id=tid,
-                inventory_id=card.inventory_id,
-                quantity=card.quantity
-            )
-            db.add(mat_cons)
-            
-            # Логируем списание в AuditLog
-            log_entry = AuditLog(
-                tenant_id=tid,
-                action="Автоматическое списание ТМЦ по техкарте услуги",
-                details=f"Списано {card.quantity} {inv_item.unit} ТМЦ '{inv_item.name}' при завершении записи #{appointment.id} клиента {appointment.client_name}."
-            )
-            db.add(log_entry)
-            
-            deducted_items.append({"name": inv_item.name, "amount_deducted": card.quantity, "remaining": inv_item.quantity})
-            
+    
+    # Проверяем, передано ли ручное переопределение списания ТМЦ
+    if req and req.materials_override is not None:
+        for override in req.materials_override:
+            if override.quantity <= 0:
+                continue
+            inv_item = db.query(InventoryItem).filter(InventoryItem.id == override.inventory_id, InventoryItem.tenant_id == tid).first()
+            if inv_item:
+                inv_item.quantity -= override.quantity
+                
+                # Логируем списание в материалах
+                mat_cons = MaterialConsumption(
+                    tenant_id=tid,
+                    inventory_id=override.inventory_id,
+                    quantity=override.quantity
+                )
+                db.add(mat_cons)
+                
+                # Логируем списание в AuditLog
+                log_entry = AuditLog(
+                    tenant_id=tid,
+                    action="Ручное списание ТМЦ при завершении записи",
+                    details=f"Списано {override.quantity} {inv_item.unit} ТМЦ '{inv_item.name}' при завершении записи #{appointment.id} клиента {appointment.client_name} (корректировка объема администратором)."
+                )
+                db.add(log_entry)
+                deducted_items.append({"name": inv_item.name, "amount_deducted": override.quantity, "remaining": inv_item.quantity})
+    else:
+        # Стандартное автоматическое списание по техкарте услуги
+        tech_cards = db.query(TechCardItem).filter(TechCardItem.service_id == appointment.service_id).all()
+        for card in tech_cards:
+            inv_item = db.query(InventoryItem).filter(InventoryItem.id == card.inventory_id, InventoryItem.tenant_id == tid).first()
+            if inv_item:
+                inv_item.quantity -= card.quantity
+                
+                # Логируем списание в материалах
+                mat_cons = MaterialConsumption(
+                    tenant_id=tid,
+                    inventory_id=card.inventory_id,
+                    quantity=card.quantity
+                )
+                db.add(mat_cons)
+                
+                # Логируем списание в AuditLog
+                log_entry = AuditLog(
+                    tenant_id=tid,
+                    action="Автоматическое списание ТМЦ по техкарте услуги",
+                    details=f"Списано {card.quantity} {inv_item.unit} ТМЦ '{inv_item.name}' при завершении записи #{appointment.id} клиента {appointment.client_name}."
+                )
+                db.add(log_entry)
+                deducted_items.append({"name": inv_item.name, "amount_deducted": card.quantity, "remaining": inv_item.quantity})
+                
     db.commit()
     
     try:
